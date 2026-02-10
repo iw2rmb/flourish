@@ -14,3 +14,4 @@ Design targets (future/intent): `design/spec.md`, `design/api.md`.
 - `editor` mouse + clipboard: `docs/editor.md` (Phase 7 in `roadmap/phase-7-editor-mouse-clipboard.md`)
 - `editor` visual-line mapping + virtual text: `docs/editor.md` (Phase 8 in `roadmap/phase-8-editor-visual-line-mapping.md`)
 - `editor` ghost + highlighting + change events: `docs/editor.md` (Phase 9 in `roadmap/phase-9-editor-ghost-highlight-events.md`)
+- `editor` horizontal scrolling (`WrapNone`): `docs/editor.md` (Phase 10 in `roadmap/phase-10-editor-horizontal-scrolling.md`)

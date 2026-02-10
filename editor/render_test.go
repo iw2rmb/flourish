@@ -209,3 +209,41 @@ func TestRender_Selection_DeletedRangesDoNotRenderHighlight(t *testing.T) {
 		t.Fatalf("unexpected selection rendering with deletions:\n got: %q\nwant: %q", got, want)
 	}
 }
+
+func TestRender_HorizontalScroll_ClipsByXOffset_TabAndWideGrapheme(t *testing.T) {
+	st := Style{
+		Text:   lipgloss.NewStyle(),
+		Cursor: lipgloss.NewStyle().Reverse(true), // ensure New() doesn't replace Style with defaults
+	}
+
+	m := New(Config{
+		Text:     "a\tb",
+		TabWidth: 4,
+		Style:    st,
+	})
+	m = m.Blur()
+	m = m.SetSize(3, 1)
+
+	m.xOffset = 0
+	if got := stripANSI(m.renderContent()); got != "a  " {
+		t.Fatalf("tab clip xOffset=0: got %q, want %q", got, "a  ")
+	}
+
+	m.xOffset = 2
+	if got := stripANSI(m.renderContent()); got != "  b" {
+		t.Fatalf("tab clip xOffset=2: got %q, want %q", got, "  b")
+	}
+
+	m2 := New(Config{
+		Text:  "a界b",
+		Style: st,
+	})
+	m2 = m2.Blur()
+	m2 = m2.SetSize(2, 1)
+
+	// "界" is 2 cells wide; starting the slice at its second cell renders a blank for alignment.
+	m2.xOffset = 2
+	if got := stripANSI(m2.renderContent()); got != " b" {
+		t.Fatalf("wide grapheme clip xOffset=2: got %q, want %q", got, " b")
+	}
+}

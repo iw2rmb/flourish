@@ -20,6 +20,9 @@ type Model struct {
 	focused bool
 
 	viewport viewport.Model
+	// xOffset is the horizontal scroll offset in terminal cells. It is used only
+	// when WrapMode==WrapNone.
+	xOffset int
 
 	lastBufVersion uint64
 	lastCursor     buffer.Pos
@@ -122,7 +125,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m, cmd = m.updateMouse(msg)
 		// Rebuild content in case the host mutated the buffer outside of the editor.
-		m.syncFromBuffer()
+		cursorChanged, versionChanged := m.syncFromBuffer()
+		if cursorChanged || versionChanged {
+			m.followCursorWithForce(false)
+		}
 		if m.cfg.Highlighter != nil && m.viewport.YOffset != beforeYOffset {
 			m.rebuildContent()
 		}
@@ -138,17 +144,17 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		}
 
 		m, cmd := m.updateKey(msg)
-		cursorChanged := m.syncFromBuffer()
+		cursorChanged, versionChanged := m.syncFromBuffer()
 		if m.cfg.OnChange != nil && m.buf != nil && m.buf.Version() != beforeVer {
 			m.cfg.OnChange(buildChangeEvent(m.buf))
 		}
-		if cursorChanged {
+		if cursorChanged || versionChanged {
 			m.followCursorWithForce(false)
 		}
 		return m, cmd
 	default:
-		cursorChanged := m.syncFromBuffer()
-		if cursorChanged {
+		cursorChanged, versionChanged := m.syncFromBuffer()
+		if cursorChanged || versionChanged {
 			m.followCursorWithForce(true)
 		}
 		return m, nil
@@ -157,24 +163,49 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 func (m Model) View() string { return m.viewport.View() }
 
-func (m *Model) syncFromBuffer() (cursorChanged bool) {
+func (m *Model) syncFromBuffer() (cursorChanged bool, versionChanged bool) {
 	if m.buf == nil {
-		return false
+		return false, false
 	}
 	ver := m.buf.Version()
 	cur := m.buf.Cursor()
 	if ver == m.lastBufVersion && cur == m.lastCursor {
-		return false
+		return false, false
 	}
 	cursorChanged = cur != m.lastCursor
+	versionChanged = ver != m.lastBufVersion
 	m.lastBufVersion = ver
 	m.lastCursor = cur
 	m.rebuildContent()
-	return cursorChanged
+	return cursorChanged, versionChanged
 }
 
 func (m *Model) rebuildContent() {
 	m.viewport.SetContent(m.renderContent())
+}
+
+func (m Model) contentWidth(lineCount int) int {
+	w := m.viewport.Width - m.viewport.Style.GetHorizontalFrameSize() - m.gutterWidth(lineCount)
+	if w < 0 {
+		w = 0
+	}
+	return w
+}
+
+func cursorCellForVisualLine(vl VisualLine, cursorCol int) int {
+	cursorCol = clampInt(cursorCol, 0, vl.RawLen)
+	if cursorCol != vl.RawLen {
+		return vl.VisualCellForDocCol(cursorCol)
+	}
+
+	// Cursor at EOL is rendered as a 1-cell placeholder inserted before any
+	// virtual insertions anchored at the raw EOL.
+	for _, tok := range vl.Tokens {
+		if tok.Kind == VisualTokenVirtual && tok.DocStartCol == vl.RawLen {
+			return tok.StartCell
+		}
+	}
+	return vl.VisualLen()
 }
 
 func (m *Model) followCursorWithForce(force bool) {
@@ -182,23 +213,75 @@ func (m *Model) followCursorWithForce(force bool) {
 		return
 	}
 	cur := m.buf.Cursor()
+	lines := rawLinesFromBufferText(m.buf.Text())
+
 	h := m.viewport.Height - m.viewport.Style.GetVerticalFrameSize()
-	if h <= 0 {
+	beforeYOffset := m.viewport.YOffset
+	newYOffset := beforeYOffset
+	if h > 0 {
+		if cur.Row < beforeYOffset {
+			newYOffset = cur.Row
+		} else if cur.Row >= beforeYOffset+h {
+			newYOffset = cur.Row - h + 1
+		}
+		if newYOffset != beforeYOffset {
+			m.viewport.SetYOffset(newYOffset)
+			if m.cfg.Highlighter != nil {
+				m.rebuildContent()
+			}
+		}
+	}
+
+	if m.cfg.WrapMode != WrapNone {
+		if m.xOffset != 0 {
+			m.xOffset = 0
+			m.rebuildContent()
+		}
 		return
 	}
 
-	beforeYOffset := m.viewport.YOffset
-	newYOffset := beforeYOffset
-	if cur.Row < beforeYOffset {
-		newYOffset = cur.Row
-	} else if cur.Row >= beforeYOffset+h {
-		newYOffset = cur.Row - h + 1
-	}
-	if newYOffset != beforeYOffset {
-		m.viewport.SetYOffset(newYOffset)
-		if m.cfg.Highlighter != nil {
+	if len(lines) == 0 || cur.Row < 0 || cur.Row >= len(lines) {
+		if m.xOffset != 0 {
+			m.xOffset = 0
 			m.rebuildContent()
 		}
+		return
+	}
+
+	cw := m.contentWidth(len(lines))
+	if cw <= 0 {
+		if m.xOffset != 0 {
+			m.xOffset = 0
+			m.rebuildContent()
+		}
+		return
+	}
+
+	rawLine := lines[cur.Row]
+	vt := m.virtualTextForRow(cur.Row, rawLine)
+	vt = m.virtualTextWithGhost(cur.Row, rawLine, vt)
+	vl := BuildVisualLine(rawLine, vt, m.cfg.TabWidth)
+
+	cursorCell := cursorCellForVisualLine(vl, cur.Col)
+	newXOffset := m.xOffset
+	if cursorCell < newXOffset {
+		newXOffset = cursorCell
+	} else if cursorCell >= newXOffset+cw {
+		newXOffset = cursorCell - cw + 1
+	}
+	if newXOffset < 0 {
+		newXOffset = 0
+	}
+
+	// When not forced, avoid shifting horizontally while the user is actively
+	// mouse-dragging a selection (it makes hit-testing feel unstable).
+	if !force && m.mouseDragging {
+		return
+	}
+
+	if newXOffset != m.xOffset {
+		m.xOffset = newXOffset
+		m.rebuildContent()
 	}
 }
 

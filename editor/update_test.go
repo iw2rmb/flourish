@@ -237,3 +237,52 @@ func TestUpdate_ViewportFollowsCursor_Minimal(t *testing.T) {
 		t.Fatalf("yoffset after moving above view: got %d, want %d", got, 1)
 	}
 }
+
+func TestUpdate_HorizontalScroll_FollowsCursor_LongLine(t *testing.T) {
+	m := New(Config{Text: "abcdefghij"})
+	m = m.SetSize(5, 1)
+
+	for i := 0; i < 5; i++ {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	}
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, Col: 5}) {
+		t.Fatalf("cursor after 5 rights: got %v, want %v", got, buffer.Pos{Row: 0, Col: 5})
+	}
+	if got := m.xOffset; got != 1 {
+		t.Fatalf("xOffset at col 5, width 5: got %d, want %d", got, 1)
+	}
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight}) // col 6
+	if got := m.xOffset; got != 2 {
+		t.Fatalf("xOffset at col 6, width 5: got %d, want %d", got, 2)
+	}
+
+	for i := 0; i < 6; i++ {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	}
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, Col: 0}) {
+		t.Fatalf("cursor after moving back: got %v, want %v", got, buffer.Pos{Row: 0, Col: 0})
+	}
+	if got := m.xOffset; got != 0 {
+		t.Fatalf("xOffset after moving back into view: got %d, want %d", got, 0)
+	}
+}
+
+func TestUpdate_HorizontalScroll_UsesCellCoordinates_Tab(t *testing.T) {
+	m := New(Config{
+		Text:     "a\tb",
+		TabWidth: 4,
+	})
+	m = m.SetSize(3, 1)
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight}) // col 1 (tab)
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight}) // col 2 ("b")
+
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, Col: 2}) {
+		t.Fatalf("cursor at b: got %v, want %v", got, buffer.Pos{Row: 0, Col: 2})
+	}
+	// Visual cells: "a" [0], tab spaces [1..3], "b" [4]. Keep cell 4 visible in width 3 => xOffset 2.
+	if got := m.xOffset; got != 2 {
+		t.Fatalf("xOffset at b (cell 4), width 3: got %d, want %d", got, 2)
+	}
+}

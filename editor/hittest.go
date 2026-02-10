@@ -55,6 +55,9 @@ func (m Model) screenToDocPos(x, y int) buffer.Pos {
 	if visualX < 0 {
 		visualX = 0
 	}
+	if m.cfg.WrapMode == WrapNone && m.xOffset > 0 {
+		visualX += m.xOffset
+	}
 
 	rawLine := lines[row]
 	vt := m.virtualTextForRow(row, rawLine)

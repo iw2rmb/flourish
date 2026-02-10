@@ -21,6 +21,17 @@ func (m *Model) renderContent() string {
 		digitCount = gutterDigits(len(lines))
 	}
 
+	xOffset := 0
+	contentWidth := 0
+	if m.cfg.WrapMode == WrapNone {
+		contentWidth = m.contentWidth(len(lines))
+		if contentWidth > 0 {
+			xOffset = m.xOffset
+		} else {
+			contentWidth = 0
+		}
+	}
+
 	out := make([]string, 0, len(lines))
 
 	highlightStartRow, highlightEndRow := 0, 0
@@ -89,7 +100,7 @@ func (m *Model) renderContent() string {
 		}
 
 		vl := BuildVisualLine(line, vt, m.cfg.TabWidth)
-		sb.WriteString(renderVisualLine(m.cfg.Style, vl, row, cursor, m.focused, sel, selOK, highlights))
+		sb.WriteString(renderVisualLine(m.cfg.Style, vl, row, cursor, m.focused, sel, selOK, highlights, xOffset, contentWidth))
 
 		out = append(out, sb.String())
 	}
@@ -97,7 +108,7 @@ func (m *Model) renderContent() string {
 	return strings.Join(out, "\n")
 }
 
-func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focused bool, sel buffer.Range, selOK bool, highlights []HighlightSpan) string {
+func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focused bool, sel buffer.Range, selOK bool, highlights []HighlightSpan, xOffset int, contentWidth int) string {
 	rawLen := vl.RawLen
 
 	cursorCol := cursor.Col
@@ -135,21 +146,67 @@ func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focus
 
 	// Cursor at EOL is rendered as a 1-cell placeholder space.
 	renderEOLCursor := hasCursor && cursorCol == rawLen
-	eolInsIdx := len(vl.Tokens)
+	eolCursorCell := -1
 	if renderEOLCursor {
-		for i, tok := range vl.Tokens {
-			if tok.Kind == VisualTokenVirtual && tok.DocStartCol == rawLen {
-				eolInsIdx = i
-				break
+		eolCursorCell = cursorCellForVisualLine(vl, cursorCol)
+	}
+
+	left := 0
+	right := int(^uint(0) >> 1) // MaxInt
+	if contentWidth > 0 {
+		left = maxInt(xOffset, 0)
+		right = left + contentWidth
+	}
+
+	isAllSpaces := func(s string) bool {
+		if s == "" {
+			return false
+		}
+		for _, r := range s {
+			if r != ' ' {
+				return false
 			}
 		}
+		return true
+	}
+
+	renderSpan := func(styleFn func(...string) string, text string, tokWidth, spanStart, spanWidth int, splittable bool) string {
+		if spanWidth <= 0 {
+			return ""
+		}
+		if spanStart == 0 && spanWidth == tokWidth {
+			return styleFn(text)
+		}
+		if splittable {
+			return styleFn(strings.Repeat(" ", spanWidth))
+		}
+		// Partial wide grapheme: preserve alignment with blanks.
+		return st.Text.Render(strings.Repeat(" ", spanWidth))
 	}
 
 	var sb strings.Builder
 	for i, tok := range vl.Tokens {
-		if renderEOLCursor && i == eolInsIdx {
-			sb.WriteString(st.Cursor.Render(" "))
+		if renderEOLCursor && eolCursorCell == tok.StartCell {
+			// Cursor placeholder sits immediately before insertions anchored at EOL.
+			spanL := maxInt(eolCursorCell, left)
+			spanR := minInt(eolCursorCell+1, right)
+			if spanL < spanR {
+				sb.WriteString(st.Cursor.Render(" "))
+			}
 		}
+
+		segL := tok.StartCell
+		segR := tok.StartCell + tok.CellWidth
+		spanL := maxInt(segL, left)
+		spanR := minInt(segR, right)
+		if spanL >= spanR {
+			continue
+		}
+		spanStart := spanL - segL
+		spanWidth := spanR - spanL
+		splittable := isAllSpaces(tok.Text) && tok.CellWidth == len([]rune(tok.Text))
+
+		write := func(s string) { sb.WriteString(s) }
 
 		switch tok.Kind {
 		case VisualTokenVirtual:
@@ -160,13 +217,13 @@ func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focus
 			case VirtualRoleOverlay:
 				style = st.VirtualOverlay.Inherit(st.Text)
 			}
-			sb.WriteString(style.Render(tok.Text))
+			write(renderSpan(style.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 		case VisualTokenDoc:
 			selected := hasSel && tok.DocStartCol < selEndCol && tok.DocEndCol > selStartCol
 			if hasCursor && i == cursorTokenIdx {
-				sb.WriteString(st.Cursor.Render(tok.Text))
+				write(renderSpan(st.Cursor.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 			} else if selected {
-				sb.WriteString(st.Selection.Render(tok.Text))
+				write(renderSpan(st.Selection.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 			} else {
 				style := st.Text
 				for _, sp := range highlights {
@@ -175,14 +232,18 @@ func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focus
 						break
 					}
 				}
-				sb.WriteString(style.Render(tok.Text))
+				write(renderSpan(style.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 			}
 		default:
-			sb.WriteString(st.Text.Render(tok.Text))
+			write(renderSpan(st.Text.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 		}
 	}
-	if renderEOLCursor && eolInsIdx == len(vl.Tokens) {
-		sb.WriteString(st.Cursor.Render(" "))
+	if renderEOLCursor && eolCursorCell == vl.VisualLen() {
+		spanL := maxInt(eolCursorCell, left)
+		spanR := minInt(eolCursorCell+1, right)
+		if spanL < spanR {
+			sb.WriteString(st.Cursor.Render(" "))
+		}
 	}
 	return sb.String()
 }

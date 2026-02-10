@@ -95,3 +95,15 @@ func TestHitTest_TabExpansionUsesCellCoordinates(t *testing.T) {
 		t.Fatalf("click on b x=4: got %v, want %v", got, buffer.Pos{Row: 0, Col: 2})
 	}
 }
+
+func TestHitTest_HorizontalScroll_AddsXOffset(t *testing.T) {
+	m := New(Config{Text: "abcdef"})
+	m.xOffset = 2
+
+	if got := m.screenToDocPos(0, 0); got != (buffer.Pos{Row: 0, Col: 2}) {
+		t.Fatalf("click at left edge with xOffset=2: got %v, want %v", got, buffer.Pos{Row: 0, Col: 2})
+	}
+	if got := m.screenToDocPos(3, 0); got != (buffer.Pos{Row: 0, Col: 5}) {
+		t.Fatalf("click x=3 with xOffset=2: got %v, want %v", got, buffer.Pos{Row: 0, Col: 5})
+	}
+}

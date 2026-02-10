@@ -12,6 +12,8 @@ type Config struct {
 	// Rendering options.
 	ShowLineNums bool
 	Style        Style
+	// WrapMode controls soft wrapping vs horizontal scrolling. Default is WrapNone.
+	WrapMode WrapMode
 
 	// VirtualTextProvider optionally supplies per-line view-only transforms
 	// (virtual deletions/insertions) used by the VisualLine mapping layer.
