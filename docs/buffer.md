@@ -9,6 +9,7 @@ Design targets:
 Roadmap:
 - Phase 1: `roadmap/phase-1-buffer-foundation.md`
 - Phase 2: `roadmap/phase-2-buffer-movement-selection.md`
+- Phase 3: `roadmap/phase-3-buffer-editing-apply.md`
 
 ## Coordinates and ranges
 
@@ -50,3 +51,27 @@ Rules:
 - `Extend=false` clears selection.
 - `Extend=true` keeps a stable selection anchor across repeated extend moves until the selection is cleared.
 - Word movement uses portable v0 semantics: skip whitespace, then skip non-whitespace (single-line; newline is a hard boundary).
+
+## Editing
+
+All editing operations are rune-accurate and follow selection-first semantics:
+- If a selection is active, insertion replaces the selection (including inserting `""`, which deletes the selection).
+- If a selection is active, backspace/delete delete the selection.
+- Otherwise, backspace deletes the rune before the cursor (joining lines at SOL).
+- Otherwise, delete deletes the rune at the cursor (joining lines at EOL).
+
+Implemented:
+- `InsertText(s string)` accepts `\n` and updates the cursor to the end of inserted text.
+- `InsertRune(r rune)` inserts one rune.
+- `InsertNewline()` inserts `\n`.
+- `DeleteBackward()`, `DeleteForward()`, `DeleteSelection()`.
+
+## Deterministic apply
+
+`Apply(edits ...TextEdit)` applies edits sequentially, interpreting each edit’s range against the buffer state at the time the edit is applied.
+
+Current semantics:
+- Edit ranges are clamped into current document bounds.
+- Empty range + non-empty text inserts.
+- Cursor moves to the end of the last effective edit.
+- Selection is cleared if any edit applies.

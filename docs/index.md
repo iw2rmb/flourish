@@ -8,3 +8,4 @@ Design targets (future/intent): `design/spec.md`, `design/api.md`.
 
 - `buffer` foundation: `docs/buffer.md` (Phase 1 in `roadmap/phase-1-buffer-foundation.md`)
 - `buffer` movement + selection: `docs/buffer.md` (Phase 2 in `roadmap/phase-2-buffer-movement-selection.md`)
+- `buffer` editing + deterministic apply: `docs/buffer.md` (Phase 3 in `roadmap/phase-3-buffer-editing-apply.md`)
