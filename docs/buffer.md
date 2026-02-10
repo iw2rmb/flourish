@@ -8,6 +8,7 @@ Design targets:
 
 Roadmap:
 - Phase 1: `roadmap/phase-1-buffer-foundation.md`
+- Phase 2: `roadmap/phase-2-buffer-movement-selection.md`
 
 ## Coordinates and ranges
 
@@ -34,3 +35,18 @@ Helpers:
 - `SetCursor` increments version only when the clamped cursor position changes.
 - `SetSelection` increments version only when the effective selection changes (including clearing an existing selection).
 - `ClearSelection` increments version only when it clears a non-empty active selection.
+- `Move` increments version only when it changes cursor and/or selection.
+
+## Movement + selection
+
+`Buffer.Move(Move)` updates cursor and selection using rune-accurate document coordinates.
+
+Types (from `design/api.md`):
+- `MoveUnit`: `MoveRune`, `MoveWord`, `MoveLine`, `MoveDoc`
+- `MoveDir`: `DirLeft`, `DirRight`, `DirUp`, `DirDown`, `DirHome`, `DirEnd`
+- `Move`: `{Unit, Dir, Extend}`
+
+Rules:
+- `Extend=false` clears selection.
+- `Extend=true` keeps a stable selection anchor across repeated extend moves until the selection is cleared.
+- Word movement uses portable v0 semantics: skip whitespace, then skip non-whitespace (single-line; newline is a hard boundary).
