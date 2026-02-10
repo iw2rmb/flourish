@@ -29,6 +29,7 @@ Helpers:
 - text as logical lines split on `\n` (each line is `[]rune`)
 - `Cursor` position (clamped)
 - optional `Selection` (normalized; empty selection is treated as inactive)
+- optional `SelectionRaw` (anchor/end without normalization; empty selection is treated as inactive)
 - `Version` counter
 
 ## Versioning
@@ -43,6 +44,10 @@ Helpers:
 ## Movement + selection
 
 `Buffer.Move(Move)` updates cursor and selection using rune-accurate document coordinates.
+
+Selection APIs:
+- `Selection()` returns the normalized half-open range `[Start, End)`.
+- `SelectionRaw()` returns `{Start: anchor, End: end}` without normalization (direction-preserving).
 
 Types (from `design/api.md`):
 - `MoveUnit`: `MoveRune`, `MoveWord`, `MoveLine`, `MoveDoc`

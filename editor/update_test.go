@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"errors"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -111,6 +112,89 @@ func TestUpdate_CopyCutPaste(t *testing.T) {
 	if got := m.buf.Text(); got != "hello" {
 		t.Fatalf("text after paste: got %q, want %q", got, "hello")
 	}
+}
+
+func TestUpdate_Paste_ReplacesSelection(t *testing.T) {
+	cb := &memClipboard{t: t, s: "X"}
+	m := New(Config{
+		Text:      "hello",
+		Clipboard: cb,
+	})
+
+	m.buf.SetSelection(buffer.Range{
+		Start: buffer.Pos{Row: 0, Col: 1}, // "ell"
+		End:   buffer.Pos{Row: 0, Col: 4},
+	})
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlV})
+	if got := m.buf.Text(); got != "hXo" {
+		t.Fatalf("text after paste replacing selection: got %q, want %q", got, "hXo")
+	}
+}
+
+type errClipboard struct{}
+
+func (c *errClipboard) ReadText() (string, error) { return "", errors.New("clipboard read error") }
+func (c *errClipboard) WriteText(string) error    { return errors.New("clipboard write error") }
+
+func TestUpdate_ClipboardErrorsIgnored(t *testing.T) {
+	m := New(Config{
+		Text:      "hello",
+		Clipboard: &errClipboard{},
+	})
+
+	// With no selection, copy/cut are no-ops (and must not panic).
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlX})
+
+	// Paste read error must be ignored.
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlV})
+	if got := m.buf.Text(); got != "hello" {
+		t.Fatalf("text after paste with clipboard error: got %q, want %q", got, "hello")
+	}
+}
+
+func TestUpdate_MouseClickShiftClickAndDrag(t *testing.T) {
+	m := New(Config{
+		Text:         "abcd\nefgh",
+		ShowLineNums: true,
+	})
+	m = m.SetSize(20, 2)
+
+	// Seed a selection; plain click should clear it.
+	m.buf.SetSelection(buffer.Range{Start: buffer.Pos{Row: 0, Col: 1}, End: buffer.Pos{Row: 0, Col: 3}})
+
+	// With line numbers: gutter width is 2 (1 digit + space). Click on row 1, col 1 => x=3, y=1.
+	m, _ = m.Update(tea.MouseMsg{X: 3, Y: 1, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft})
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 1, Col: 1}) {
+		t.Fatalf("cursor after click: got %v, want %v", got, buffer.Pos{Row: 1, Col: 1})
+	}
+	if _, ok := m.buf.Selection(); ok {
+		t.Fatalf("expected selection cleared after click")
+	}
+
+	// Shift+click extends from current cursor (anchor).
+	m, _ = m.Update(tea.MouseMsg{X: 5, Y: 1, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft, Shift: true}) // col 3
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 1, Col: 3}) {
+		t.Fatalf("cursor after shift+click: got %v, want %v", got, buffer.Pos{Row: 1, Col: 3})
+	}
+	if got, ok := m.buf.Selection(); !ok || got != (buffer.Range{Start: buffer.Pos{Row: 1, Col: 1}, End: buffer.Pos{Row: 1, Col: 3}}) {
+		t.Fatalf("selection after shift+click: got (%v,%v), want (%v,%v)", got, ok, buffer.Range{Start: buffer.Pos{Row: 1, Col: 1}, End: buffer.Pos{Row: 1, Col: 3}}, true)
+	}
+
+	// Another shift+click keeps the original anchor (col 1) and updates end (col 0).
+	m, _ = m.Update(tea.MouseMsg{X: 2, Y: 1, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft, Shift: true}) // col 0
+	if got, ok := m.buf.Selection(); !ok || got != (buffer.Range{Start: buffer.Pos{Row: 1, Col: 0}, End: buffer.Pos{Row: 1, Col: 1}}) {
+		t.Fatalf("selection after second shift+click: got (%v,%v), want (%v,%v)", got, ok, buffer.Range{Start: buffer.Pos{Row: 1, Col: 0}, End: buffer.Pos{Row: 1, Col: 1}}, true)
+	}
+
+	// Drag selection: press at row 0, col 1 then motion to row 0, col 3.
+	m, _ = m.Update(tea.MouseMsg{X: 3, Y: 0, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft})
+	m, _ = m.Update(tea.MouseMsg{X: 5, Y: 0, Action: tea.MouseActionMotion, Button: tea.MouseButtonNone})
+	if got, ok := m.buf.Selection(); !ok || got != (buffer.Range{Start: buffer.Pos{Row: 0, Col: 1}, End: buffer.Pos{Row: 0, Col: 3}}) {
+		t.Fatalf("selection after drag: got (%v,%v), want (%v,%v)", got, ok, buffer.Range{Start: buffer.Pos{Row: 0, Col: 1}, End: buffer.Pos{Row: 0, Col: 3}}, true)
+	}
+	m, _ = m.Update(tea.MouseMsg{X: 5, Y: 0, Action: tea.MouseActionRelease, Button: tea.MouseButtonLeft})
 }
 
 func TestUpdate_ViewportFollowsCursor_Minimal(t *testing.T) {

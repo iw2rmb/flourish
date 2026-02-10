@@ -2,7 +2,6 @@ package editor
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/iw2rmb/flouris/buffer"
@@ -20,9 +19,9 @@ func (m Model) renderContent() string {
 
 	cursor := m.buf.Cursor()
 	sel, selOK := m.buf.Selection()
-	gutterDigits := 0
+	digitCount := 0
 	if m.cfg.ShowLineNums {
-		gutterDigits = len(strconv.Itoa(len(lines)))
+		digitCount = gutterDigits(len(lines))
 	}
 
 	out := make([]string, 0, len(lines))
@@ -30,7 +29,7 @@ func (m Model) renderContent() string {
 		var sb strings.Builder
 
 		if m.cfg.ShowLineNums {
-			num := fmt.Sprintf("%*d", gutterDigits, row+1)
+			num := fmt.Sprintf("%*d", digitCount, row+1)
 			numStyle := m.cfg.Style.LineNum
 			if m.focused && row == cursor.Row {
 				numStyle = m.cfg.Style.LineNumActive

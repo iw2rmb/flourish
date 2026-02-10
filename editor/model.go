@@ -22,6 +22,9 @@ type Model struct {
 
 	lastBufVersion uint64
 	lastCursor     buffer.Pos
+
+	mouseDragging bool
+	mouseAnchor   buffer.Pos
 }
 
 func New(cfg Config) Model {
@@ -88,7 +91,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m.SetSize(msg.Width, msg.Height), nil
 	case tea.MouseMsg:
 		var cmd tea.Cmd
-		m.viewport, cmd = m.viewport.Update(msg)
+		m, cmd = m.updateMouse(msg)
 		// Rebuild content in case the host mutated the buffer outside of the editor.
 		m.syncFromBuffer()
 		// Don't force-follow cursor here; allow manual scrolling via mouse wheel.

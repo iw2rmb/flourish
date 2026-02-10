@@ -62,3 +62,27 @@ func TestBuffer_SetSelection_NormalizesClampsAndVersions(t *testing.T) {
 		t.Fatalf("expected version unchanged, got %d", b.Version())
 	}
 }
+
+func TestBuffer_SelectionRaw_PreservesDirection(t *testing.T) {
+	b := New("abcd", Options{})
+
+	b.SetSelection(Range{Start: Pos{Row: 0, Col: 3}, End: Pos{Row: 0, Col: 1}})
+
+	raw, ok := b.SelectionRaw()
+	if !ok {
+		t.Fatalf("expected raw selection active")
+	}
+	wantRaw := Range{Start: Pos{Row: 0, Col: 3}, End: Pos{Row: 0, Col: 1}}
+	if raw != wantRaw {
+		t.Fatalf("raw selection=%v, want %v", raw, wantRaw)
+	}
+
+	norm, ok := b.Selection()
+	if !ok {
+		t.Fatalf("expected normalized selection active")
+	}
+	wantNorm := Range{Start: Pos{Row: 0, Col: 1}, End: Pos{Row: 0, Col: 3}}
+	if norm != wantNorm {
+		t.Fatalf("normalized selection=%v, want %v", norm, wantNorm)
+	}
+}

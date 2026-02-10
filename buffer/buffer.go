@@ -76,6 +76,17 @@ func (b *Buffer) Selection() (Range, bool) {
 	return r, true
 }
 
+// SelectionRaw returns the raw selection anchor/end without normalization.
+//
+// This is useful for UI layers that need to preserve the selection direction
+// (e.g. shift+click behavior) while still treating empty selections as inactive.
+func (b *Buffer) SelectionRaw() (Range, bool) {
+	if !b.sel.active || b.sel.anchor == b.sel.end {
+		return Range{}, false
+	}
+	return Range{Start: b.sel.anchor, End: b.sel.end}, true
+}
+
 func (b *Buffer) SetSelection(r Range) {
 	clamped := ClampRange(r, len(b.lines), b.lineLen)
 	next := selectionState{
