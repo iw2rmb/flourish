@@ -12,3 +12,4 @@ Design targets (future/intent): `design/spec.md`, `design/api.md`.
 - `buffer` undo/redo: `docs/buffer.md` (Phase 4 in `roadmap/phase-4-buffer-undo-redo.md`)
 - `editor` keys + selection + scroll: `docs/editor.md` (Phase 6 in `roadmap/phase-6-editor-keys-selection-scroll.md`)
 - `editor` mouse + clipboard: `docs/editor.md` (Phase 7 in `roadmap/phase-7-editor-mouse-clipboard.md`)
+- `editor` visual-line mapping + virtual text: `docs/editor.md` (Phase 8 in `roadmap/phase-8-editor-visual-line-mapping.md`)

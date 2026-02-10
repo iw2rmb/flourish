@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/iw2rmb/flouris/buffer"
 )
 
 func TestModel_SetSizeAffectsViewHeight(t *testing.T) {
@@ -46,5 +48,56 @@ func TestView_SnapshotFixedSize(t *testing.T) {
 	}
 	if fmt.Sprintf("%q", got) != fmt.Sprintf("%q", want) {
 		t.Fatalf("unexpected view:\n got: %q\nwant: %q", got, want)
+	}
+}
+
+func TestVirtualTextProvider_ContextPerLine(t *testing.T) {
+	var got []VirtualTextContext
+	m := New(Config{
+		Text: "ab\ncd\nef",
+		VirtualTextProvider: func(ctx VirtualTextContext) VirtualText {
+			got = append(got, ctx)
+			return VirtualText{}
+		},
+	})
+	got = nil // New() triggers an initial render
+
+	m.buf.SetCursor(buffer.Pos{Row: 1, Col: 1})
+	m.buf.SetSelection(buffer.Range{
+		Start: buffer.Pos{Row: 0, Col: 1},
+		End:   buffer.Pos{Row: 2, Col: 1},
+	})
+
+	_ = m.renderContent()
+
+	if len(got) != 3 {
+		t.Fatalf("provider calls: got %d, want %d", len(got), 3)
+	}
+
+	if got[0].Row != 0 || got[0].LineText != "ab" {
+		t.Fatalf("row 0 ctx: got (%d,%q)", got[0].Row, got[0].LineText)
+	}
+	if got[1].Row != 1 || got[1].LineText != "cd" {
+		t.Fatalf("row 1 ctx: got (%d,%q)", got[1].Row, got[1].LineText)
+	}
+	if got[2].Row != 2 || got[2].LineText != "ef" {
+		t.Fatalf("row 2 ctx: got (%d,%q)", got[2].Row, got[2].LineText)
+	}
+
+	if !got[1].HasCursor || got[1].CursorCol != 1 {
+		t.Fatalf("cursor ctx row 1: got (has=%v,col=%d), want (true,1)", got[1].HasCursor, got[1].CursorCol)
+	}
+	if got[0].HasCursor || got[2].HasCursor {
+		t.Fatalf("cursor ctx other rows: got row0=%v row2=%v, want both false", got[0].HasCursor, got[2].HasCursor)
+	}
+
+	if !got[0].HasSelection || got[0].SelectionStartCol != 1 || got[0].SelectionEndCol != 2 {
+		t.Fatalf("selection ctx row 0: got (has=%v,%d..%d), want (true,1..2)", got[0].HasSelection, got[0].SelectionStartCol, got[0].SelectionEndCol)
+	}
+	if !got[1].HasSelection || got[1].SelectionStartCol != 0 || got[1].SelectionEndCol != 2 {
+		t.Fatalf("selection ctx row 1: got (has=%v,%d..%d), want (true,0..2)", got[1].HasSelection, got[1].SelectionStartCol, got[1].SelectionEndCol)
+	}
+	if !got[2].HasSelection || got[2].SelectionStartCol != 0 || got[2].SelectionEndCol != 1 {
+		t.Fatalf("selection ctx row 2: got (has=%v,%d..%d), want (true,0..1)", got[2].HasSelection, got[2].SelectionStartCol, got[2].SelectionEndCol)
 	}
 }

@@ -10,8 +10,9 @@ Roadmap:
 - Phase 5: `roadmap/phase-5-editor-skeleton-rendering.md`
 - Phase 6: `roadmap/phase-6-editor-keys-selection-scroll.md`
 - Phase 7: `roadmap/phase-7-editor-mouse-clipboard.md`
+- Phase 8: `roadmap/phase-8-editor-visual-line-mapping.md`
 
-## What exists (Phase 7)
+## What exists (Phase 8)
 
 The `editor` package provides a Bubble Tea component:
 - `editor.New(editor.Config)` constructs a value-type `editor.Model` that owns an internal `*buffer.Buffer`.
@@ -27,8 +28,17 @@ The `editor` package provides a Bubble Tea component:
   - optional line numbers gutter (`Config.ShowLineNums`)
   - selection styling (`Style.Selection`) for the active selection range (half-open `[Start, End)`)
   - cursor styling on the active line when focused (`Style.Cursor`)
+  - virtual text transforms via `Config.VirtualTextProvider` (virtual deletions/insertions)
 
 Rendering uses `bubbles/viewport` for vertical scrolling and width/height clipping.
+
+## Virtual text + visual mapping
+
+- `Config.VirtualTextProvider` can return per-line view-only transforms:
+  - virtual deletions hide raw rune ranges (they do not render and are skipped by hit-testing)
+  - virtual insertions add rendered cells anchored at a raw document column (clicks inside insertions map to the anchor column)
+- Cursor and selection remain document-based; selection styling applies only to visible doc-backed cells.
+- Tabs expand by `Config.TabWidth` (default: 4) and all horizontal mapping is in terminal-cell coordinates (grapheme-aware).
 
 ## Key handling
 
@@ -45,7 +55,7 @@ Rendering uses `bubbles/viewport` for vertical scrolling and width/height clippi
 
 Hit-testing maps viewport-local mouse coordinates `(X,Y)` to document positions:
 - `Y` maps to `buffer.Pos.Row` using `viewport.YOffset`.
-- `X` maps to `buffer.Pos.Col` (v0: runes are treated as 1-cell).
+- `X` maps to `buffer.Pos.Col` using terminal **cell** coordinates (grapheme-aware; wide graphemes map multiple cells to one doc position; tabs expand by `Config.TabWidth`, default 4).
 - Clicking in the line number gutter maps to column 0 (start of line).
 - Positions are clamped into document bounds.
 

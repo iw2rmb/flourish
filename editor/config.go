@@ -11,6 +11,14 @@ type Config struct {
 	ShowLineNums bool
 	Style        Style
 
+	// VirtualTextProvider optionally supplies per-line view-only transforms
+	// (virtual deletions/insertions) used by the VisualLine mapping layer.
+	// When nil, the transform is identity.
+	VirtualTextProvider VirtualTextProvider
+
+	// TabWidth controls tab stop width in terminal cells. If <= 0, defaults to 4.
+	TabWidth int
+
 	// If true, movement/selection still work but buffer mutations are ignored.
 	ReadOnly bool
 

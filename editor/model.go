@@ -2,6 +2,7 @@ package editor
 
 import (
 	"reflect"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -33,6 +34,9 @@ func New(cfg Config) Model {
 	}
 	if reflect.DeepEqual(cfg.KeyMap, KeyMap{}) {
 		cfg.KeyMap = DefaultKeyMap()
+	}
+	if cfg.TabWidth <= 0 {
+		cfg.TabWidth = 4
 	}
 
 	m := Model{
@@ -153,4 +157,87 @@ func (m *Model) followCursorWithForce(force bool) {
 		m.viewport.SetYOffset(cur.Row - h + 1)
 		return
 	}
+}
+
+func (m Model) virtualTextForRow(row int, rawLine string) VirtualText {
+	if m.buf == nil || m.cfg.VirtualTextProvider == nil {
+		return VirtualText{}
+	}
+
+	rawRunes := []rune(rawLine)
+	rawLen := len(rawRunes)
+
+	cursor := m.buf.Cursor()
+	hasCursor := cursor.Row == row
+	cursorCol := cursor.Col
+	if cursorCol < 0 {
+		cursorCol = 0
+	}
+	if cursorCol > rawLen {
+		cursorCol = rawLen
+	}
+
+	sel, selOK := m.buf.Selection()
+	selStartCol, selEndCol, hasSel := selectionColsForRow(sel, selOK, row, rawLen)
+
+	ctx := VirtualTextContext{
+		Row:      row,
+		LineText: rawLine,
+
+		CursorCol: cursorCol,
+		HasCursor: hasCursor,
+
+		SelectionStartCol: selStartCol,
+		SelectionEndCol:   selEndCol,
+		HasSelection:      hasSel,
+
+		DocVersion: m.buf.Version(),
+	}
+	vt := m.cfg.VirtualTextProvider(ctx)
+	return normalizeVirtualText(vt, rawLen)
+}
+
+func selectionColsForRow(sel buffer.Range, selOK bool, row int, lineLen int) (startCol, endCol int, hasSel bool) {
+	if !selOK {
+		return 0, 0, false
+	}
+	if row < sel.Start.Row || row > sel.End.Row {
+		return 0, 0, false
+	}
+
+	startCol = 0
+	endCol = lineLen
+	if row == sel.Start.Row {
+		startCol = sel.Start.Col
+	}
+	if row == sel.End.Row {
+		endCol = sel.End.Col
+	}
+	if startCol < 0 {
+		startCol = 0
+	}
+	if endCol < 0 {
+		endCol = 0
+	}
+	if startCol > lineLen {
+		startCol = lineLen
+	}
+	if endCol > lineLen {
+		endCol = lineLen
+	}
+	if startCol > endCol {
+		startCol, endCol = endCol, startCol
+	}
+	if startCol == endCol {
+		return 0, 0, false
+	}
+	return startCol, endCol, true
+}
+
+func rawLinesFromBufferText(text string) []string {
+	lines := strings.Split(text, "\n")
+	if len(lines) == 0 {
+		return []string{""}
+	}
+	return lines
 }

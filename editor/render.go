@@ -12,10 +12,7 @@ func (m Model) renderContent() string {
 		return ""
 	}
 
-	lines := strings.Split(m.buf.Text(), "\n")
-	if len(lines) == 0 {
-		lines = []string{""}
-	}
+	lines := rawLinesFromBufferText(m.buf.Text())
 
 	cursor := m.buf.Cursor()
 	sel, selOK := m.buf.Selection()
@@ -38,7 +35,9 @@ func (m Model) renderContent() string {
 			sb.WriteString(m.cfg.Style.Gutter.Render(" "))
 		}
 
-		sb.WriteString(renderLine(m.cfg.Style, line, row, cursor, m.focused, sel, selOK))
+		vt := m.virtualTextForRow(row, line)
+		vl := BuildVisualLine(line, vt, m.cfg.TabWidth)
+		sb.WriteString(renderVisualLine(m.cfg.Style, vl, row, cursor, m.focused, sel, selOK))
 
 		out = append(out, sb.String())
 	}
@@ -46,78 +45,77 @@ func (m Model) renderContent() string {
 	return strings.Join(out, "\n")
 }
 
-func renderLine(st Style, line string, row int, cursor buffer.Pos, focused bool, sel buffer.Range, selOK bool) string {
-	runes := []rune(line)
+func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focused bool, sel buffer.Range, selOK bool) string {
+	rawLen := vl.RawLen
+
 	cursorCol := cursor.Col
-	if row != cursor.Row || !focused {
+	hasCursor := row == cursor.Row && focused
+	if !hasCursor {
 		cursorCol = -1
 	} else {
-		if cursorCol < 0 {
-			cursorCol = 0
+		cursorCol = clampInt(cursorCol, 0, rawLen)
+	}
+
+	selStartCol, selEndCol, hasSel := selectionColsForRow(sel, selOK, row, rawLen)
+
+	cursorTokenIdx := -1
+	if hasCursor && cursorCol >= 0 && cursorCol < rawLen {
+		for i, tok := range vl.Tokens {
+			if tok.Kind != VisualTokenDoc {
+				continue
+			}
+			if cursorCol >= tok.DocStartCol && cursorCol < tok.DocEndCol {
+				cursorTokenIdx = i
+				break
+			}
 		}
-		if cursorCol > len(runes) {
-			cursorCol = len(runes)
+		if cursorTokenIdx == -1 {
+			// Cursor is inside a deleted range; snap to the next visible doc-backed token.
+			targetCell := vl.VisualCellForDocCol(cursorCol)
+			for i, tok := range vl.Tokens {
+				if tok.Kind == VisualTokenDoc && tok.StartCell == targetCell {
+					cursorTokenIdx = i
+					break
+				}
+			}
 		}
 	}
 
-	selStartCol, selEndCol := 0, 0
-	if selOK && row >= sel.Start.Row && row <= sel.End.Row {
-		selStartCol = 0
-		selEndCol = len(runes)
-		if row == sel.Start.Row {
-			selStartCol = sel.Start.Col
-		}
-		if row == sel.End.Row {
-			selEndCol = sel.End.Col
-		}
-		if selStartCol < 0 {
-			selStartCol = 0
-		}
-		if selEndCol < 0 {
-			selEndCol = 0
-		}
-		if selStartCol > len(runes) {
-			selStartCol = len(runes)
-		}
-		if selEndCol > len(runes) {
-			selEndCol = len(runes)
-		}
-		if selStartCol > selEndCol {
-			selStartCol, selEndCol = selEndCol, selStartCol
-		}
-		if selStartCol == selEndCol {
-			selOK = false
+	// Cursor at EOL is rendered as a 1-cell placeholder space.
+	renderEOLCursor := hasCursor && cursorCol == rawLen
+	eolInsIdx := len(vl.Tokens)
+	if renderEOLCursor {
+		for i, tok := range vl.Tokens {
+			if tok.Kind == VisualTokenVirtual && tok.DocStartCol == rawLen {
+				eolInsIdx = i
+				break
+			}
 		}
 	}
 
 	var sb strings.Builder
-	i := 0
-	for i < len(runes) {
-		if cursorCol == i {
-			sb.WriteString(st.Cursor.Render(string(runes[i])))
-			i++
-			continue
+	for i, tok := range vl.Tokens {
+		if renderEOLCursor && i == eolInsIdx {
+			sb.WriteString(st.Cursor.Render(" "))
 		}
 
-		selected := selOK && i >= selStartCol && i < selEndCol
-		j := i + 1
-		for j < len(runes) && j != cursorCol {
-			nextSelected := selOK && j >= selStartCol && j < selEndCol
-			if nextSelected != selected {
-				break
+		switch tok.Kind {
+		case VisualTokenVirtual:
+			sb.WriteString(st.Text.Render(tok.Text))
+		case VisualTokenDoc:
+			selected := hasSel && tok.DocStartCol < selEndCol && tok.DocEndCol > selStartCol
+			if hasCursor && i == cursorTokenIdx {
+				sb.WriteString(st.Cursor.Render(tok.Text))
+			} else if selected {
+				sb.WriteString(st.Selection.Render(tok.Text))
+			} else {
+				sb.WriteString(st.Text.Render(tok.Text))
 			}
-			j++
+		default:
+			sb.WriteString(st.Text.Render(tok.Text))
 		}
-
-		chunk := string(runes[i:j])
-		if selected {
-			sb.WriteString(st.Selection.Render(chunk))
-		} else {
-			sb.WriteString(st.Text.Render(chunk))
-		}
-		i = j
 	}
-	if cursorCol == len(runes) {
+	if renderEOLCursor && eolInsIdx == len(vl.Tokens) {
 		sb.WriteString(st.Cursor.Render(" "))
 	}
 	return sb.String()

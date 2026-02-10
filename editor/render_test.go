@@ -171,3 +171,41 @@ func TestRender_Selection_FullLineSelection(t *testing.T) {
 		t.Fatalf("unexpected full-line selection rendering:\n got: %q\nwant: %q", got, want)
 	}
 }
+
+func TestRender_Selection_DeletedRangesDoNotRenderHighlight(t *testing.T) {
+	r := lipgloss.NewRenderer(io.Discard)
+	r.SetColorProfile(termenv.TrueColor)
+	r.SetHasDarkBackground(true)
+
+	st := Style{
+		Text:      r.NewStyle(),
+		Selection: r.NewStyle().Underline(true),
+	}
+
+	m := New(Config{
+		Text:  "**a**",
+		Style: st,
+		VirtualTextProvider: func(ctx VirtualTextContext) VirtualText {
+			// Hide markdown markers: "**a**" -> "a"
+			return VirtualText{
+				Deletions: []VirtualDeletion{
+					{StartCol: 0, EndCol: 2},
+					{StartCol: 3, EndCol: 5},
+				},
+			}
+		},
+	})
+	m = m.Blur()
+
+	// Select the entire raw line; only the visible doc-backed cell should be highlighted.
+	m.buf.SetSelection(buffer.Range{
+		Start: buffer.Pos{Row: 0, Col: 0},
+		End:   buffer.Pos{Row: 0, Col: 5},
+	})
+
+	got := m.renderContent()
+	want := st.Selection.Render("a")
+	if got != want {
+		t.Fatalf("unexpected selection rendering with deletions:\n got: %q\nwant: %q", got, want)
+	}
+}

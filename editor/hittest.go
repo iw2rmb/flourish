@@ -2,7 +2,6 @@ package editor
 
 import (
 	"strconv"
-	"strings"
 
 	"github.com/iw2rmb/flouris/buffer"
 )
@@ -28,7 +27,6 @@ func (m Model) gutterWidth(lineCount int) int {
 // (0,0) is the top-left of the visible content region.
 //
 // v0 mapping rules:
-// - runes are treated as 1 cell wide
 // - gutter clicks map to col 0
 // - x/y are clamped into document bounds
 func (m Model) screenToDocPos(x, y int) buffer.Pos {
@@ -36,10 +34,7 @@ func (m Model) screenToDocPos(x, y int) buffer.Pos {
 		return buffer.Pos{}
 	}
 
-	lines := strings.Split(m.buf.Text(), "\n")
-	if len(lines) == 0 {
-		lines = []string{""}
-	}
+	lines := rawLinesFromBufferText(m.buf.Text())
 
 	row := m.viewport.YOffset + y
 	if row < 0 {
@@ -52,16 +47,19 @@ func (m Model) screenToDocPos(x, y int) buffer.Pos {
 	if x < 0 {
 		x = 0
 	}
-	col := x - m.gutterWidth(len(lines))
-	if col < 0 {
-		col = 0
+	gw := m.gutterWidth(len(lines))
+	if x < gw {
+		return buffer.Pos{Row: row, Col: 0}
+	}
+	visualX := x - gw
+	if visualX < 0 {
+		visualX = 0
 	}
 
-	runes := []rune(lines[row])
-	if col > len(runes) {
-		col = len(runes)
-	}
+	rawLine := lines[row]
+	vt := m.virtualTextForRow(row, rawLine)
+	vl := BuildVisualLine(rawLine, vt, m.cfg.TabWidth)
+	col := vl.DocColForVisualCell(visualX)
 
 	return buffer.Pos{Row: row, Col: col}
 }
-
