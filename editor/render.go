@@ -7,7 +7,7 @@ import (
 	"github.com/iw2rmb/flouris/buffer"
 )
 
-func (m Model) renderContent() string {
+func (m *Model) renderContent() string {
 	if m.buf == nil {
 		return ""
 	}
@@ -22,6 +22,25 @@ func (m Model) renderContent() string {
 	}
 
 	out := make([]string, 0, len(lines))
+
+	highlightStartRow, highlightEndRow := 0, 0
+	if m.cfg.Highlighter != nil {
+		h := m.viewport.Height - m.viewport.Style.GetVerticalFrameSize()
+		if h > 0 {
+			highlightStartRow = m.viewport.YOffset
+			if highlightStartRow < 0 {
+				highlightStartRow = 0
+			}
+			if highlightStartRow > len(lines) {
+				highlightStartRow = len(lines)
+			}
+			highlightEndRow = highlightStartRow + h
+			if highlightEndRow > len(lines) {
+				highlightEndRow = len(lines)
+			}
+		}
+	}
+
 	for row, line := range lines {
 		var sb strings.Builder
 
@@ -36,8 +55,41 @@ func (m Model) renderContent() string {
 		}
 
 		vt := m.virtualTextForRow(row, line)
+		vt = m.virtualTextWithGhost(row, line, vt)
+
+		var highlights []HighlightSpan
+		if m.cfg.Highlighter != nil && row >= highlightStartRow && row < highlightEndRow {
+			visible, rawToVisible := visibleTextAfterDeletions(line, vt)
+			visLen := len([]rune(visible))
+
+			hasCursor := cursor.Row == row
+			cursorCol := -1
+			rawCursorCol := -1
+			if hasCursor {
+				rawLen := len([]rune(line))
+				rawCursorCol = clampInt(cursor.Col, 0, rawLen)
+				if rawCursorCol >= 0 && rawCursorCol < len(rawToVisible) {
+					cursorCol = clampInt(rawToVisible[rawCursorCol], 0, visLen)
+				} else {
+					cursorCol = visLen
+				}
+			}
+
+			spans, err := m.cfg.Highlighter.HighlightLine(LineContext{
+				Row:          row,
+				RawText:      line,
+				Text:         visible,
+				CursorCol:    cursorCol,
+				RawCursorCol: rawCursorCol,
+				HasCursor:    hasCursor,
+			})
+			if err == nil {
+				highlights = normalizeHighlightSpans(spans, visLen)
+			}
+		}
+
 		vl := BuildVisualLine(line, vt, m.cfg.TabWidth)
-		sb.WriteString(renderVisualLine(m.cfg.Style, vl, row, cursor, m.focused, sel, selOK))
+		sb.WriteString(renderVisualLine(m.cfg.Style, vl, row, cursor, m.focused, sel, selOK, highlights))
 
 		out = append(out, sb.String())
 	}
@@ -45,7 +97,7 @@ func (m Model) renderContent() string {
 	return strings.Join(out, "\n")
 }
 
-func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focused bool, sel buffer.Range, selOK bool) string {
+func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focused bool, sel buffer.Range, selOK bool, highlights []HighlightSpan) string {
 	rawLen := vl.RawLen
 
 	cursorCol := cursor.Col
@@ -101,7 +153,14 @@ func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focus
 
 		switch tok.Kind {
 		case VisualTokenVirtual:
-			sb.WriteString(st.Text.Render(tok.Text))
+			style := st.Text
+			switch tok.Role {
+			case VirtualRoleGhost:
+				style = st.Ghost.Inherit(st.Text)
+			case VirtualRoleOverlay:
+				style = st.VirtualOverlay.Inherit(st.Text)
+			}
+			sb.WriteString(style.Render(tok.Text))
 		case VisualTokenDoc:
 			selected := hasSel && tok.DocStartCol < selEndCol && tok.DocEndCol > selStartCol
 			if hasCursor && i == cursorTokenIdx {
@@ -109,7 +168,14 @@ func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focus
 			} else if selected {
 				sb.WriteString(st.Selection.Render(tok.Text))
 			} else {
-				sb.WriteString(st.Text.Render(tok.Text))
+				style := st.Text
+				for _, sp := range highlights {
+					if tok.VisibleStartCol < sp.EndCol && tok.VisibleEndCol > sp.StartCol {
+						style = sp.Style.Inherit(st.Text)
+						break
+					}
+				}
+				sb.WriteString(style.Render(tok.Text))
 			}
 		default:
 			sb.WriteString(st.Text.Render(tok.Text))

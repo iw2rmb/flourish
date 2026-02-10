@@ -23,6 +23,22 @@ func (m Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	}
 
 	km := m.cfg.KeyMap
+	ga := normalizeGhostAccept(m.cfg.GhostAccept)
+
+	if m.cfg.GhostProvider != nil && !m.cfg.ReadOnly {
+		if ga.AcceptTab && msg.Type == tea.KeyTab {
+			if ghost, ok := (&m).ghostForCursor(); ok && len(ghost.Edits) > 0 {
+				m.buf.Apply(ghost.Edits...)
+				return m, nil
+			}
+		}
+		if ga.AcceptRight && key.Matches(msg, km.Right) {
+			if ghost, ok := (&m).ghostForCursor(); ok && len(ghost.Edits) > 0 {
+				m.buf.Apply(ghost.Edits...)
+				return m, nil
+			}
+		}
+	}
 
 	switch {
 	case key.Matches(msg, km.Left):

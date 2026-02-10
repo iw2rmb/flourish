@@ -6,6 +6,8 @@ package editor
 type Config struct {
 	// Initial text for the internal buffer.
 	Text string
+	// Optional host metadata used by hooks for caching.
+	DocID string
 
 	// Rendering options.
 	ShowLineNums bool
@@ -30,4 +32,17 @@ type Config struct {
 
 	// Forwarded to buffer.Options.
 	HistoryLimit int
+
+	// Ghost suggestion (EOL-only). When nil, ghost is disabled.
+	GhostProvider GhostProvider
+	// GhostAccept configures accept keys. Zero value defaults to Tab+Right.
+	GhostAccept GhostAccept
+
+	// Highlighter optionally provides per-line highlight spans over the visible
+	// text after virtual deletions.
+	Highlighter Highlighter
+
+	// OnChange, if set, fires after every successful buffer mutation triggered
+	// via Update. It is not fired for host-driven buffer changes.
+	OnChange func(ChangeEvent)
 }

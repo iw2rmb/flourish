@@ -25,6 +25,11 @@ type VisualToken struct {
 	// CellWidth is the number of terminal cells this token occupies.
 	CellWidth int
 
+	// VisibleStartCol/VisibleEndCol define the rune span in the visible line text
+	// (after deletions) that this token corresponds to. Meaningful only for doc tokens.
+	VisibleStartCol int
+	VisibleEndCol   int
+
 	// DocStartCol/DocEndCol define the raw document rune span this token corresponds to.
 	// For virtual tokens, DocStartCol == DocEndCol == AnchorCol.
 	DocStartCol int
@@ -82,6 +87,8 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 	type docGrapheme struct {
 		rawStart int
 		rawEnd   int
+		visStart int
+		visEnd   int
 		text     string
 		width    int // computed later (tabs depend on visual col)
 	}
@@ -100,6 +107,8 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 			docGraphemes = append(docGraphemes, docGrapheme{
 				rawStart: rawStart,
 				rawEnd:   rawEnd,
+				visStart: visRuneIdx,
+				visEnd:   visRuneIdx + len(gr),
 				text:     g.Str(),
 			})
 			visRuneIdx += len(gr)
@@ -113,7 +122,7 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 	var visualCellToDoc []int
 	visualCol := 0
 
-	appendToken := func(kind VisualTokenKind, text string, cellWidth int, docStart, docEnd int, role VirtualRole) {
+	appendToken := func(kind VisualTokenKind, text string, cellWidth int, visibleStart, visibleEnd int, docStart, docEnd int, role VirtualRole) {
 		if cellWidth < 1 {
 			cellWidth = 1
 		}
@@ -134,6 +143,8 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 			Text:        text,
 			StartCell:   startCell,
 			CellWidth:   cellWidth,
+			VisibleStartCol: visibleStart,
+			VisibleEndCol:   visibleEnd,
 			DocStartCol: docStart,
 			DocEndCol:   docEnd,
 			Role:        role,
@@ -148,13 +159,13 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 			width := g.Width()
 			if text == "\t" {
 				adv := tabAdvance(visualCol, tabWidth)
-				appendToken(VisualTokenVirtual, strings.Repeat(" ", adv), adv, in.Col, in.Col, in.Role)
+				appendToken(VisualTokenVirtual, strings.Repeat(" ", adv), adv, -1, -1, in.Col, in.Col, in.Role)
 				continue
 			}
 			if width < 1 {
 				width = 1
 			}
-			appendToken(VisualTokenVirtual, text, width, in.Col, in.Col, in.Role)
+			appendToken(VisualTokenVirtual, text, width, -1, -1, in.Col, in.Col, in.Role)
 		}
 	}
 
@@ -168,14 +179,14 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 		text := dg.text
 		if text == "\t" {
 			adv := tabAdvance(visualCol, tabWidth)
-			appendToken(VisualTokenDoc, strings.Repeat(" ", adv), adv, dg.rawStart, dg.rawEnd, 0)
+			appendToken(VisualTokenDoc, strings.Repeat(" ", adv), adv, dg.visStart, dg.visEnd, dg.rawStart, dg.rawEnd, 0)
 			continue
 		}
 		width := uniseg.StringWidth(text)
 		if width < 1 {
 			width = 1
 		}
-		appendToken(VisualTokenDoc, text, width, dg.rawStart, dg.rawEnd, 0)
+		appendToken(VisualTokenDoc, text, width, dg.visStart, dg.visEnd, dg.rawStart, dg.rawEnd, 0)
 	}
 
 	// Emit any remaining insertions (including EOL insertions).

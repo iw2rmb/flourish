@@ -24,6 +24,8 @@ type Model struct {
 	lastBufVersion uint64
 	lastCursor     buffer.Pos
 
+	ghostCache ghostCache
+
 	mouseDragging bool
 	mouseAnchor   buffer.Pos
 }
@@ -49,6 +51,23 @@ func New(cfg Config) Model {
 	m.lastCursor = m.buf.Cursor()
 	m.rebuildContent()
 	return m
+}
+
+func (m *Model) ghostForCursor() (Ghost, bool) {
+	if m.buf == nil || m.cfg.GhostProvider == nil || !m.focused {
+		return Ghost{}, false
+	}
+
+	cur := m.buf.Cursor()
+	lines := rawLinesFromBufferText(m.buf.Text())
+	if cur.Row < 0 || cur.Row >= len(lines) {
+		return Ghost{}, false
+	}
+
+	lineText := lines[cur.Row]
+	rawLen := len([]rune(lineText))
+	col := clampInt(cur.Col, 0, rawLen)
+	return m.ghostFor(cur.Row, col, lineText, rawLen)
 }
 
 func (m Model) Buffer() *buffer.Buffer { return m.buf }
@@ -94,15 +113,35 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		return m.SetSize(msg.Width, msg.Height), nil
 	case tea.MouseMsg:
+		beforeVer := uint64(0)
+		if m.buf != nil {
+			beforeVer = m.buf.Version()
+		}
+		beforeYOffset := m.viewport.YOffset
+
 		var cmd tea.Cmd
 		m, cmd = m.updateMouse(msg)
 		// Rebuild content in case the host mutated the buffer outside of the editor.
 		m.syncFromBuffer()
+		if m.cfg.Highlighter != nil && m.viewport.YOffset != beforeYOffset {
+			m.rebuildContent()
+		}
+		if m.cfg.OnChange != nil && m.buf != nil && m.buf.Version() != beforeVer {
+			m.cfg.OnChange(buildChangeEvent(m.buf))
+		}
 		// Don't force-follow cursor here; allow manual scrolling via mouse wheel.
 		return m, cmd
 	case tea.KeyMsg:
+		beforeVer := uint64(0)
+		if m.buf != nil {
+			beforeVer = m.buf.Version()
+		}
+
 		m, cmd := m.updateKey(msg)
 		cursorChanged := m.syncFromBuffer()
+		if m.cfg.OnChange != nil && m.buf != nil && m.buf.Version() != beforeVer {
+			m.cfg.OnChange(buildChangeEvent(m.buf))
+		}
 		if cursorChanged {
 			m.followCursorWithForce(false)
 		}
@@ -148,18 +187,22 @@ func (m *Model) followCursorWithForce(force bool) {
 		return
 	}
 
-	y := m.viewport.YOffset
-	if cur.Row < y {
-		m.viewport.SetYOffset(cur.Row)
-		return
+	beforeYOffset := m.viewport.YOffset
+	newYOffset := beforeYOffset
+	if cur.Row < beforeYOffset {
+		newYOffset = cur.Row
+	} else if cur.Row >= beforeYOffset+h {
+		newYOffset = cur.Row - h + 1
 	}
-	if cur.Row >= y+h {
-		m.viewport.SetYOffset(cur.Row - h + 1)
-		return
+	if newYOffset != beforeYOffset {
+		m.viewport.SetYOffset(newYOffset)
+		if m.cfg.Highlighter != nil {
+			m.rebuildContent()
+		}
 	}
 }
 
-func (m Model) virtualTextForRow(row int, rawLine string) VirtualText {
+func (m *Model) virtualTextForRow(row int, rawLine string) VirtualText {
 	if m.buf == nil || m.cfg.VirtualTextProvider == nil {
 		return VirtualText{}
 	}
@@ -191,6 +234,7 @@ func (m Model) virtualTextForRow(row int, rawLine string) VirtualText {
 		SelectionEndCol:   selEndCol,
 		HasSelection:      hasSel,
 
+		DocID:      m.cfg.DocID,
 		DocVersion: m.buf.Version(),
 	}
 	vt := m.cfg.VirtualTextProvider(ctx)

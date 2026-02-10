@@ -11,8 +11,9 @@ Roadmap:
 - Phase 6: `roadmap/phase-6-editor-keys-selection-scroll.md`
 - Phase 7: `roadmap/phase-7-editor-mouse-clipboard.md`
 - Phase 8: `roadmap/phase-8-editor-visual-line-mapping.md`
+- Phase 9: `roadmap/phase-9-editor-ghost-highlight-events.md`
 
-## What exists (Phase 8)
+## What exists (Phase 9)
 
 The `editor` package provides a Bubble Tea component:
 - `editor.New(editor.Config)` constructs a value-type `editor.Model` that owns an internal `*buffer.Buffer`.
@@ -29,6 +30,8 @@ The `editor` package provides a Bubble Tea component:
   - selection styling (`Style.Selection`) for the active selection range (half-open `[Start, End)`)
   - cursor styling on the active line when focused (`Style.Cursor`)
   - virtual text transforms via `Config.VirtualTextProvider` (virtual deletions/insertions)
+  - EOL-only ghost suggestions via `Config.GhostProvider` (rendered with `Style.Ghost`, accepted via `Config.GhostAccept`)
+  - optional per-line highlighting via `Config.Highlighter` (spans over visible doc text after deletions)
 
 Rendering uses `bubbles/viewport` for vertical scrolling and width/height clipping.
 
@@ -37,14 +40,27 @@ Rendering uses `bubbles/viewport` for vertical scrolling and width/height clippi
 - `Config.VirtualTextProvider` can return per-line view-only transforms:
   - virtual deletions hide raw rune ranges (they do not render and are skipped by hit-testing)
   - virtual insertions add rendered cells anchored at a raw document column (clicks inside insertions map to the anchor column)
+- `Config.DocID` (optional) is forwarded into hook contexts for caching (`VirtualTextContext.DocID`, `GhostContext.DocID`).
 - Cursor and selection remain document-based; selection styling applies only to visible doc-backed cells.
 - Tabs expand by `Config.TabWidth` (default: 4) and all horizontal mapping is in terminal-cell coordinates (grapheme-aware).
+- Virtual insertions render using their role:
+  - `VirtualRoleGhost` uses `Style.Ghost`
+  - `VirtualRoleOverlay` uses `Style.VirtualOverlay`
 
 ## Key handling
 
 - Default keymap: `DefaultKeyMap()` (arrow movement, shift+arrows selection, ctrl/alt word movement fallbacks, backspace/delete/enter, undo/redo, copy/cut/paste).
 - `Config.ReadOnly=true` ignores buffer mutations but still allows movement and selection.
 - Clipboard integration is optional via `Config.Clipboard`. If nil, copy/cut/paste are disabled.
+- Ghost acceptance:
+  - at EOL only
+  - applies `Ghost.Edits` via `buffer.Apply(...)`
+  - default accept keys: Tab and Right (configurable via `Config.GhostAccept`)
+
+## Change events
+
+- `Config.OnChange` fires after every buffer mutation triggered via `Update`.
+- Event payload includes the full buffer text (v0), cursor position, and selection state.
 
 ## Scrolling behavior
 
