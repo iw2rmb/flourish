@@ -1,0 +1,11 @@
+.DS_Store
+
+# Go build artifacts
+*.exe
+*.test
+*.out
+
+# Editors / tools
+.idea/
+.vscode/
+
