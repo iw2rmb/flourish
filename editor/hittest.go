@@ -29,19 +29,21 @@ func (m Model) gutterWidth(lineCount int) int {
 // v0 mapping rules:
 // - gutter clicks map to col 0
 // - x/y are clamped into document bounds
-func (m Model) screenToDocPos(x, y int) buffer.Pos {
+func (m *Model) screenToDocPos(x, y int) buffer.Pos {
 	if m.buf == nil {
 		return buffer.Pos{}
 	}
 
 	lines := rawLinesFromBufferText(m.buf.Text())
-
-	row := m.viewport.YOffset + y
-	if row < 0 {
-		row = 0
+	layout := m.ensureLayoutCache(lines)
+	if len(layout.rows) == 0 {
+		return buffer.Pos{}
 	}
-	if row >= len(lines) {
-		row = len(lines) - 1
+
+	visualRow := layout.clampVisualRow(m.viewport.YOffset + y)
+	row, line, seg, _, ok := layout.lineAndSegmentAt(visualRow)
+	if !ok {
+		return buffer.Pos{}
 	}
 
 	if x < 0 {
@@ -59,10 +61,23 @@ func (m Model) screenToDocPos(x, y int) buffer.Pos {
 		visualX += m.xOffset
 	}
 
-	rawLine := lines[row]
-	vt := m.virtualTextForRow(row, rawLine)
-	vl := BuildVisualLine(rawLine, vt, m.cfg.TabWidth)
-	col := vl.DocColForVisualCell(visualX)
+	if m.cfg.WrapMode != WrapNone {
+		if visualX <= 0 {
+			return buffer.Pos{Row: row, Col: seg.StartCol}
+		}
+		if visualX >= seg.Cells {
+			return buffer.Pos{Row: row, Col: seg.EndCol}
+		}
+		targetCell := seg.startCell + visualX
+		if targetCell >= seg.endCell {
+			return buffer.Pos{Row: row, Col: seg.EndCol}
+		}
+		col := line.visual.DocColForVisualCell(targetCell)
+		col = clampInt(col, seg.StartCol, seg.EndCol)
+		return buffer.Pos{Row: row, Col: col}
+	}
+
+	col := line.visual.DocColForVisualCell(visualX)
 
 	return buffer.Pos{Row: row, Col: col}
 }

@@ -107,3 +107,27 @@ func TestHitTest_HorizontalScroll_AddsXOffset(t *testing.T) {
 		t.Fatalf("click x=3 with xOffset=2: got %v, want %v", got, buffer.Pos{Row: 0, Col: 5})
 	}
 }
+
+func TestHitTest_SoftWrap_UsesWrappedSegmentsAndViewportYOffset(t *testing.T) {
+	m := New(Config{
+		Text:     "abcdef\nghijkl",
+		WrapMode: WrapGrapheme,
+	})
+	m = m.SetSize(3, 2)
+
+	// First logical line wraps as: "abc" + "def".
+	if got := m.screenToDocPos(1, 1); got != (buffer.Pos{Row: 0, Col: 4}) {
+		t.Fatalf("wrapped second segment x=1,y=1: got %v, want %v", got, buffer.Pos{Row: 0, Col: 4})
+	}
+
+	// Click past end-of-segment should map to segment end.
+	if got := m.screenToDocPos(99, 1); got != (buffer.Pos{Row: 0, Col: 6}) {
+		t.Fatalf("past wrapped segment end x=99,y=1: got %v, want %v", got, buffer.Pos{Row: 0, Col: 6})
+	}
+
+	// Scroll by visual rows: Y offset 2 starts at line 1, first wrapped segment.
+	m.viewport.YOffset = 2
+	if got := m.screenToDocPos(1, 0); got != (buffer.Pos{Row: 1, Col: 1}) {
+		t.Fatalf("wrapped yoffset mapping x=1,y=0,yoffset=2: got %v, want %v", got, buffer.Pos{Row: 1, Col: 1})
+	}
+}

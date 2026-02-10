@@ -13,8 +13,9 @@ Roadmap:
 - Phase 8: `roadmap/phase-8-editor-visual-line-mapping.md`
 - Phase 9: `roadmap/phase-9-editor-ghost-highlight-events.md`
 - Phase 10: `roadmap/phase-10-editor-horizontal-scrolling.md`
+- Phase 11: `roadmap/phase-11-editor-soft-wrapping.md`
 
-## What exists (Phase 10)
+## What exists (Phase 11)
 
 The `editor` package provides a Bubble Tea component:
 - `editor.New(editor.Config)` constructs a value-type `editor.Model` that owns an internal `*buffer.Buffer`.
@@ -26,8 +27,10 @@ The `editor` package provides a Bubble Tea component:
   - mouse wheel scrolling (via `bubbles/viewport`)
   - mouse click/shift+click/drag selection
 - `View()` renders:
-  - logical buffer lines (soft wrap not implemented yet)
+  - logical buffer lines rendered as visual rows from a wrap layout cache
   - `WrapNone` horizontal scrolling for long lines (internal `xOffset` in terminal cells)
+  - `WrapWord` soft wrapping with word-boundary preference and punctuation fallback heuristic
+  - `WrapGrapheme` soft wrapping at grapheme boundaries
   - optional line numbers gutter (`Config.ShowLineNums`)
   - selection styling (`Style.Selection`) for the active selection range (half-open `[Start, End)`)
   - cursor styling on the active line when focused (`Style.Cursor`)
@@ -40,9 +43,12 @@ Rendering uses `bubbles/viewport` for vertical scrolling and width/height clippi
 ## Wrapping + horizontal scrolling
 
 - `Config.WrapMode` exists (default: `WrapNone`).
+- Layout is computed as wrapped segments (`StartCol`, `EndCol`, `Cells`) per logical line and flattened into visual rows.
+- Grapheme boundaries and widths are Unicode-aware (`rivo/uniseg`) and measured in terminal cells (`go-runewidth`); tabs use tab-stop expansion by `Config.TabWidth`.
 - For `WrapNone`, the editor maintains an internal horizontal offset `xOffset` (cells) so the cursor stays visible on long lines.
 - Horizontal scrolling clips each logical line by cells to `[xOffset:xOffset+contentWidth)`, where `contentWidth = viewportWidth - gutterWidth`.
 - Horizontal scrolling is updated on key-driven cursor moves and edits; it is not adjusted while mouse-dragging a selection.
+- For `WrapWord` and `WrapGrapheme`, `xOffset` is not used; viewport Y offset and cursor-follow operate on wrapped visual rows.
 
 ## Virtual text + visual mapping
 
@@ -76,6 +82,7 @@ Rendering uses `bubbles/viewport` for vertical scrolling and width/height clippi
 - The viewport follows the cursor after key-driven movement/edits to keep the cursor row visible.
 - Manual mouse wheel scrolling is preserved (cursor-follow does not override wheel scrolling).
 - Under `WrapNone`, horizontal scrolling follows the cursor to keep its visual cell column visible.
+- Under `WrapWord`/`WrapGrapheme`, vertical follow maps cursor doc position to wrapped visual row/column.
 
 ## Mouse handling
 
@@ -85,6 +92,10 @@ Hit-testing maps viewport-local mouse coordinates `(X,Y)` to document positions:
 - Clicking in the line number gutter maps to column 0 (start of line).
 - Positions are clamped into document bounds.
 - Under `WrapNone`, hit-testing accounts for the horizontal scroll offset (`xOffset`).
+- Under soft-wrap modes, hit-testing uses the wrap layout cache:
+  - `(x,y)` maps to logical line + wrapped segment + doc column
+  - click past segment end maps to segment end column
+  - viewport `YOffset` is interpreted in wrapped visual rows
 
 Behavior:
 - click: set cursor and clear selection

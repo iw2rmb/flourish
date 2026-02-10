@@ -286,3 +286,34 @@ func TestUpdate_HorizontalScroll_UsesCellCoordinates_Tab(t *testing.T) {
 		t.Fatalf("xOffset at b (cell 4), width 3: got %d, want %d", got, 2)
 	}
 }
+
+func TestUpdate_SoftWrap_ViewportFollowsCursorByVisualRow(t *testing.T) {
+	m := New(Config{
+		Text:     "0123456789",
+		WrapMode: WrapGrapheme,
+	})
+	m = m.SetSize(3, 2)
+
+	for i := 0; i < 6; i++ {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	}
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, Col: 6}) {
+		t.Fatalf("cursor after 6 rights: got %v, want %v", got, buffer.Pos{Row: 0, Col: 6})
+	}
+	if got := m.viewport.YOffset; got != 1 {
+		t.Fatalf("yOffset after entering 3rd visual row: got %d, want %d", got, 1)
+	}
+	if got := m.xOffset; got != 0 {
+		t.Fatalf("xOffset under soft wrap must stay 0: got %d, want %d", got, 0)
+	}
+
+	for i := 0; i < 4; i++ {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	}
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, Col: 2}) {
+		t.Fatalf("cursor after moving left: got %v, want %v", got, buffer.Pos{Row: 0, Col: 2})
+	}
+	if got := m.viewport.YOffset; got != 0 {
+		t.Fatalf("yOffset after returning to first visual row: got %d, want %d", got, 0)
+	}
+}

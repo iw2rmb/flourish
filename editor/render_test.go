@@ -247,3 +247,35 @@ func TestRender_HorizontalScroll_ClipsByXOffset_TabAndWideGrapheme(t *testing.T)
 		t.Fatalf("wide grapheme clip xOffset=2: got %q, want %q", got, " b")
 	}
 }
+
+func TestRender_SoftWrap_GraphemeAndLineNumbers(t *testing.T) {
+	st := Style{
+		Text:   lipgloss.NewStyle(),
+		Cursor: lipgloss.NewStyle().Reverse(true),
+	}
+
+	m := New(Config{
+		Text:     "abcdef",
+		WrapMode: WrapGrapheme,
+		Style:    st,
+	})
+	m = m.Blur()
+	m = m.SetSize(3, 2)
+
+	if got := stripANSI(m.renderContent()); got != "abc\ndef" {
+		t.Fatalf("wrapped content: got %q, want %q", got, "abc\ndef")
+	}
+
+	withNums := New(Config{
+		Text:         "abcdef",
+		WrapMode:     WrapGrapheme,
+		ShowLineNums: true,
+		Style:        st,
+	})
+	withNums = withNums.Blur()
+	withNums = withNums.SetSize(5, 2) // gutter 2 + content 3
+
+	if got := stripANSI(withNums.renderContent()); got != "1 abc\n  def" {
+		t.Fatalf("wrapped content with line nums: got %q, want %q", got, "1 abc\n  def")
+	}
+}

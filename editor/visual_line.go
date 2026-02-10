@@ -2,8 +2,6 @@ package editor
 
 import (
 	"strings"
-
-	"github.com/rivo/uniseg"
 )
 
 type VisualTokenKind int
@@ -95,23 +93,16 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 
 	docGraphemes := make([]docGrapheme, 0, len(visibleRunes))
 	if visibleText != "" {
-		g := uniseg.NewGraphemes(visibleText)
-		visRuneIdx := 0
-		for g.Next() {
-			gr := g.Runes()
-			if len(gr) == 0 {
-				continue
-			}
-			rawStart := visibleRawCols[visRuneIdx]
-			rawEnd := visibleRawCols[visRuneIdx+len(gr)-1] + 1
+		for _, gr := range splitGraphemeBoundaries(visibleText) {
+			rawStart := visibleRawCols[gr.StartCol]
+			rawEnd := visibleRawCols[gr.EndCol-1] + 1
 			docGraphemes = append(docGraphemes, docGrapheme{
 				rawStart: rawStart,
 				rawEnd:   rawEnd,
-				visStart: visRuneIdx,
-				visEnd:   visRuneIdx + len(gr),
-				text:     g.Str(),
+				visStart: gr.StartCol,
+				visEnd:   gr.EndCol,
+				text:     gr.Text,
 			})
-			visRuneIdx += len(gr)
 		}
 	}
 
@@ -139,29 +130,23 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 			visualCellToDoc = append(visualCellToDoc, mapCol)
 		}
 		tokens = append(tokens, VisualToken{
-			Kind:        kind,
-			Text:        text,
-			StartCell:   startCell,
-			CellWidth:   cellWidth,
+			Kind:            kind,
+			Text:            text,
+			StartCell:       startCell,
+			CellWidth:       cellWidth,
 			VisibleStartCol: visibleStart,
 			VisibleEndCol:   visibleEnd,
-			DocStartCol: docStart,
-			DocEndCol:   docEnd,
-			Role:        role,
+			DocStartCol:     docStart,
+			DocEndCol:       docEnd,
+			Role:            role,
 		})
 		visualCol += cellWidth
 	}
 
 	appendInsertion := func(in VirtualInsertion) {
-		g := uniseg.NewGraphemes(in.Text)
-		for g.Next() {
-			text := g.Str()
-			width := g.Width()
-			if text == "\t" {
-				adv := tabAdvance(visualCol, tabWidth)
-				appendToken(VisualTokenVirtual, strings.Repeat(" ", adv), adv, -1, -1, in.Col, in.Col, in.Role)
-				continue
-			}
+		for _, gr := range splitGraphemeBoundaries(in.Text) {
+			text := gr.Text
+			width := graphemeCellWidth(text, visualCol, tabWidth)
 			if width < 1 {
 				width = 1
 			}
@@ -182,7 +167,7 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 			appendToken(VisualTokenDoc, strings.Repeat(" ", adv), adv, dg.visStart, dg.visEnd, dg.rawStart, dg.rawEnd, 0)
 			continue
 		}
-		width := uniseg.StringWidth(text)
+		width := graphemeCellWidth(text, visualCol, tabWidth)
 		if width < 1 {
 			width = 1
 		}

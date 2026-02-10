@@ -31,6 +31,8 @@ type Model struct {
 
 	mouseDragging bool
 	mouseAnchor   buffer.Pos
+
+	layout wrapLayoutCache
 }
 
 func New(cfg Config) Model {
@@ -181,6 +183,7 @@ func (m *Model) syncFromBuffer() (cursorChanged bool, versionChanged bool) {
 }
 
 func (m *Model) rebuildContent() {
+	m.invalidateLayoutCache()
 	m.viewport.SetContent(m.renderContent())
 }
 
@@ -214,15 +217,20 @@ func (m *Model) followCursorWithForce(force bool) {
 	}
 	cur := m.buf.Cursor()
 	lines := rawLinesFromBufferText(m.buf.Text())
+	layout := m.ensureLayoutCache(lines)
 
 	h := m.viewport.Height - m.viewport.Style.GetVerticalFrameSize()
 	beforeYOffset := m.viewport.YOffset
 	newYOffset := beforeYOffset
 	if h > 0 {
-		if cur.Row < beforeYOffset {
-			newYOffset = cur.Row
-		} else if cur.Row >= beforeYOffset+h {
-			newYOffset = cur.Row - h + 1
+		cursorVisualRow := cur.Row
+		if vr, _, ok := layout.cursorVisualPosition(cur); ok {
+			cursorVisualRow = vr
+		}
+		if cursorVisualRow < beforeYOffset {
+			newYOffset = cursorVisualRow
+		} else if cursorVisualRow >= beforeYOffset+h {
+			newYOffset = cursorVisualRow - h + 1
 		}
 		if newYOffset != beforeYOffset {
 			m.viewport.SetYOffset(newYOffset)

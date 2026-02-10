@@ -13,6 +13,7 @@ func (m *Model) renderContent() string {
 	}
 
 	lines := rawLinesFromBufferText(m.buf.Text())
+	layout := m.ensureLayoutCache(lines)
 
 	cursor := m.buf.Cursor()
 	sel, selOK := m.buf.Selection()
@@ -21,86 +22,81 @@ func (m *Model) renderContent() string {
 		digitCount = gutterDigits(len(lines))
 	}
 
-	xOffset := 0
-	contentWidth := 0
-	if m.cfg.WrapMode == WrapNone {
-		contentWidth = m.contentWidth(len(lines))
-		if contentWidth > 0 {
-			xOffset = m.xOffset
-		} else {
-			contentWidth = 0
-		}
-	}
-
-	out := make([]string, 0, len(lines))
-
-	highlightStartRow, highlightEndRow := 0, 0
+	highlightsByLine := make([][]HighlightSpan, len(layout.lines))
 	if m.cfg.Highlighter != nil {
 		h := m.viewport.Height - m.viewport.Style.GetVerticalFrameSize()
 		if h > 0 {
-			highlightStartRow = m.viewport.YOffset
-			if highlightStartRow < 0 {
-				highlightStartRow = 0
+			start := m.viewport.YOffset
+			if start < 0 {
+				start = 0
 			}
-			if highlightStartRow > len(lines) {
-				highlightStartRow = len(lines)
+			if start > len(layout.rows) {
+				start = len(layout.rows)
 			}
-			highlightEndRow = highlightStartRow + h
-			if highlightEndRow > len(lines) {
-				highlightEndRow = len(lines)
+			end := start + h
+			if end > len(layout.rows) {
+				end = len(layout.rows)
+			}
+
+			marked := make([]bool, len(layout.lines))
+			for visualRow := start; visualRow < end; visualRow++ {
+				ref := layout.rows[visualRow]
+				row := ref.logicalRow
+				if row < 0 || row >= len(layout.lines) || marked[row] {
+					continue
+				}
+				marked[row] = true
+				line := layout.lines[row]
+				highlightsByLine[row] = m.highlightForLine(row, line.rawLine, line.vt, cursor)
 			}
 		}
 	}
 
-	for row, line := range lines {
+	out := make([]string, 0, len(layout.rows))
+	maxIntVal := int(^uint(0) >> 1)
+	contentWidth := m.contentWidth(len(lines))
+	leftNoWrap := maxInt(m.xOffset, 0)
+	rightNoWrap := maxIntVal
+	if m.cfg.WrapMode == WrapNone && contentWidth > 0 {
+		rightNoWrap = leftNoWrap + contentWidth
+	}
+
+	for _, ref := range layout.rows {
+		row := ref.logicalRow
+		if row < 0 || row >= len(layout.lines) {
+			continue
+		}
+		line := layout.lines[row]
+		if ref.segmentIndex < 0 || ref.segmentIndex >= len(line.segments) {
+			continue
+		}
+		seg := line.segments[ref.segmentIndex]
+
 		var sb strings.Builder
 
 		if m.cfg.ShowLineNums {
-			num := fmt.Sprintf("%*d", digitCount, row+1)
 			numStyle := m.cfg.Style.LineNum
-			if m.focused && row == cursor.Row {
+			if m.focused && row == cursor.Row && ref.segmentIndex == 0 {
 				numStyle = m.cfg.Style.LineNumActive
+			}
+			num := fmt.Sprintf("%*s", digitCount, "")
+			if ref.segmentIndex == 0 {
+				num = fmt.Sprintf("%*d", digitCount, row+1)
 			}
 			sb.WriteString(numStyle.Render(num))
 			sb.WriteString(m.cfg.Style.Gutter.Render(" "))
 		}
 
-		vt := m.virtualTextForRow(row, line)
-		vt = m.virtualTextWithGhost(row, line, vt)
-
-		var highlights []HighlightSpan
-		if m.cfg.Highlighter != nil && row >= highlightStartRow && row < highlightEndRow {
-			visible, rawToVisible := visibleTextAfterDeletions(line, vt)
-			visLen := len([]rune(visible))
-
-			hasCursor := cursor.Row == row
-			cursorCol := -1
-			rawCursorCol := -1
-			if hasCursor {
-				rawLen := len([]rune(line))
-				rawCursorCol = clampInt(cursor.Col, 0, rawLen)
-				if rawCursorCol >= 0 && rawCursorCol < len(rawToVisible) {
-					cursorCol = clampInt(rawToVisible[rawCursorCol], 0, visLen)
-				} else {
-					cursorCol = visLen
-				}
-			}
-
-			spans, err := m.cfg.Highlighter.HighlightLine(LineContext{
-				Row:          row,
-				RawText:      line,
-				Text:         visible,
-				CursorCol:    cursorCol,
-				RawCursorCol: rawCursorCol,
-				HasCursor:    hasCursor,
-			})
-			if err == nil {
-				highlights = normalizeHighlightSpans(spans, visLen)
+		left := leftNoWrap
+		right := rightNoWrap
+		if m.cfg.WrapMode != WrapNone {
+			left = seg.startCell
+			right = seg.endCell
+			if seg.Cells == 0 {
+				right = left + 1
 			}
 		}
-
-		vl := BuildVisualLine(line, vt, m.cfg.TabWidth)
-		sb.WriteString(renderVisualLine(m.cfg.Style, vl, row, cursor, m.focused, sel, selOK, highlights, xOffset, contentWidth))
+		sb.WriteString(renderVisualLine(m.cfg.Style, line.visual, row, cursor, m.focused, sel, selOK, highlightsByLine[row], left, right))
 
 		out = append(out, sb.String())
 	}
@@ -108,7 +104,42 @@ func (m *Model) renderContent() string {
 	return strings.Join(out, "\n")
 }
 
-func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focused bool, sel buffer.Range, selOK bool, highlights []HighlightSpan, xOffset int, contentWidth int) string {
+func (m *Model) highlightForLine(row int, rawLine string, vt VirtualText, cursor buffer.Pos) []HighlightSpan {
+	if m.cfg.Highlighter == nil {
+		return nil
+	}
+
+	visible, rawToVisible := visibleTextAfterDeletions(rawLine, vt)
+	visLen := len([]rune(visible))
+
+	hasCursor := cursor.Row == row
+	cursorCol := -1
+	rawCursorCol := -1
+	if hasCursor {
+		rawLen := len([]rune(rawLine))
+		rawCursorCol = clampInt(cursor.Col, 0, rawLen)
+		if rawCursorCol >= 0 && rawCursorCol < len(rawToVisible) {
+			cursorCol = clampInt(rawToVisible[rawCursorCol], 0, visLen)
+		} else {
+			cursorCol = visLen
+		}
+	}
+
+	spans, err := m.cfg.Highlighter.HighlightLine(LineContext{
+		Row:          row,
+		RawText:      rawLine,
+		Text:         visible,
+		CursorCol:    cursorCol,
+		RawCursorCol: rawCursorCol,
+		HasCursor:    hasCursor,
+	})
+	if err != nil {
+		return nil
+	}
+	return normalizeHighlightSpans(spans, visLen)
+}
+
+func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focused bool, sel buffer.Range, selOK bool, highlights []HighlightSpan, left, right int) string {
 	rawLen := vl.RawLen
 
 	cursorCol := cursor.Col
@@ -151,11 +182,9 @@ func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focus
 		eolCursorCell = cursorCellForVisualLine(vl, cursorCol)
 	}
 
-	left := 0
-	right := int(^uint(0) >> 1) // MaxInt
-	if contentWidth > 0 {
-		left = maxInt(xOffset, 0)
-		right = left + contentWidth
+	left = maxInt(left, 0)
+	if right < left {
+		right = left
 	}
 
 	isAllSpaces := func(s string) bool {
