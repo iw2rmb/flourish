@@ -10,6 +10,7 @@ Roadmap:
 - Phase 1: `roadmap/phase-1-buffer-foundation.md`
 - Phase 2: `roadmap/phase-2-buffer-movement-selection.md`
 - Phase 3: `roadmap/phase-3-buffer-editing-apply.md`
+- Phase 4: `roadmap/phase-4-buffer-undo-redo.md`
 
 ## Coordinates and ranges
 
@@ -37,6 +38,7 @@ Helpers:
 - `SetSelection` increments version only when the effective selection changes (including clearing an existing selection).
 - `ClearSelection` increments version only when it clears a non-empty active selection.
 - `Move` increments version only when it changes cursor and/or selection.
+- `Undo` / `Redo` increment version only when they succeed.
 
 ## Movement + selection
 
@@ -75,3 +77,19 @@ Current semantics:
 - Empty range + non-empty text inserts.
 - Cursor moves to the end of the last effective edit.
 - Selection is cleared if any edit applies.
+
+## Undo/redo
+
+Undo/redo are available via:
+- `CanUndo()`, `Undo()`
+- `CanRedo()`, `Redo()`
+
+History model (v0):
+- Each successful **public text mutation** creates exactly one undo step:
+  - `InsertText`, `InsertRune`, `InsertNewline`
+  - `DeleteBackward`, `DeleteForward`, `DeleteSelection`
+  - `Apply(...)` (one step for the entire call, regardless of edit count)
+- No coalescing in v0 (each call is its own step).
+- Each step stores a full snapshot: text, cursor, and selection (including selection anchor direction).
+- Any new text mutation clears the redo stack.
+- Undo depth is bounded by `Options.HistoryLimit` (default 1000).

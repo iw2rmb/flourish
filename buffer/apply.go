@@ -13,8 +13,7 @@ func (b *Buffer) Apply(edits ...TextEdit) {
 		return
 	}
 
-	prevCursor := b.cursor
-	prevSel := b.sel
+	prev := b.snapshot()
 
 	anyChanged := false
 	lastCursor := b.cursor
@@ -34,12 +33,6 @@ func (b *Buffer) Apply(edits ...TextEdit) {
 
 	b.cursor = b.clampPos(lastCursor)
 	b.sel = selectionState{}
-
-	if prevCursor == b.cursor && selectionStateEqual(prevSel, b.sel) {
-		// Defensive: replaceRange changed text, so this should be unreachable, but
-		// keep version semantics consistent.
-		b.version++
-		return
-	}
 	b.version++
+	b.recordUndo(prev)
 }

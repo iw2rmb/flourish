@@ -10,6 +10,8 @@ func (b *Buffer) InsertText(s string) {
 		return
 	}
 
+	prev := b.snapshot()
+
 	r, ok := b.Selection()
 	if !ok {
 		r = Range{Start: b.cursor, End: b.cursor}
@@ -23,6 +25,7 @@ func (b *Buffer) InsertText(s string) {
 	b.cursor = nextCursor
 	b.sel = selectionState{}
 	b.version++
+	b.recordUndo(prev)
 }
 
 func (b *Buffer) InsertRune(r rune) {
@@ -44,6 +47,8 @@ func (b *Buffer) DeleteBackward() {
 		return
 	}
 
+	prev := b.snapshot()
+
 	if col > 0 {
 		start := Pos{Row: row, Col: col - 1}
 		end := Pos{Row: row, Col: col}
@@ -54,6 +59,7 @@ func (b *Buffer) DeleteBackward() {
 		b.cursor = nextCursor
 		b.sel = selectionState{}
 		b.version++
+		b.recordUndo(prev)
 		return
 	}
 
@@ -68,6 +74,7 @@ func (b *Buffer) DeleteBackward() {
 	b.cursor = nextCursor
 	b.sel = selectionState{}
 	b.version++
+	b.recordUndo(prev)
 }
 
 func (b *Buffer) DeleteForward() {
@@ -82,6 +89,8 @@ func (b *Buffer) DeleteForward() {
 		return
 	}
 
+	prev := b.snapshot()
+
 	if col < len(b.lines[row]) {
 		start := Pos{Row: row, Col: col}
 		end := Pos{Row: row, Col: col + 1}
@@ -92,6 +101,7 @@ func (b *Buffer) DeleteForward() {
 		b.cursor = nextCursor
 		b.sel = selectionState{}
 		b.version++
+		b.recordUndo(prev)
 		return
 	}
 
@@ -105,6 +115,7 @@ func (b *Buffer) DeleteForward() {
 	b.cursor = nextCursor
 	b.sel = selectionState{}
 	b.version++
+	b.recordUndo(prev)
 }
 
 func (b *Buffer) DeleteSelection() {
@@ -112,6 +123,7 @@ func (b *Buffer) DeleteSelection() {
 	if !ok {
 		return
 	}
+	prev := b.snapshot()
 	nextCursor, changed := b.replaceRange(r, "")
 	if !changed {
 		return
@@ -119,6 +131,7 @@ func (b *Buffer) DeleteSelection() {
 	b.cursor = nextCursor
 	b.sel = selectionState{}
 	b.version++
+	b.recordUndo(prev)
 }
 
 func (b *Buffer) replaceRange(r Range, text string) (nextCursor Pos, changed bool) {

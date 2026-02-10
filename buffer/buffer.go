@@ -20,7 +20,8 @@ type Buffer struct {
 	cursor Pos
 	sel    selectionState
 
-	opt Options
+	opt  Options
+	hist historyState
 }
 
 func New(text string, opt Options) *Buffer {
