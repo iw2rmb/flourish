@@ -2,10 +2,14 @@ package editor
 
 import (
 	"fmt"
+	"io"
 	"strings"
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
+
+	"github.com/iw2rmb/flouris/buffer"
 )
 
 func TestRender_LineNumberAlignment_1To120(t *testing.T) {
@@ -32,13 +36,14 @@ func TestRender_LineNumberAlignment_1To120(t *testing.T) {
 	digits := 3
 	for i, line := range lines {
 		wantPrefix := fmt.Sprintf("%*d ", digits, i+1)
-		if !strings.HasPrefix(line, wantPrefix) {
-			t.Fatalf("line %d prefix: got %q, want prefix %q", i+1, line, wantPrefix)
+		gotLine := stripANSI(line)
+		if !strings.HasPrefix(gotLine, wantPrefix) {
+			t.Fatalf("line %d prefix: got %q, want prefix %q", i+1, gotLine, wantPrefix)
 		}
 	}
 }
 
-func TestRender_CursorProducesANSIWhenFocused(t *testing.T) {
+func TestRender_CursorStyleAppliedWhenFocused(t *testing.T) {
 	m := New(Config{
 		Text:  "ab",
 		Style: Style{Text: lipgloss.NewStyle(), Cursor: lipgloss.NewStyle().PaddingLeft(1).PaddingRight(1)},
@@ -48,5 +53,121 @@ func TestRender_CursorProducesANSIWhenFocused(t *testing.T) {
 	want := " a b"
 	if got != want {
 		t.Fatalf("unexpected cursor rendering:\n got: %q\nwant: %q", got, want)
+	}
+}
+
+func TestRender_Selection_MultiLine_HalfOpen(t *testing.T) {
+	r := lipgloss.NewRenderer(io.Discard)
+	r.SetColorProfile(termenv.TrueColor)
+	r.SetHasDarkBackground(true)
+
+	st := Style{
+		Text:      r.NewStyle(),
+		Selection: r.NewStyle().Underline(true),
+		Cursor:    r.NewStyle().Reverse(true),
+	}
+
+	m := New(Config{Text: "ab\ncd\nef", Style: st})
+	m = m.Blur()
+
+	m.buf.SetSelection(buffer.Range{
+		Start: buffer.Pos{Row: 0, Col: 1},
+		End:   buffer.Pos{Row: 2, Col: 1},
+	})
+
+	got := m.renderContent()
+	want := strings.Join([]string{
+		st.Text.Render("a") + st.Selection.Render("b"),
+		st.Selection.Render("cd"),
+		st.Selection.Render("e") + st.Text.Render("f"),
+	}, "\n")
+
+	if got != want {
+		t.Fatalf("unexpected selection rendering:\n got: %q\nwant: %q", got, want)
+	}
+}
+
+func TestRender_Selection_LineBoundary_EndAtStartOfNextLine(t *testing.T) {
+	r := lipgloss.NewRenderer(io.Discard)
+	r.SetColorProfile(termenv.TrueColor)
+	r.SetHasDarkBackground(true)
+
+	st := Style{
+		Text:      r.NewStyle(),
+		Selection: r.NewStyle().Underline(true),
+	}
+
+	m := New(Config{Text: "ab\ncd", Style: st})
+	m = m.Blur()
+
+	// Half-open: selecting [0:1, 1:0) selects only "b".
+	m.buf.SetSelection(buffer.Range{
+		Start: buffer.Pos{Row: 0, Col: 1},
+		End:   buffer.Pos{Row: 1, Col: 0},
+	})
+
+	got := m.renderContent()
+	want := strings.Join([]string{
+		st.Text.Render("a") + st.Selection.Render("b"),
+		st.Text.Render("cd"),
+	}, "\n")
+
+	if got != want {
+		t.Fatalf("unexpected line-boundary selection rendering:\n got: %q\nwant: %q", got, want)
+	}
+}
+
+func TestRender_Selection_EmptySelectionRendersAsText(t *testing.T) {
+	r := lipgloss.NewRenderer(io.Discard)
+	r.SetColorProfile(termenv.TrueColor)
+	r.SetHasDarkBackground(true)
+
+	st := Style{
+		Text:      r.NewStyle(),
+		Selection: r.NewStyle().Underline(true),
+	}
+
+	m := New(Config{Text: "ab", Style: st})
+	m = m.Blur()
+
+	m.buf.SetSelection(buffer.Range{
+		Start: buffer.Pos{Row: 0, Col: 1},
+		End:   buffer.Pos{Row: 0, Col: 1},
+	})
+
+	got := m.renderContent()
+	want := st.Text.Render("ab")
+	if got != want {
+		t.Fatalf("unexpected empty selection rendering:\n got: %q\nwant: %q", got, want)
+	}
+}
+
+func TestRender_Selection_FullLineSelection(t *testing.T) {
+	r := lipgloss.NewRenderer(io.Discard)
+	r.SetColorProfile(termenv.TrueColor)
+	r.SetHasDarkBackground(true)
+
+	st := Style{
+		Text:      r.NewStyle(),
+		Selection: r.NewStyle().Underline(true),
+	}
+
+	m := New(Config{Text: "ab\ncd", Style: st})
+	m = m.Blur()
+
+	// Half-open: selecting [0:0, 1:0) selects the full first line only.
+	m.buf.SetSelection(buffer.Range{
+		Start: buffer.Pos{Row: 0, Col: 0},
+		End:   buffer.Pos{Row: 1, Col: 0},
+	})
+
+	got := m.renderContent()
+	want := strings.Join([]string{
+		st.Selection.Render("ab"),
+		st.Text.Render("cd"),
+	}, "\n")
+
+	if got != want {
+		t.Fatalf("unexpected full-line selection rendering:\n got: %q\nwant: %q", got, want)
 	}
 }

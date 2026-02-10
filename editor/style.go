@@ -10,8 +10,9 @@ type Style struct {
 	LineNum       lipgloss.Style
 	LineNumActive lipgloss.Style
 
-	Text   lipgloss.Style
-	Cursor lipgloss.Style
+	Text      lipgloss.Style
+	Selection lipgloss.Style
+	Cursor    lipgloss.Style
 }
 
 func DefaultStyle() Style {
@@ -21,6 +22,7 @@ func DefaultStyle() Style {
 		LineNum:       gutter,
 		LineNumActive: lipgloss.NewStyle().Foreground(lipgloss.Color("250")).Bold(true),
 		Text:          lipgloss.NewStyle(),
+		Selection:     lipgloss.NewStyle().Background(lipgloss.Color("237")),
 		Cursor:        lipgloss.NewStyle().Reverse(true),
 	}
 }

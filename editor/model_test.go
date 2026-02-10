@@ -36,7 +36,7 @@ func TestView_SnapshotFixedSize(t *testing.T) {
 		t.Fatalf("expected 3 lines, got %d", len(got))
 	}
 	for i := range got {
-		got[i] = strings.TrimRight(got[i], " ")
+		got[i] = strings.TrimRight(stripANSI(got[i]), " ")
 	}
 
 	want := []string{

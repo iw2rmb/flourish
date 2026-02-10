@@ -1,6 +1,8 @@
 package editor
 
 import (
+	"reflect"
+
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -23,6 +25,13 @@ type Model struct {
 }
 
 func New(cfg Config) Model {
+	if reflect.DeepEqual(cfg.Style, Style{}) {
+		cfg.Style = DefaultStyle()
+	}
+	if reflect.DeepEqual(cfg.KeyMap, KeyMap{}) {
+		cfg.KeyMap = DefaultKeyMap()
+	}
+
 	m := Model{
 		cfg:      cfg,
 		buf:      buffer.New(cfg.Text, buffer.Options{HistoryLimit: cfg.HistoryLimit}),
@@ -84,8 +93,14 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		m.syncFromBuffer()
 		// Don't force-follow cursor here; allow manual scrolling via mouse wheel.
 		return m, cmd
+	case tea.KeyMsg:
+		m, cmd := m.updateKey(msg)
+		cursorChanged := m.syncFromBuffer()
+		if cursorChanged {
+			m.followCursorWithForce(false)
+		}
+		return m, cmd
 	default:
-		// No internal key handling in phase 5. Hosts may drive edits by mutating the buffer.
 		cursorChanged := m.syncFromBuffer()
 		if cursorChanged {
 			m.followCursorWithForce(true)
