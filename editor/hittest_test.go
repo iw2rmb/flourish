@@ -57,6 +57,24 @@ func TestHitTest_InsertedTextMapsToAnchorCol(t *testing.T) {
 	}
 }
 
+func TestHitTest_GhostInsertionAtNonEOL_MapsToAnchorCol(t *testing.T) {
+	m := New(Config{
+		Text: "ab",
+		GhostProvider: func(ctx GhostContext) (Ghost, bool) {
+			return Ghost{Text: "XX"}, true
+		},
+	})
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 1})
+
+	// Visual: "aXXb"
+	if got := m.screenToDocPos(1, 0); got != (buffer.Pos{Row: 0, GraphemeCol: 1}) {
+		t.Fatalf("click in ghost insertion x=1: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 1})
+	}
+	if got := m.screenToDocPos(2, 0); got != (buffer.Pos{Row: 0, GraphemeCol: 1}) {
+		t.Fatalf("click in ghost insertion x=2: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 1})
+	}
+}
+
 func TestHitTest_DeletedPrefixMapsFirstVisibleCellToCorrectRawCol(t *testing.T) {
 	m := New(Config{
 		Text: "**a**",

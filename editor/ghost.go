@@ -70,9 +70,6 @@ func (m *Model) ghostFor(row, col int, lineText string, rawLen int) (Ghost, bool
 	}
 
 	col = clampInt(col, 0, maxInt(rawLen, 0))
-	if col != rawLen {
-		return Ghost{}, false
-	}
 
 	key := ghostCacheKey{
 		docID:      m.cfg.DocID,
@@ -88,7 +85,7 @@ func (m *Model) ghostFor(row, col int, lineText string, rawLen int) (Ghost, bool
 		Row:         row,
 		GraphemeCol: col,
 		LineText:    lineText,
-		IsEndOfLine: true,
+		IsEndOfLine: col == rawLen,
 		DocID:       m.cfg.DocID,
 		DocVersion:  m.buf.Version(),
 	}
@@ -114,15 +111,12 @@ func (m *Model) virtualTextWithGhost(row int, rawLine string, vt VirtualText) Vi
 
 	rawLen := graphemeutil.Count(rawLine)
 	col := clampInt(cursor.GraphemeCol, 0, rawLen)
-	if col != rawLen {
-		return vt
-	}
 
 	ghost, ok := m.ghostFor(row, col, rawLine, rawLen)
 	if !ok || ghost.Text == "" {
 		return vt
 	}
 
-	vt.Insertions = append(vt.Insertions, VirtualInsertion{GraphemeCol: rawLen, Text: ghost.Text, Role: VirtualRoleGhost})
+	vt.Insertions = append(vt.Insertions, VirtualInsertion{GraphemeCol: col, Text: ghost.Text, Role: VirtualRoleGhost})
 	return normalizeVirtualText(vt, rawLen)
 }

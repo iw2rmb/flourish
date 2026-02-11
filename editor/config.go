@@ -35,7 +35,8 @@ type Config struct {
 	// Forwarded to buffer.Options.
 	HistoryLimit int
 
-	// Ghost suggestion (EOL-only). When nil, ghost is disabled.
+	// Ghost suggestion (inline at cursor column, single-line, non-interactive).
+	// When nil, ghost is disabled.
 	GhostProvider GhostProvider
 	// GhostAccept configures accept keys. Zero value defaults to Tab+Right.
 	GhostAccept GhostAccept

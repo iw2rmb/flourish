@@ -48,12 +48,13 @@ Mouse:
 `Config` supports optional hooks:
 - `VirtualTextProvider` for per-line virtual deletions/insertions.
 - `Highlighter` for per-line highlight spans.
-- `GhostProvider` for EOL ghost suggestions.
+- `GhostProvider` for inline ghost suggestions at cursor column.
 - `OnChange` for post-mutation change events.
 
 Virtual text rules:
 - deletions hide grapheme ranges from view.
 - insertions are view-only and anchored to document grapheme columns.
+- ghost insertions are single-line and non-interactive.
 - cursor/selection remain document-based.
 
 ## Change Events

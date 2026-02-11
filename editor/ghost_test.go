@@ -6,39 +6,49 @@ import (
 	"github.com/iw2rmb/flouris/buffer"
 )
 
-func TestGhostProvider_CalledOnlyAtEOL_AndOnlyWhenFocused(t *testing.T) {
+func TestGhostProvider_CalledAtAnyCol_AndOnlyWhenFocused(t *testing.T) {
 	calls := 0
+	var seen []GhostContext
 	m := New(Config{
 		Text: "ab",
 		GhostProvider: func(ctx GhostContext) (Ghost, bool) {
 			calls++
+			seen = append(seen, ctx)
 			return Ghost{Text: "X"}, true
 		},
 	})
 	calls = 0 // New() triggers an initial render
+	seen = nil
 
-	if _, ok := m.ghostForCursor(); ok {
-		t.Fatalf("expected no ghost when cursor not at EOL")
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 1}) // non-EOL
+	if _, ok := m.ghostForCursor(); !ok {
+		t.Fatalf("expected ghost at non-EOL")
 	}
-	if calls != 0 {
-		t.Fatalf("provider calls when not at EOL: got %d, want %d", calls, 0)
+	if calls != 1 {
+		t.Fatalf("provider calls at non-EOL: got %d, want %d", calls, 1)
+	}
+	if len(seen) != 1 || seen[0].GraphemeCol != 1 || seen[0].IsEndOfLine {
+		t.Fatalf("non-EOL context: got %+v", seen)
 	}
 
 	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 2}) // EOL
 	if _, ok := m.ghostForCursor(); !ok {
 		t.Fatalf("expected ghost at EOL")
 	}
-	if calls != 1 {
-		t.Fatalf("provider calls at EOL: got %d, want %d", calls, 1)
+	if calls != 2 {
+		t.Fatalf("provider calls at EOL: got %d, want %d", calls, 2)
+	}
+	if len(seen) != 2 || seen[1].GraphemeCol != 2 || !seen[1].IsEndOfLine {
+		t.Fatalf("EOL context: got %+v", seen)
 	}
 
 	m = m.Blur()
-	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 2}) // keep at EOL
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 1})
 	if _, ok := m.ghostForCursor(); ok {
 		t.Fatalf("expected no ghost when blurred")
 	}
-	if calls != 1 {
-		t.Fatalf("provider should not be called when blurred: got %d, want %d", calls, 1)
+	if calls != 2 {
+		t.Fatalf("provider should not be called when blurred: got %d, want %d", calls, 2)
 	}
 }
 
@@ -53,7 +63,7 @@ func TestGhostProvider_CacheHitAvoidsDuplicateCalls(t *testing.T) {
 	})
 	calls = 0
 
-	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 2}) // EOL
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 1}) // non-EOL
 
 	if _, ok := m.ghostForCursor(); !ok {
 		t.Fatalf("expected ghost on first call")
@@ -63,6 +73,15 @@ func TestGhostProvider_CacheHitAvoidsDuplicateCalls(t *testing.T) {
 	}
 	if calls != 1 {
 		t.Fatalf("provider calls with cache: got %d, want %d", calls, 1)
+	}
+
+	// Cursor column is part of the key.
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 2}) // EOL
+	if _, ok := m.ghostForCursor(); !ok {
+		t.Fatalf("expected ghost at a different cursor col")
+	}
+	if calls != 2 {
+		t.Fatalf("provider calls after cursor-col change: got %d, want %d", calls, 2)
 	}
 }
 
