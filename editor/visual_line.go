@@ -2,6 +2,8 @@ package editor
 
 import (
 	"strings"
+
+	graphemeutil "github.com/iw2rmb/flouris/internal/grapheme"
 )
 
 type VisualTokenKind int
@@ -23,38 +25,38 @@ type VisualToken struct {
 	// CellWidth is the number of terminal cells this token occupies.
 	CellWidth int
 
-	// VisibleStartCol/VisibleEndCol define the rune span in the visible line text
+	// VisibleStartGraphemeCol/VisibleEndGraphemeCol define the grapheme span in the visible line text
 	// (after deletions) that this token corresponds to. Meaningful only for doc tokens.
-	VisibleStartCol int
-	VisibleEndCol   int
+	VisibleStartGraphemeCol int
+	VisibleEndGraphemeCol   int
 
-	// DocStartCol/DocEndCol define the raw document rune span this token corresponds to.
-	// For virtual tokens, DocStartCol == DocEndCol == AnchorCol.
-	DocStartCol int
-	DocEndCol   int
+	// DocStartGraphemeCol/DocEndGraphemeCol define the raw document grapheme span this token corresponds to.
+	// For virtual tokens, DocStartGraphemeCol == DocEndGraphemeCol == AnchorCol.
+	DocStartGraphemeCol int
+	DocEndGraphemeCol   int
 
 	// Role is meaningful only for virtual tokens.
 	Role VirtualRole
 }
 
 type VisualLine struct {
-	RawLen int // rune length of the raw buffer line
+	RawGraphemeLen int // grapheme length of the raw buffer line
 
 	Tokens []VisualToken
 
-	// VisualCellToDocCol maps each visual cell to a raw document rune column.
+	// VisualCellToDocGraphemeCol maps each visual cell to a raw document grapheme column.
 	// For wide graphemes, every cell maps to the same doc column.
 	// For virtual insertions, every cell maps to the insertion anchor column.
-	VisualCellToDocCol []int
+	VisualCellToDocGraphemeCol []int
 
-	// DocColToVisualCell maps raw document rune columns to a visual cell offset.
+	// DocGraphemeColToVisualCell maps raw document grapheme columns to a visual cell offset.
 	// Deleted doc columns map to the next visible doc column (or EOL if none).
-	DocColToVisualCell []int
+	DocGraphemeColToVisualCell []int
 }
 
 func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
-	rawRunes := []rune(rawLine)
-	rawLen := len(rawRunes)
+	rawGraphemes := graphemeutil.Split(rawLine)
+	rawLen := len(rawGraphemes)
 	if tabWidth <= 0 {
 		tabWidth = 4
 	}
@@ -63,24 +65,22 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 
 	deleted := make([]bool, rawLen)
 	for _, d := range vt.Deletions {
-		for i := d.StartCol; i < d.EndCol && i < rawLen; i++ {
+		for i := d.StartGraphemeCol; i < d.EndGraphemeCol && i < rawLen; i++ {
 			if i >= 0 {
 				deleted[i] = true
 			}
 		}
 	}
 
-	visibleRunes := make([]rune, 0, rawLen)
+	visibleGraphemes := make([]string, 0, rawLen)
 	visibleRawCols := make([]int, 0, rawLen)
-	for i, r := range rawRunes {
+	for i, gr := range rawGraphemes {
 		if deleted[i] {
 			continue
 		}
-		visibleRunes = append(visibleRunes, r)
+		visibleGraphemes = append(visibleGraphemes, gr)
 		visibleRawCols = append(visibleRawCols, i)
 	}
-
-	visibleText := string(visibleRunes)
 
 	type docGrapheme struct {
 		rawStart int
@@ -91,19 +91,16 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 		width    int // computed later (tabs depend on visual col)
 	}
 
-	docGraphemes := make([]docGrapheme, 0, len(visibleRunes))
-	if visibleText != "" {
-		for _, gr := range splitGraphemeBoundaries(visibleText) {
-			rawStart := visibleRawCols[gr.StartCol]
-			rawEnd := visibleRawCols[gr.EndCol-1] + 1
-			docGraphemes = append(docGraphemes, docGrapheme{
-				rawStart: rawStart,
-				rawEnd:   rawEnd,
-				visStart: gr.StartCol,
-				visEnd:   gr.EndCol,
-				text:     gr.Text,
-			})
-		}
+	docGraphemes := make([]docGrapheme, 0, len(visibleGraphemes))
+	for visIdx, gr := range visibleGraphemes {
+		rawStart := visibleRawCols[visIdx]
+		docGraphemes = append(docGraphemes, docGrapheme{
+			rawStart: rawStart,
+			rawEnd:   rawStart + 1,
+			visStart: visIdx,
+			visEnd:   visIdx + 1,
+			text:     gr,
+		})
 	}
 
 	ins := vt.Insertions
@@ -130,15 +127,15 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 			visualCellToDoc = append(visualCellToDoc, mapCol)
 		}
 		tokens = append(tokens, VisualToken{
-			Kind:            kind,
-			Text:            text,
-			StartCell:       startCell,
-			CellWidth:       cellWidth,
-			VisibleStartCol: visibleStart,
-			VisibleEndCol:   visibleEnd,
-			DocStartCol:     docStart,
-			DocEndCol:       docEnd,
-			Role:            role,
+			Kind:                    kind,
+			Text:                    text,
+			StartCell:               startCell,
+			CellWidth:               cellWidth,
+			VisibleStartGraphemeCol: visibleStart,
+			VisibleEndGraphemeCol:   visibleEnd,
+			DocStartGraphemeCol:     docStart,
+			DocEndGraphemeCol:       docEnd,
+			Role:                    role,
 		})
 		visualCol += cellWidth
 	}
@@ -150,13 +147,13 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 			if width < 1 {
 				width = 1
 			}
-			appendToken(VisualTokenVirtual, text, width, -1, -1, in.Col, in.Col, in.Role)
+			appendToken(VisualTokenVirtual, text, width, -1, -1, in.GraphemeCol, in.GraphemeCol, in.Role)
 		}
 	}
 
 	for _, dg := range docGraphemes {
 		// Emit insertions that anchor before (or inside) this doc grapheme.
-		for insIdx < len(ins) && ins[insIdx].Col < dg.rawEnd {
+		for insIdx < len(ins) && ins[insIdx].GraphemeCol < dg.rawEnd {
 			appendInsertion(ins[insIdx])
 			insIdx++
 		}
@@ -191,8 +188,8 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 		if tok.Kind != VisualTokenDoc {
 			continue
 		}
-		start := clampInt(tok.DocStartCol, 0, rawLen)
-		end := clampInt(tok.DocEndCol, 0, rawLen)
+		start := clampInt(tok.DocStartGraphemeCol, 0, rawLen)
+		end := clampInt(tok.DocEndGraphemeCol, 0, rawLen)
 		for c := start; c < end; c++ {
 			docToVisual[c] = tok.StartCell
 		}
@@ -204,40 +201,40 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 	}
 
 	return VisualLine{
-		RawLen:             rawLen,
-		Tokens:             tokens,
-		VisualCellToDocCol: visualCellToDoc,
-		DocColToVisualCell: docToVisual,
+		RawGraphemeLen:             rawLen,
+		Tokens:                     tokens,
+		VisualCellToDocGraphemeCol: visualCellToDoc,
+		DocGraphemeColToVisualCell: docToVisual,
 	}
 }
 
-func (vl VisualLine) VisualLen() int { return len(vl.VisualCellToDocCol) }
+func (vl VisualLine) VisualLen() int { return len(vl.VisualCellToDocGraphemeCol) }
 
-func (vl VisualLine) DocColForVisualCell(x int) int {
-	if len(vl.VisualCellToDocCol) == 0 {
-		return vl.RawLen
+func (vl VisualLine) DocGraphemeColForVisualCell(x int) int {
+	if len(vl.VisualCellToDocGraphemeCol) == 0 {
+		return vl.RawGraphemeLen
 	}
 	if x < 0 {
 		x = 0
 	}
-	if x >= len(vl.VisualCellToDocCol) {
-		return vl.RawLen
+	if x >= len(vl.VisualCellToDocGraphemeCol) {
+		return vl.RawGraphemeLen
 	}
-	col := vl.VisualCellToDocCol[x]
-	return clampInt(col, 0, vl.RawLen)
+	col := vl.VisualCellToDocGraphemeCol[x]
+	return clampInt(col, 0, vl.RawGraphemeLen)
 }
 
-func (vl VisualLine) VisualCellForDocCol(col int) int {
+func (vl VisualLine) VisualCellForDocGraphemeCol(col int) int {
 	if col < 0 {
 		col = 0
 	}
-	if col > vl.RawLen {
-		col = vl.RawLen
+	if col > vl.RawGraphemeLen {
+		col = vl.RawGraphemeLen
 	}
-	if len(vl.DocColToVisualCell) == 0 {
+	if len(vl.DocGraphemeColToVisualCell) == 0 {
 		return 0
 	}
-	return clampInt(vl.DocColToVisualCell[col], 0, len(vl.VisualCellToDocCol))
+	return clampInt(vl.DocGraphemeColToVisualCell[col], 0, len(vl.VisualCellToDocGraphemeCol))
 }
 
 func tabAdvance(visualCol, tabWidth int) int {

@@ -2,19 +2,21 @@ package editor
 
 import (
 	"github.com/mattn/go-runewidth"
+
+	graphemeutil "github.com/iw2rmb/flouris/internal/grapheme"
 	"github.com/rivo/uniseg"
 )
 
 type graphemeBoundary struct {
-	StartCol int
-	EndCol   int
-	Text     string
+	StartGraphemeCol int
+	EndGraphemeCol   int
+	Text             string
 }
 
 type graphemeStep struct {
-	Col       int
-	NextCol   int
-	CellWidth int
+	GraphemeCol     int
+	NextGraphemeCol int
+	CellWidth       int
 }
 
 func splitGraphemeBoundaries(text string) []graphemeBoundary {
@@ -22,25 +24,19 @@ func splitGraphemeBoundaries(text string) []graphemeBoundary {
 		return nil
 	}
 
-	out := make([]graphemeBoundary, 0, len([]rune(text)))
-	g := uniseg.NewGraphemes(text)
-	col := 0
-	for g.Next() {
-		r := g.Runes()
-		if len(r) == 0 {
-			continue
-		}
+	clusters := graphemeutil.Split(text)
+	out := make([]graphemeBoundary, 0, len(clusters))
+	for i, c := range clusters {
 		out = append(out, graphemeBoundary{
-			StartCol: col,
-			EndCol:   col + len(r),
-			Text:     g.Str(),
+			StartGraphemeCol: i,
+			EndGraphemeCol:   i + 1,
+			Text:             c,
 		})
-		col += len(r)
 	}
 	return out
 }
 
-// iterateGraphemeSteps provides (doc rune index) -> (next rune index, cell width)
+// iterateGraphemeSteps provides (doc grapheme index) -> (next grapheme index, cell width)
 // for a single logical line segment. Widths are terminal-cell widths.
 func iterateGraphemeSteps(text string, tabWidth int, startCell int) []graphemeStep {
 	bounds := splitGraphemeBoundaries(text)
@@ -56,9 +52,9 @@ func iterateGraphemeSteps(text string, tabWidth int, startCell int) []graphemeSt
 			w = 0
 		}
 		out = append(out, graphemeStep{
-			Col:       b.StartCol,
-			NextCol:   b.EndCol,
-			CellWidth: w,
+			GraphemeCol:     b.StartGraphemeCol,
+			NextGraphemeCol: b.EndGraphemeCol,
+			CellWidth:       w,
 		})
 		visualCol += w
 	}

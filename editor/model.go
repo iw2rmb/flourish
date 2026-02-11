@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/iw2rmb/flouris/buffer"
+	graphemeutil "github.com/iw2rmb/flouris/internal/grapheme"
 )
 
 // Model is a Bubble Tea component that renders and interacts with a buffer.
@@ -70,8 +71,8 @@ func (m *Model) ghostForCursor() (Ghost, bool) {
 	}
 
 	lineText := lines[cur.Row]
-	rawLen := len([]rune(lineText))
-	col := clampInt(cur.Col, 0, rawLen)
+	rawLen := graphemeutil.Count(lineText)
+	col := clampInt(cur.GraphemeCol, 0, rawLen)
 	return m.ghostFor(cur.Row, col, lineText, rawLen)
 }
 
@@ -196,15 +197,15 @@ func (m Model) contentWidth(lineCount int) int {
 }
 
 func cursorCellForVisualLine(vl VisualLine, cursorCol int) int {
-	cursorCol = clampInt(cursorCol, 0, vl.RawLen)
-	if cursorCol != vl.RawLen {
-		return vl.VisualCellForDocCol(cursorCol)
+	cursorCol = clampInt(cursorCol, 0, vl.RawGraphemeLen)
+	if cursorCol != vl.RawGraphemeLen {
+		return vl.VisualCellForDocGraphemeCol(cursorCol)
 	}
 
 	// Cursor at EOL is rendered as a 1-cell placeholder inserted before any
 	// virtual insertions anchored at the raw EOL.
 	for _, tok := range vl.Tokens {
-		if tok.Kind == VisualTokenVirtual && tok.DocStartCol == vl.RawLen {
+		if tok.Kind == VisualTokenVirtual && tok.DocStartGraphemeCol == vl.RawGraphemeLen {
 			return tok.StartCell
 		}
 	}
@@ -270,7 +271,7 @@ func (m *Model) followCursorWithForce(force bool) {
 	vt = m.virtualTextWithGhost(cur.Row, rawLine, vt)
 	vl := BuildVisualLine(rawLine, vt, m.cfg.TabWidth)
 
-	cursorCell := cursorCellForVisualLine(vl, cur.Col)
+	cursorCell := cursorCellForVisualLine(vl, cur.GraphemeCol)
 	newXOffset := m.xOffset
 	if cursorCell < newXOffset {
 		newXOffset = cursorCell
@@ -298,12 +299,11 @@ func (m *Model) virtualTextForRow(row int, rawLine string) VirtualText {
 		return VirtualText{}
 	}
 
-	rawRunes := []rune(rawLine)
-	rawLen := len(rawRunes)
+	rawLen := graphemeutil.Count(rawLine)
 
 	cursor := m.buf.Cursor()
 	hasCursor := cursor.Row == row
-	cursorCol := cursor.Col
+	cursorCol := cursor.GraphemeCol
 	if cursorCol < 0 {
 		cursorCol = 0
 	}
@@ -318,12 +318,12 @@ func (m *Model) virtualTextForRow(row int, rawLine string) VirtualText {
 		Row:      row,
 		LineText: rawLine,
 
-		CursorCol: cursorCol,
-		HasCursor: hasCursor,
+		CursorGraphemeCol: cursorCol,
+		HasCursor:         hasCursor,
 
-		SelectionStartCol: selStartCol,
-		SelectionEndCol:   selEndCol,
-		HasSelection:      hasSel,
+		SelectionStartGraphemeCol: selStartCol,
+		SelectionEndGraphemeCol:   selEndCol,
+		HasSelection:              hasSel,
 
 		DocID:      m.cfg.DocID,
 		DocVersion: m.buf.Version(),
@@ -343,10 +343,10 @@ func selectionColsForRow(sel buffer.Range, selOK bool, row int, lineLen int) (st
 	startCol = 0
 	endCol = lineLen
 	if row == sel.Start.Row {
-		startCol = sel.Start.Col
+		startCol = sel.Start.GraphemeCol
 	}
 	if row == sel.End.Row {
-		endCol = sel.End.Col
+		endCol = sel.End.GraphemeCol
 	}
 	if startCol < 0 {
 		startCol = 0

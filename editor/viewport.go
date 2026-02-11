@@ -78,11 +78,11 @@ func (m *Model) ensureLayoutCache(lines []string) wrapLayoutCache {
 		segments := wrapSegmentsForVisualLine(visual, m.cfg.WrapMode, key.contentWidth)
 		if len(segments) == 0 {
 			segments = []wrappedSegment{{
-				StartCol:  0,
-				EndCol:    visual.RawLen,
-				Cells:     visual.VisualLen(),
-				startCell: 0,
-				endCell:   visual.VisualLen(),
+				StartGraphemeCol: 0,
+				EndGraphemeCol:   visual.RawGraphemeLen,
+				Cells:            visual.VisualLen(),
+				startCell:        0,
+				endCell:          visual.VisualLen(),
 			}}
 		}
 
@@ -108,9 +108,9 @@ func (m *Model) ensureLayoutCache(lines []string) wrapLayoutCache {
 			rawLine: "",
 			visual:  BuildVisualLine("", VirtualText{}, m.cfg.TabWidth),
 			segments: []wrappedSegment{{
-				StartCol: 0,
-				EndCol:   0,
-				Cells:    0,
+				StartGraphemeCol: 0,
+				EndGraphemeCol:   0,
+				Cells:            0,
 			}},
 		})
 		cache.rows = append(cache.rows, wrapLayoutRow{})
@@ -162,7 +162,7 @@ func (c wrapLayoutCache) cursorVisualPosition(cursor buffer.Pos) (visualRow int,
 		return line.firstVisualRow, 0, true
 	}
 
-	cursorCol := clampInt(cursor.Col, 0, line.visual.RawLen)
+	cursorCol := clampInt(cursor.GraphemeCol, 0, line.visual.RawGraphemeLen)
 	cursorCell := cursorCellForVisualLine(line.visual, cursorCol)
 	segIdx := len(line.segments) - 1
 	for i, seg := range line.segments {

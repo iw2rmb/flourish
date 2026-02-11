@@ -1,6 +1,10 @@
 package buffer
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/iw2rmb/flouris/internal/grapheme"
+)
 
 type Options struct {
 	HistoryLimit int // default: 1000 (wired in later phases)
@@ -14,7 +18,7 @@ type selectionState struct {
 
 // Buffer is the pure document state: text, cursor, and selection.
 type Buffer struct {
-	lines   [][]rune
+	lines   [][]string
 	version uint64
 
 	cursor Pos
@@ -31,7 +35,7 @@ func New(text string, opt Options) *Buffer {
 	return &Buffer{
 		lines:   splitLines(text),
 		version: 0,
-		cursor:  Pos{Row: 0, Col: 0},
+		cursor:  Pos{Row: 0, GraphemeCol: 0},
 		sel:     selectionState{},
 		opt:     opt,
 	}
@@ -47,7 +51,7 @@ func (b *Buffer) Text() string {
 		if i > 0 {
 			sb.WriteByte('\n')
 		}
-		sb.WriteString(string(line))
+		sb.WriteString(grapheme.Join(line))
 	}
 	return sb.String()
 }
@@ -140,14 +144,14 @@ func (b *Buffer) clampPos(p Pos) Pos {
 	return ClampPos(p, len(b.lines), b.lineLen)
 }
 
-func splitLines(text string) [][]rune {
+func splitLines(text string) [][]string {
 	parts := strings.Split(text, "\n")
 	if len(parts) == 0 {
 		parts = []string{""}
 	}
-	lines := make([][]rune, 0, len(parts))
+	lines := make([][]string, 0, len(parts))
 	for _, s := range parts {
-		lines = append(lines, []rune(s))
+		lines = append(lines, grapheme.Split(s))
 	}
 	if len(lines) == 0 {
 		lines = append(lines, nil)

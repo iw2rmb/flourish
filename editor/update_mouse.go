@@ -83,4 +83,3 @@ func (m Model) clampMouseToBounds(x, y int) (int, int) {
 	}
 	return x, y
 }
-

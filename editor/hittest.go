@@ -51,7 +51,7 @@ func (m *Model) screenToDocPos(x, y int) buffer.Pos {
 	}
 	gw := m.gutterWidth(len(lines))
 	if x < gw {
-		return buffer.Pos{Row: row, Col: 0}
+		return buffer.Pos{Row: row, GraphemeCol: 0}
 	}
 	visualX := x - gw
 	if visualX < 0 {
@@ -63,21 +63,21 @@ func (m *Model) screenToDocPos(x, y int) buffer.Pos {
 
 	if m.cfg.WrapMode != WrapNone {
 		if visualX <= 0 {
-			return buffer.Pos{Row: row, Col: seg.StartCol}
+			return buffer.Pos{Row: row, GraphemeCol: seg.StartGraphemeCol}
 		}
 		if visualX >= seg.Cells {
-			return buffer.Pos{Row: row, Col: seg.EndCol}
+			return buffer.Pos{Row: row, GraphemeCol: seg.EndGraphemeCol}
 		}
 		targetCell := seg.startCell + visualX
 		if targetCell >= seg.endCell {
-			return buffer.Pos{Row: row, Col: seg.EndCol}
+			return buffer.Pos{Row: row, GraphemeCol: seg.EndGraphemeCol}
 		}
-		col := line.visual.DocColForVisualCell(targetCell)
-		col = clampInt(col, seg.StartCol, seg.EndCol)
-		return buffer.Pos{Row: row, Col: col}
+		col := line.visual.DocGraphemeColForVisualCell(targetCell)
+		col = clampInt(col, seg.StartGraphemeCol, seg.EndGraphemeCol)
+		return buffer.Pos{Row: row, GraphemeCol: col}
 	}
 
-	col := line.visual.DocColForVisualCell(visualX)
+	col := line.visual.DocGraphemeColForVisualCell(visualX)
 
-	return buffer.Pos{Row: row, Col: col}
+	return buffer.Pos{Row: row, GraphemeCol: col}
 }

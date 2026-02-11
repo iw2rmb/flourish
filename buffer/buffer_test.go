@@ -8,15 +8,15 @@ func TestBuffer_SetCursor_ClampsAndVersions(t *testing.T) {
 		t.Fatalf("expected version 0, got %d", b.Version())
 	}
 
-	b.SetCursor(Pos{Row: 999, Col: 999})
-	if got := b.Cursor(); got != (Pos{Row: 1, Col: 2}) {
+	b.SetCursor(Pos{Row: 999, GraphemeCol: 999})
+	if got := b.Cursor(); got != (Pos{Row: 1, GraphemeCol: 2}) {
 		t.Fatalf("cursor=%v, want (1,2)", got)
 	}
 	if b.Version() != 1 {
 		t.Fatalf("expected version 1, got %d", b.Version())
 	}
 
-	b.SetCursor(Pos{Row: 1, Col: 2})
+	b.SetCursor(Pos{Row: 1, GraphemeCol: 2})
 	if b.Version() != 1 {
 		t.Fatalf("expected version unchanged, got %d", b.Version())
 	}
@@ -26,15 +26,15 @@ func TestBuffer_SetSelection_NormalizesClampsAndVersions(t *testing.T) {
 	b := New("a\nbc", Options{})
 
 	b.SetSelection(Range{
-		Start: Pos{Row: 1, Col: 99},
-		End:   Pos{Row: 0, Col: -1},
+		Start: Pos{Row: 1, GraphemeCol: 99},
+		End:   Pos{Row: 0, GraphemeCol: -1},
 	})
 
 	r, ok := b.Selection()
 	if !ok {
 		t.Fatalf("expected selection active")
 	}
-	want := Range{Start: Pos{Row: 0, Col: 0}, End: Pos{Row: 1, Col: 2}}
+	want := Range{Start: Pos{Row: 0, GraphemeCol: 0}, End: Pos{Row: 1, GraphemeCol: 2}}
 	if r != want {
 		t.Fatalf("selection=%v, want %v", r, want)
 	}
@@ -43,7 +43,7 @@ func TestBuffer_SetSelection_NormalizesClampsAndVersions(t *testing.T) {
 	}
 
 	// Setting the same effective selection should not bump the version.
-	b.SetSelection(Range{Start: Pos{Row: 1, Col: 2}, End: Pos{Row: 0, Col: 0}})
+	b.SetSelection(Range{Start: Pos{Row: 1, GraphemeCol: 2}, End: Pos{Row: 0, GraphemeCol: 0}})
 	if b.Version() != 1 {
 		t.Fatalf("expected version unchanged, got %d", b.Version())
 	}
@@ -66,13 +66,13 @@ func TestBuffer_SetSelection_NormalizesClampsAndVersions(t *testing.T) {
 func TestBuffer_SelectionRaw_PreservesDirection(t *testing.T) {
 	b := New("abcd", Options{})
 
-	b.SetSelection(Range{Start: Pos{Row: 0, Col: 3}, End: Pos{Row: 0, Col: 1}})
+	b.SetSelection(Range{Start: Pos{Row: 0, GraphemeCol: 3}, End: Pos{Row: 0, GraphemeCol: 1}})
 
 	raw, ok := b.SelectionRaw()
 	if !ok {
 		t.Fatalf("expected raw selection active")
 	}
-	wantRaw := Range{Start: Pos{Row: 0, Col: 3}, End: Pos{Row: 0, Col: 1}}
+	wantRaw := Range{Start: Pos{Row: 0, GraphemeCol: 3}, End: Pos{Row: 0, GraphemeCol: 1}}
 	if raw != wantRaw {
 		t.Fatalf("raw selection=%v, want %v", raw, wantRaw)
 	}
@@ -81,7 +81,7 @@ func TestBuffer_SelectionRaw_PreservesDirection(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected normalized selection active")
 	}
-	wantNorm := Range{Start: Pos{Row: 0, Col: 1}, End: Pos{Row: 0, Col: 3}}
+	wantNorm := Range{Start: Pos{Row: 0, GraphemeCol: 1}, End: Pos{Row: 0, GraphemeCol: 3}}
 	if norm != wantNorm {
 		t.Fatalf("normalized selection=%v, want %v", norm, wantNorm)
 	}

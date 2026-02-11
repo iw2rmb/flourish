@@ -12,21 +12,21 @@ const (
 	VirtualRoleOverlay                    // generic inserted text (dim/annotation)
 )
 
-// VirtualDeletion hides a half-open rune range [StartCol, EndCol) within a single logical line.
+// VirtualDeletion hides a half-open grapheme range [StartGraphemeCol, EndGraphemeCol) within a single logical line.
 //
-// Columns are rune indices in the raw buffer line (before any deletions).
+// Columns are grapheme indices in the raw buffer line (before any deletions).
 type VirtualDeletion struct {
-	StartCol int
-	EndCol   int
+	StartGraphemeCol int
+	EndGraphemeCol   int
 }
 
-// VirtualInsertion inserts view-only text at a rune column within a single logical line.
+// VirtualInsertion inserts view-only text at a grapheme column within a single logical line.
 //
-// Col is a rune index in the raw buffer line (before any deletions).
+// GraphemeCol is a grapheme index in the raw buffer line (before any deletions).
 type VirtualInsertion struct {
-	Col  int
-	Text string
-	Role VirtualRole
+	GraphemeCol int
+	Text        string
+	Role        VirtualRole
 }
 
 type VirtualText struct {
@@ -39,12 +39,12 @@ type VirtualTextContext struct {
 	LineText string // raw buffer line text (unwrapped)
 
 	// Cursor/selection state for conditional transforms.
-	CursorCol int // rune index in raw buffer line
-	HasCursor bool
+	CursorGraphemeCol int // grapheme index in raw buffer line
+	HasCursor         bool
 
-	SelectionStartCol int // rune index in raw buffer line
-	SelectionEndCol   int // rune index in raw buffer line
-	HasSelection      bool
+	SelectionStartGraphemeCol int // grapheme index in raw buffer line
+	SelectionEndGraphemeCol   int // grapheme index in raw buffer line
+	HasSelection              bool
 
 	// Useful for caching.
 	DocID      string
@@ -60,21 +60,21 @@ func normalizeVirtualText(vt VirtualText, rawLineLen int) VirtualText {
 	if len(vt.Deletions) > 0 {
 		dels := make([]VirtualDeletion, 0, len(vt.Deletions))
 		for _, d := range vt.Deletions {
-			start := clampInt(d.StartCol, 0, rawLineLen)
-			end := clampInt(d.EndCol, 0, rawLineLen)
+			start := clampInt(d.StartGraphemeCol, 0, rawLineLen)
+			end := clampInt(d.EndGraphemeCol, 0, rawLineLen)
 			if end < start {
 				start, end = end, start
 			}
 			if start == end {
 				continue
 			}
-			dels = append(dels, VirtualDeletion{StartCol: start, EndCol: end})
+			dels = append(dels, VirtualDeletion{StartGraphemeCol: start, EndGraphemeCol: end})
 		}
 		sort.Slice(dels, func(i, j int) bool {
-			if dels[i].StartCol != dels[j].StartCol {
-				return dels[i].StartCol < dels[j].StartCol
+			if dels[i].StartGraphemeCol != dels[j].StartGraphemeCol {
+				return dels[i].StartGraphemeCol < dels[j].StartGraphemeCol
 			}
-			return dels[i].EndCol < dels[j].EndCol
+			return dels[i].EndGraphemeCol < dels[j].EndGraphemeCol
 		})
 		merged := make([]VirtualDeletion, 0, len(dels))
 		for _, d := range dels {
@@ -83,8 +83,8 @@ func normalizeVirtualText(vt VirtualText, rawLineLen int) VirtualText {
 				continue
 			}
 			last := &merged[len(merged)-1]
-			if d.StartCol <= last.EndCol {
-				last.EndCol = maxInt(last.EndCol, d.EndCol)
+			if d.StartGraphemeCol <= last.EndGraphemeCol {
+				last.EndGraphemeCol = maxInt(last.EndGraphemeCol, d.EndGraphemeCol)
 				continue
 			}
 			merged = append(merged, d)
@@ -96,20 +96,20 @@ func normalizeVirtualText(vt VirtualText, rawLineLen int) VirtualText {
 	if len(vt.Insertions) > 0 {
 		ins := make([]VirtualInsertion, 0, len(vt.Insertions))
 		for _, in := range vt.Insertions {
-			col := clampInt(in.Col, 0, rawLineLen)
+			col := clampInt(in.GraphemeCol, 0, rawLineLen)
 			text := sanitizeSingleLine(in.Text)
 			if text == "" {
 				continue
 			}
-			ins = append(ins, VirtualInsertion{Col: col, Text: text, Role: in.Role})
+			ins = append(ins, VirtualInsertion{GraphemeCol: col, Text: text, Role: in.Role})
 		}
 
 		// If an insertion anchor falls inside a deleted range, anchor at the deleted range start.
 		if len(vt.Deletions) > 0 && len(ins) > 0 {
 			for i := range ins {
 				for _, d := range vt.Deletions {
-					if ins[i].Col >= d.StartCol && ins[i].Col < d.EndCol {
-						ins[i].Col = d.StartCol
+					if ins[i].GraphemeCol >= d.StartGraphemeCol && ins[i].GraphemeCol < d.EndGraphemeCol {
+						ins[i].GraphemeCol = d.StartGraphemeCol
 						break
 					}
 				}
@@ -117,7 +117,7 @@ func normalizeVirtualText(vt VirtualText, rawLineLen int) VirtualText {
 		}
 
 		sort.SliceStable(ins, func(i, j int) bool {
-			return ins[i].Col < ins[j].Col
+			return ins[i].GraphemeCol < ins[j].GraphemeCol
 		})
 		vt.Insertions = ins
 	}

@@ -1,11 +1,13 @@
 package editor
 
-import "unicode"
+import (
+	graphemeutil "github.com/iw2rmb/flouris/internal/grapheme"
+)
 
 type wrappedSegment struct {
-	StartCol int
-	EndCol   int
-	Cells    int
+	StartGraphemeCol int
+	EndGraphemeCol   int
+	Cells            int
 
 	startCell int
 	endCell   int
@@ -24,22 +26,22 @@ func wrapSegmentsForVisualLine(vl VisualLine, mode WrapMode, width int) []wrappe
 	visualLen := vl.VisualLen()
 	if width <= 0 || mode == WrapNone {
 		return []wrappedSegment{{
-			StartCol:  0,
-			EndCol:    vl.RawLen,
-			Cells:     visualLen,
-			startCell: 0,
-			endCell:   visualLen,
+			StartGraphemeCol: 0,
+			EndGraphemeCol:   vl.RawGraphemeLen,
+			Cells:            visualLen,
+			startCell:        0,
+			endCell:          visualLen,
 		}}
 	}
 
 	units := wrapUnitsFromVisualLine(vl)
 	if len(units) == 0 {
 		return []wrappedSegment{{
-			StartCol:  0,
-			EndCol:    0,
-			Cells:     0,
-			startCell: 0,
-			endCell:   0,
+			StartGraphemeCol: 0,
+			EndGraphemeCol:   0,
+			Cells:            0,
+			startCell:        0,
+			endCell:          0,
 		}}
 	}
 
@@ -123,11 +125,11 @@ func tokenIsSplittableSpaces(tok VisualToken) bool {
 	if tok.Text == "" {
 		return false
 	}
-	if tok.CellWidth != len([]rune(tok.Text)) {
+	if tok.CellWidth != graphemeutil.Count(tok.Text) {
 		return false
 	}
-	for _, r := range tok.Text {
-		if r != ' ' {
+	for _, gr := range graphemeutil.Split(tok.Text) {
+		if !graphemeutil.IsSpace(gr) {
 			return false
 		}
 	}
@@ -140,11 +142,11 @@ func tokenClass(text string) (isWhitespace bool, isPunct bool) {
 	}
 	isWhitespace = true
 	isPunct = true
-	for _, r := range text {
-		if !unicode.IsSpace(r) {
+	for _, gr := range graphemeutil.Split(text) {
+		if !graphemeutil.IsSpace(gr) {
 			isWhitespace = false
 		}
-		if !unicode.IsPunct(r) {
+		if !graphemeutil.IsPunct(gr) {
 			isPunct = false
 		}
 	}
@@ -164,22 +166,22 @@ func segmentFromUnitRange(vl VisualLine, units []wrapUnit, start, end int) wrapp
 		endCell = startCell
 	}
 
-	startCol := clampInt(vl.DocColForVisualCell(startCell), 0, vl.RawLen)
+	startCol := clampInt(vl.DocGraphemeColForVisualCell(startCell), 0, vl.RawGraphemeLen)
 	endCol := startCol
 	if endCell >= vl.VisualLen() {
-		endCol = vl.RawLen
+		endCol = vl.RawGraphemeLen
 	} else {
-		endCol = clampInt(vl.DocColForVisualCell(endCell), 0, vl.RawLen)
+		endCol = clampInt(vl.DocGraphemeColForVisualCell(endCell), 0, vl.RawGraphemeLen)
 	}
 	if endCol < startCol {
 		endCol = startCol
 	}
 
 	return wrappedSegment{
-		StartCol:  startCol,
-		EndCol:    endCol,
-		Cells:     endCell - startCell,
-		startCell: startCell,
-		endCell:   endCell,
+		StartGraphemeCol: startCol,
+		EndGraphemeCol:   endCol,
+		Cells:            endCell - startCell,
+		startCell:        startCell,
+		endCell:          endCell,
 	}
 }

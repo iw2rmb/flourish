@@ -29,14 +29,14 @@ func TestRender_GhostInsertionAtEOL_UsesGhostStyle(t *testing.T) {
 			return Ghost{
 				Text: "X",
 				Edits: []buffer.TextEdit{{
-					Range: buffer.Range{Start: buffer.Pos{Row: 0, Col: 2}, End: buffer.Pos{Row: 0, Col: 2}},
+					Range: buffer.Range{Start: buffer.Pos{Row: 0, GraphemeCol: 2}, End: buffer.Pos{Row: 0, GraphemeCol: 2}},
 					Text:  "X",
 				}},
 			}, true
 		},
 	})
 
-	m.buf.SetCursor(buffer.Pos{Row: 0, Col: 2}) // EOL
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 2}) // EOL
 
 	got := m.renderContent()
 	want := st.Text.Render("a") + st.Text.Render("b") + st.Cursor.Render(" ") + st.Ghost.Inherit(st.Text).Render("X")
@@ -52,20 +52,20 @@ func TestUpdate_GhostAccept_TabAppliesEdits(t *testing.T) {
 			return Ghost{
 				Text: "X",
 				Edits: []buffer.TextEdit{{
-					Range: buffer.Range{Start: buffer.Pos{Row: 0, Col: 2}, End: buffer.Pos{Row: 0, Col: 2}},
+					Range: buffer.Range{Start: buffer.Pos{Row: 0, GraphemeCol: 2}, End: buffer.Pos{Row: 0, GraphemeCol: 2}},
 					Text:  "X",
 				}},
 			}, true
 		},
 	})
-	m.buf.SetCursor(buffer.Pos{Row: 0, Col: 2}) // EOL
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 2}) // EOL
 
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
 	if got := m.buf.Text(); got != "abX" {
 		t.Fatalf("text after ghost accept: got %q, want %q", got, "abX")
 	}
-	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, Col: 3}) {
-		t.Fatalf("cursor after ghost accept: got %v, want %v", got, buffer.Pos{Row: 0, Col: 3})
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, GraphemeCol: 3}) {
+		t.Fatalf("cursor after ghost accept: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 3})
 	}
 }
 
@@ -76,19 +76,19 @@ func TestUpdate_GhostAccept_RightAppliesEdits(t *testing.T) {
 			return Ghost{
 				Text: "X",
 				Edits: []buffer.TextEdit{{
-					Range: buffer.Range{Start: buffer.Pos{Row: 0, Col: 2}, End: buffer.Pos{Row: 0, Col: 2}},
+					Range: buffer.Range{Start: buffer.Pos{Row: 0, GraphemeCol: 2}, End: buffer.Pos{Row: 0, GraphemeCol: 2}},
 					Text:  "X",
 				}},
 			}, true
 		},
 	})
-	m.buf.SetCursor(buffer.Pos{Row: 0, Col: 2}) // EOL
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 2}) // EOL
 
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
 	if got := m.buf.Text(); got != "abX" {
 		t.Fatalf("text after ghost accept: got %q, want %q", got, "abX")
 	}
-	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, Col: 3}) {
-		t.Fatalf("cursor after ghost accept: got %v, want %v", got, buffer.Pos{Row: 0, Col: 3})
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, GraphemeCol: 3}) {
+		t.Fatalf("cursor after ghost accept: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 3})
 	}
 }

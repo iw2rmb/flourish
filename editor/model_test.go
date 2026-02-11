@@ -62,10 +62,10 @@ func TestVirtualTextProvider_ContextPerLine(t *testing.T) {
 	})
 	got = nil // New() triggers an initial render
 
-	m.buf.SetCursor(buffer.Pos{Row: 1, Col: 1})
+	m.buf.SetCursor(buffer.Pos{Row: 1, GraphemeCol: 1})
 	m.buf.SetSelection(buffer.Range{
-		Start: buffer.Pos{Row: 0, Col: 1},
-		End:   buffer.Pos{Row: 2, Col: 1},
+		Start: buffer.Pos{Row: 0, GraphemeCol: 1},
+		End:   buffer.Pos{Row: 2, GraphemeCol: 1},
 	})
 
 	_ = m.renderContent()
@@ -84,20 +84,20 @@ func TestVirtualTextProvider_ContextPerLine(t *testing.T) {
 		t.Fatalf("row 2 ctx: got (%d,%q)", got[2].Row, got[2].LineText)
 	}
 
-	if !got[1].HasCursor || got[1].CursorCol != 1 {
-		t.Fatalf("cursor ctx row 1: got (has=%v,col=%d), want (true,1)", got[1].HasCursor, got[1].CursorCol)
+	if !got[1].HasCursor || got[1].CursorGraphemeCol != 1 {
+		t.Fatalf("cursor ctx row 1: got (has=%v,col=%d), want (true,1)", got[1].HasCursor, got[1].CursorGraphemeCol)
 	}
 	if got[0].HasCursor || got[2].HasCursor {
 		t.Fatalf("cursor ctx other rows: got row0=%v row2=%v, want both false", got[0].HasCursor, got[2].HasCursor)
 	}
 
-	if !got[0].HasSelection || got[0].SelectionStartCol != 1 || got[0].SelectionEndCol != 2 {
-		t.Fatalf("selection ctx row 0: got (has=%v,%d..%d), want (true,1..2)", got[0].HasSelection, got[0].SelectionStartCol, got[0].SelectionEndCol)
+	if !got[0].HasSelection || got[0].SelectionStartGraphemeCol != 1 || got[0].SelectionEndGraphemeCol != 2 {
+		t.Fatalf("selection ctx row 0: got (has=%v,%d..%d), want (true,1..2)", got[0].HasSelection, got[0].SelectionStartGraphemeCol, got[0].SelectionEndGraphemeCol)
 	}
-	if !got[1].HasSelection || got[1].SelectionStartCol != 0 || got[1].SelectionEndCol != 2 {
-		t.Fatalf("selection ctx row 1: got (has=%v,%d..%d), want (true,0..2)", got[1].HasSelection, got[1].SelectionStartCol, got[1].SelectionEndCol)
+	if !got[1].HasSelection || got[1].SelectionStartGraphemeCol != 0 || got[1].SelectionEndGraphemeCol != 2 {
+		t.Fatalf("selection ctx row 1: got (has=%v,%d..%d), want (true,0..2)", got[1].HasSelection, got[1].SelectionStartGraphemeCol, got[1].SelectionEndGraphemeCol)
 	}
-	if !got[2].HasSelection || got[2].SelectionStartCol != 0 || got[2].SelectionEndCol != 1 {
-		t.Fatalf("selection ctx row 2: got (has=%v,%d..%d), want (true,0..1)", got[2].HasSelection, got[2].SelectionStartCol, got[2].SelectionEndCol)
+	if !got[2].HasSelection || got[2].SelectionStartGraphemeCol != 0 || got[2].SelectionEndGraphemeCol != 1 {
+		t.Fatalf("selection ctx row 2: got (has=%v,%d..%d), want (true,0..1)", got[2].HasSelection, got[2].SelectionStartGraphemeCol, got[2].SelectionEndGraphemeCol)
 	}
 }

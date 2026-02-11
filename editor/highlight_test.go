@@ -47,7 +47,7 @@ func TestHighlighting_ErrorFallsBackToPlainText(t *testing.T) {
 		Style: st,
 		Highlighter: &stubHighlighter{
 			fn: func(ctx LineContext) ([]HighlightSpan, error) {
-				return []HighlightSpan{{StartCol: 1, EndCol: 3, Style: r.NewStyle().Underline(true)}}, errors.New("boom")
+				return []HighlightSpan{{StartGraphemeCol: 1, EndGraphemeCol: 3, Style: r.NewStyle().Underline(true)}}, errors.New("boom")
 			},
 		},
 	})
@@ -77,7 +77,7 @@ func TestHighlighting_RebuildsAfterAutoFollowScroll(t *testing.T) {
 	m = m.SetSize(10, 1)
 	rows = nil
 
-	m.buf.SetCursor(buffer.Pos{Row: 2, Col: 0})
+	m.buf.SetCursor(buffer.Pos{Row: 2, GraphemeCol: 0})
 	m, _ = m.Update(struct{}{})
 
 	if len(rows) != 2 || rows[0] != 0 || rows[1] != 2 {
@@ -99,7 +99,7 @@ func TestHighlighting_AppliesSpansToVisibleDocText(t *testing.T) {
 		Style: st,
 		Highlighter: &stubHighlighter{
 			fn: func(ctx LineContext) ([]HighlightSpan, error) {
-				return []HighlightSpan{{StartCol: 1, EndCol: 3, Style: hlStyle}}, nil
+				return []HighlightSpan{{StartGraphemeCol: 1, EndGraphemeCol: 3, Style: hlStyle}}, nil
 			},
 		},
 	})

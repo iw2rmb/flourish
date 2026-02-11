@@ -14,19 +14,19 @@ Roadmap:
 
 ## Coordinates and ranges
 
-- `Pos` is `(Row, Col)` in **runes**, 0-based.
+- `Pos` is `(Row, GraphemeCol)` in **grapheme clusters**, 0-based.
 - `Range` is a **half-open** interval in document coordinates: `[Start, End)`.
 
 Helpers:
 - `ComparePos(a, b)` orders positions in document order.
 - `NormalizeRange(r)` ensures `Start <= End`.
-- `ClampPos(p, rowCount, lineLen)` clamps to `0 <= Row < rowCount` and `0 <= Col <= lineLen(Row)`.
+- `ClampPos(p, rowCount, lineLen)` clamps to `0 <= Row < rowCount` and `0 <= GraphemeCol <= lineLen(Row)`.
 - `ClampRange(r, rowCount, lineLen)` clamps both endpoints.
 
 ## Buffer state
 
 `Buffer` stores:
-- text as logical lines split on `\n` (each line is `[]rune`)
+- text as logical lines split on `\n` (each line is `[]string` grapheme clusters)
 - `Cursor` position (clamped)
 - optional `Selection` (normalized; empty selection is treated as inactive)
 - optional `SelectionRaw` (anchor/end without normalization; empty selection is treated as inactive)
@@ -43,14 +43,14 @@ Helpers:
 
 ## Movement + selection
 
-`Buffer.Move(Move)` updates cursor and selection using rune-accurate document coordinates.
+`Buffer.Move(Move)` updates cursor and selection using grapheme-accurate document coordinates.
 
 Selection APIs:
 - `Selection()` returns the normalized half-open range `[Start, End)`.
 - `SelectionRaw()` returns `{Start: anchor, End: end}` without normalization (direction-preserving).
 
 Types (from `design/api.md`):
-- `MoveUnit`: `MoveRune`, `MoveWord`, `MoveLine`, `MoveDoc`
+- `MoveUnit`: `MoveGrapheme`, `MoveWord`, `MoveLine`, `MoveDoc`
 - `MoveDir`: `DirLeft`, `DirRight`, `DirUp`, `DirDown`, `DirHome`, `DirEnd`
 - `Move`: `{Unit, Dir, Extend}`
 
@@ -61,15 +61,15 @@ Rules:
 
 ## Editing
 
-All editing operations are rune-accurate and follow selection-first semantics:
+All editing operations are grapheme-accurate and follow selection-first semantics:
 - If a selection is active, insertion replaces the selection (including inserting `""`, which deletes the selection).
 - If a selection is active, backspace/delete delete the selection.
-- Otherwise, backspace deletes the rune before the cursor (joining lines at SOL).
-- Otherwise, delete deletes the rune at the cursor (joining lines at EOL).
+- Otherwise, backspace deletes the grapheme cluster before the cursor (joining lines at SOL).
+- Otherwise, delete deletes the grapheme cluster at the cursor (joining lines at EOL).
 
 Implemented:
 - `InsertText(s string)` accepts `\n` and updates the cursor to the end of inserted text.
-- `InsertRune(r rune)` inserts one rune.
+- `InsertGrapheme(g string)` inserts one grapheme cluster.
 - `InsertNewline()` inserts `\n`.
 - `DeleteBackward()`, `DeleteForward()`, `DeleteSelection()`.
 
@@ -91,7 +91,7 @@ Undo/redo are available via:
 
 History model (v0):
 - Each successful **public text mutation** creates exactly one undo step:
-  - `InsertText`, `InsertRune`, `InsertNewline`
+  - `InsertText`, `InsertGrapheme`, `InsertNewline`
   - `DeleteBackward`, `DeleteForward`, `DeleteSelection`
   - `Apply(...)` (one step for the entire call, regardless of edit count)
 - No coalescing in v0 (each call is its own step).

@@ -43,7 +43,7 @@ Rendering uses `bubbles/viewport` for vertical scrolling and width/height clippi
 ## Wrapping + horizontal scrolling
 
 - `Config.WrapMode` exists (default: `WrapNone`).
-- Layout is computed as wrapped segments (`StartCol`, `EndCol`, `Cells`) per logical line and flattened into visual rows.
+- Layout is computed as wrapped segments (`StartGraphemeCol`, `EndGraphemeCol`, `Cells`) per logical line and flattened into visual rows.
 - Grapheme boundaries and widths are Unicode-aware (`rivo/uniseg`) and measured in terminal cells (`go-runewidth`); tabs use tab-stop expansion by `Config.TabWidth`.
 - For `WrapNone`, the editor maintains an internal horizontal offset `xOffset` (cells) so the cursor stays visible on long lines.
 - Horizontal scrolling clips each logical line by cells to `[xOffset:xOffset+contentWidth)`, where `contentWidth = viewportWidth - gutterWidth`.
@@ -53,8 +53,8 @@ Rendering uses `bubbles/viewport` for vertical scrolling and width/height clippi
 ## Virtual text + visual mapping
 
 - `Config.VirtualTextProvider` can return per-line view-only transforms:
-  - virtual deletions hide raw rune ranges (they do not render and are skipped by hit-testing)
-  - virtual insertions add rendered cells anchored at a raw document column (clicks inside insertions map to the anchor column)
+  - virtual deletions hide raw grapheme ranges (they do not render and are skipped by hit-testing)
+  - virtual insertions add rendered cells anchored at a raw document grapheme column (clicks inside insertions map to the anchor column)
 - `Config.DocID` (optional) is forwarded into hook contexts for caching (`VirtualTextContext.DocID`, `GhostContext.DocID`).
 - Cursor and selection remain document-based; selection styling applies only to visible doc-backed cells.
 - Tabs expand by `Config.TabWidth` (default: 4) and all horizontal mapping is in terminal-cell coordinates (grapheme-aware).
@@ -88,7 +88,7 @@ Rendering uses `bubbles/viewport` for vertical scrolling and width/height clippi
 
 Hit-testing maps viewport-local mouse coordinates `(X,Y)` to document positions:
 - `Y` maps to `buffer.Pos.Row` using `viewport.YOffset`.
-- `X` maps to `buffer.Pos.Col` using terminal **cell** coordinates (grapheme-aware; wide graphemes map multiple cells to one doc position; tabs expand by `Config.TabWidth`, default 4).
+- `X` maps to `buffer.Pos.GraphemeCol` using terminal **cell** coordinates (grapheme-aware; wide graphemes map multiple cells to one doc position; tabs expand by `Config.TabWidth`, default 4).
 - Clicking in the line number gutter maps to column 0 (start of line).
 - Positions are clamped into document bounds.
 - Under `WrapNone`, hit-testing accounts for the horizontal scroll offset (`xOffset`).

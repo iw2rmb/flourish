@@ -4,33 +4,33 @@ import "testing"
 
 func TestComparePos(t *testing.T) {
 	t.Run("row", func(t *testing.T) {
-		if got := ComparePos(Pos{Row: 0, Col: 0}, Pos{Row: 1, Col: 0}); got >= 0 {
+		if got := ComparePos(Pos{Row: 0, GraphemeCol: 0}, Pos{Row: 1, GraphemeCol: 0}); got >= 0 {
 			t.Fatalf("expected < 0, got %d", got)
 		}
-		if got := ComparePos(Pos{Row: 2, Col: 0}, Pos{Row: 1, Col: 999}); got <= 0 {
+		if got := ComparePos(Pos{Row: 2, GraphemeCol: 0}, Pos{Row: 1, GraphemeCol: 999}); got <= 0 {
 			t.Fatalf("expected > 0, got %d", got)
 		}
 	})
 
 	t.Run("col", func(t *testing.T) {
-		if got := ComparePos(Pos{Row: 1, Col: 0}, Pos{Row: 1, Col: 1}); got >= 0 {
+		if got := ComparePos(Pos{Row: 1, GraphemeCol: 0}, Pos{Row: 1, GraphemeCol: 1}); got >= 0 {
 			t.Fatalf("expected < 0, got %d", got)
 		}
-		if got := ComparePos(Pos{Row: 1, Col: 2}, Pos{Row: 1, Col: 1}); got <= 0 {
+		if got := ComparePos(Pos{Row: 1, GraphemeCol: 2}, Pos{Row: 1, GraphemeCol: 1}); got <= 0 {
 			t.Fatalf("expected > 0, got %d", got)
 		}
 	})
 
 	t.Run("equal", func(t *testing.T) {
-		if got := ComparePos(Pos{Row: 3, Col: 4}, Pos{Row: 3, Col: 4}); got != 0 {
+		if got := ComparePos(Pos{Row: 3, GraphemeCol: 4}, Pos{Row: 3, GraphemeCol: 4}); got != 0 {
 			t.Fatalf("expected 0, got %d", got)
 		}
 	})
 }
 
 func TestNormalizeRange(t *testing.T) {
-	r := NormalizeRange(Range{Start: Pos{Row: 2, Col: 3}, End: Pos{Row: 1, Col: 9}})
-	if r.Start != (Pos{Row: 1, Col: 9}) || r.End != (Pos{Row: 2, Col: 3}) {
+	r := NormalizeRange(Range{Start: Pos{Row: 2, GraphemeCol: 3}, End: Pos{Row: 1, GraphemeCol: 9}})
+	if r.Start != (Pos{Row: 1, GraphemeCol: 9}) || r.End != (Pos{Row: 2, GraphemeCol: 3}) {
 		t.Fatalf("unexpected range: %#v", r)
 	}
 
@@ -48,10 +48,10 @@ func TestClampPos(t *testing.T) {
 		in   Pos
 		want Pos
 	}{
-		{in: Pos{Row: -1, Col: -1}, want: Pos{Row: 0, Col: 0}},
-		{in: Pos{Row: 999, Col: 999}, want: Pos{Row: 2, Col: 3}},
-		{in: Pos{Row: 1, Col: 5}, want: Pos{Row: 1, Col: 0}},
-		{in: Pos{Row: 0, Col: 1}, want: Pos{Row: 0, Col: 1}},
+		{in: Pos{Row: -1, GraphemeCol: -1}, want: Pos{Row: 0, GraphemeCol: 0}},
+		{in: Pos{Row: 999, GraphemeCol: 999}, want: Pos{Row: 2, GraphemeCol: 3}},
+		{in: Pos{Row: 1, GraphemeCol: 5}, want: Pos{Row: 1, GraphemeCol: 0}},
+		{in: Pos{Row: 0, GraphemeCol: 1}, want: Pos{Row: 0, GraphemeCol: 1}},
 	}
 
 	for _, tc := range cases {

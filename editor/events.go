@@ -3,8 +3,8 @@ package editor
 import "github.com/iw2rmb/flouris/buffer"
 
 type ChangeEvent struct {
-	Version uint64
-	Cursor  buffer.Pos
+	Version   uint64
+	Cursor    buffer.Pos
 	Selection struct {
 		Range  buffer.Range
 		Active bool
@@ -26,4 +26,3 @@ func buildChangeEvent(b *buffer.Buffer) ChangeEvent {
 	}
 	return ev
 }
-

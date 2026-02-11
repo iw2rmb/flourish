@@ -1,10 +1,10 @@
 package buffer
 
-// Pos points into the logical document by (row, col) in runes.
-// Row and Col are 0-based.
+// Pos points into the logical document by (row, grapheme col).
+// Row and GraphemeCol are 0-based.
 type Pos struct {
-	Row int
-	Col int
+	Row         int
+	GraphemeCol int
 }
 
 // Range is a half-open selection in document coordinates: [Start, End).
@@ -27,10 +27,10 @@ func ComparePos(a, b Pos) int {
 	if a.Row > b.Row {
 		return 1
 	}
-	if a.Col < b.Col {
+	if a.GraphemeCol < b.GraphemeCol {
 		return -1
 	}
-	if a.Col > b.Col {
+	if a.GraphemeCol > b.GraphemeCol {
 		return 1
 	}
 	return 0
@@ -63,11 +63,11 @@ func clampInt(v, min, max int) int {
 // ClampPos clamps p into document bounds described by rowCount and lineLen.
 //
 // - rowCount is the number of logical lines (rows).
-// - lineLen(row) returns the rune length of the given row.
+// - lineLen(row) returns the grapheme length of the given row.
 //
 // The returned Pos always satisfies:
 // - 0 <= Row < rowCount (with rowCount treated as at least 1)
-// - 0 <= Col <= lineLen(Row)
+// - 0 <= GraphemeCol <= lineLen(Row)
 func ClampPos(p Pos, rowCount int, lineLen func(row int) int) Pos {
 	if rowCount <= 0 {
 		rowCount = 1
@@ -82,9 +82,9 @@ func ClampPos(p Pos, rowCount int, lineLen func(row int) int) Pos {
 			maxCol = 0
 		}
 	}
-	col := clampInt(p.Col, 0, maxCol)
+	col := clampInt(p.GraphemeCol, 0, maxCol)
 
-	return Pos{Row: row, Col: col}
+	return Pos{Row: row, GraphemeCol: col}
 }
 
 func ClampRange(r Range, rowCount int, lineLen func(row int) int) Range {

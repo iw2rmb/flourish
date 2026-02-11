@@ -1,10 +1,13 @@
 package editor
 
-import "github.com/iw2rmb/flouris/buffer"
+import (
+	"github.com/iw2rmb/flouris/buffer"
+	graphemeutil "github.com/iw2rmb/flouris/internal/grapheme"
+)
 
 type GhostContext struct {
 	Row         int
-	Col         int // rune index in the line
+	GraphemeCol int // grapheme index in the line
 	LineText    string
 	IsEndOfLine bool
 
@@ -83,7 +86,7 @@ func (m *Model) ghostFor(row, col int, lineText string, rawLen int) (Ghost, bool
 
 	ctx := GhostContext{
 		Row:         row,
-		Col:         col,
+		GraphemeCol: col,
 		LineText:    lineText,
 		IsEndOfLine: true,
 		DocID:       m.cfg.DocID,
@@ -109,8 +112,8 @@ func (m *Model) virtualTextWithGhost(row int, rawLine string, vt VirtualText) Vi
 		return vt
 	}
 
-	rawLen := len([]rune(rawLine))
-	col := clampInt(cursor.Col, 0, rawLen)
+	rawLen := graphemeutil.Count(rawLine)
+	col := clampInt(cursor.GraphemeCol, 0, rawLen)
 	if col != rawLen {
 		return vt
 	}
@@ -120,6 +123,6 @@ func (m *Model) virtualTextWithGhost(row int, rawLine string, vt VirtualText) Vi
 		return vt
 	}
 
-	vt.Insertions = append(vt.Insertions, VirtualInsertion{Col: rawLen, Text: ghost.Text, Role: VirtualRoleGhost})
+	vt.Insertions = append(vt.Insertions, VirtualInsertion{GraphemeCol: rawLen, Text: ghost.Text, Role: VirtualRoleGhost})
 	return normalizeVirtualText(vt, rawLen)
 }

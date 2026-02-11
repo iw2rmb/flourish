@@ -71,8 +71,8 @@ func TestRender_Selection_MultiLine_HalfOpen(t *testing.T) {
 	m = m.Blur()
 
 	m.buf.SetSelection(buffer.Range{
-		Start: buffer.Pos{Row: 0, Col: 1},
-		End:   buffer.Pos{Row: 2, Col: 1},
+		Start: buffer.Pos{Row: 0, GraphemeCol: 1},
+		End:   buffer.Pos{Row: 2, GraphemeCol: 1},
 	})
 
 	got := m.renderContent()
@@ -102,8 +102,8 @@ func TestRender_Selection_LineBoundary_EndAtStartOfNextLine(t *testing.T) {
 
 	// Half-open: selecting [0:1, 1:0) selects only "b".
 	m.buf.SetSelection(buffer.Range{
-		Start: buffer.Pos{Row: 0, Col: 1},
-		End:   buffer.Pos{Row: 1, Col: 0},
+		Start: buffer.Pos{Row: 0, GraphemeCol: 1},
+		End:   buffer.Pos{Row: 1, GraphemeCol: 0},
 	})
 
 	got := m.renderContent()
@@ -131,8 +131,8 @@ func TestRender_Selection_EmptySelectionRendersAsText(t *testing.T) {
 	m = m.Blur()
 
 	m.buf.SetSelection(buffer.Range{
-		Start: buffer.Pos{Row: 0, Col: 1},
-		End:   buffer.Pos{Row: 0, Col: 1},
+		Start: buffer.Pos{Row: 0, GraphemeCol: 1},
+		End:   buffer.Pos{Row: 0, GraphemeCol: 1},
 	})
 
 	got := m.renderContent()
@@ -157,8 +157,8 @@ func TestRender_Selection_FullLineSelection(t *testing.T) {
 
 	// Half-open: selecting [0:0, 1:0) selects the full first line only.
 	m.buf.SetSelection(buffer.Range{
-		Start: buffer.Pos{Row: 0, Col: 0},
-		End:   buffer.Pos{Row: 1, Col: 0},
+		Start: buffer.Pos{Row: 0, GraphemeCol: 0},
+		End:   buffer.Pos{Row: 1, GraphemeCol: 0},
 	})
 
 	got := m.renderContent()
@@ -189,8 +189,8 @@ func TestRender_Selection_DeletedRangesDoNotRenderHighlight(t *testing.T) {
 			// Hide markdown markers: "**a**" -> "a"
 			return VirtualText{
 				Deletions: []VirtualDeletion{
-					{StartCol: 0, EndCol: 2},
-					{StartCol: 3, EndCol: 5},
+					{StartGraphemeCol: 0, EndGraphemeCol: 2},
+					{StartGraphemeCol: 3, EndGraphemeCol: 5},
 				},
 			}
 		},
@@ -199,8 +199,8 @@ func TestRender_Selection_DeletedRangesDoNotRenderHighlight(t *testing.T) {
 
 	// Select the entire raw line; only the visible doc-backed cell should be highlighted.
 	m.buf.SetSelection(buffer.Range{
-		Start: buffer.Pos{Row: 0, Col: 0},
-		End:   buffer.Pos{Row: 0, Col: 5},
+		Start: buffer.Pos{Row: 0, GraphemeCol: 0},
+		End:   buffer.Pos{Row: 0, GraphemeCol: 5},
 	})
 
 	got := m.renderContent()

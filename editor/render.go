@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/iw2rmb/flouris/buffer"
+	graphemeutil "github.com/iw2rmb/flouris/internal/grapheme"
 )
 
 func (m *Model) renderContent() string {
@@ -110,14 +111,14 @@ func (m *Model) highlightForLine(row int, rawLine string, vt VirtualText, cursor
 	}
 
 	visible, rawToVisible := visibleTextAfterDeletions(rawLine, vt)
-	visLen := len([]rune(visible))
+	visLen := graphemeutil.Count(visible)
 
 	hasCursor := cursor.Row == row
 	cursorCol := -1
 	rawCursorCol := -1
 	if hasCursor {
-		rawLen := len([]rune(rawLine))
-		rawCursorCol = clampInt(cursor.Col, 0, rawLen)
+		rawLen := graphemeutil.Count(rawLine)
+		rawCursorCol = clampInt(cursor.GraphemeCol, 0, rawLen)
 		if rawCursorCol >= 0 && rawCursorCol < len(rawToVisible) {
 			cursorCol = clampInt(rawToVisible[rawCursorCol], 0, visLen)
 		} else {
@@ -126,12 +127,12 @@ func (m *Model) highlightForLine(row int, rawLine string, vt VirtualText, cursor
 	}
 
 	spans, err := m.cfg.Highlighter.HighlightLine(LineContext{
-		Row:          row,
-		RawText:      rawLine,
-		Text:         visible,
-		CursorCol:    cursorCol,
-		RawCursorCol: rawCursorCol,
-		HasCursor:    hasCursor,
+		Row:                  row,
+		RawText:              rawLine,
+		Text:                 visible,
+		CursorGraphemeCol:    cursorCol,
+		RawCursorGraphemeCol: rawCursorCol,
+		HasCursor:            hasCursor,
 	})
 	if err != nil {
 		return nil
@@ -140,9 +141,9 @@ func (m *Model) highlightForLine(row int, rawLine string, vt VirtualText, cursor
 }
 
 func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focused bool, sel buffer.Range, selOK bool, highlights []HighlightSpan, left, right int) string {
-	rawLen := vl.RawLen
+	rawLen := vl.RawGraphemeLen
 
-	cursorCol := cursor.Col
+	cursorCol := cursor.GraphemeCol
 	hasCursor := row == cursor.Row && focused
 	if !hasCursor {
 		cursorCol = -1
@@ -158,14 +159,14 @@ func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focus
 			if tok.Kind != VisualTokenDoc {
 				continue
 			}
-			if cursorCol >= tok.DocStartCol && cursorCol < tok.DocEndCol {
+			if cursorCol >= tok.DocStartGraphemeCol && cursorCol < tok.DocEndGraphemeCol {
 				cursorTokenIdx = i
 				break
 			}
 		}
 		if cursorTokenIdx == -1 {
 			// Cursor is inside a deleted range; snap to the next visible doc-backed token.
-			targetCell := vl.VisualCellForDocCol(cursorCol)
+			targetCell := vl.VisualCellForDocGraphemeCol(cursorCol)
 			for i, tok := range vl.Tokens {
 				if tok.Kind == VisualTokenDoc && tok.StartCell == targetCell {
 					cursorTokenIdx = i
@@ -191,8 +192,8 @@ func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focus
 		if s == "" {
 			return false
 		}
-		for _, r := range s {
-			if r != ' ' {
+		for _, g := range graphemeutil.Split(s) {
+			if !graphemeutil.IsSpace(g) {
 				return false
 			}
 		}
@@ -233,7 +234,7 @@ func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focus
 		}
 		spanStart := spanL - segL
 		spanWidth := spanR - spanL
-		splittable := isAllSpaces(tok.Text) && tok.CellWidth == len([]rune(tok.Text))
+		splittable := isAllSpaces(tok.Text) && tok.CellWidth == graphemeutil.Count(tok.Text)
 
 		write := func(s string) { sb.WriteString(s) }
 
@@ -248,7 +249,7 @@ func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focus
 			}
 			write(renderSpan(style.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 		case VisualTokenDoc:
-			selected := hasSel && tok.DocStartCol < selEndCol && tok.DocEndCol > selStartCol
+			selected := hasSel && tok.DocStartGraphemeCol < selEndCol && tok.DocEndGraphemeCol > selStartCol
 			if hasCursor && i == cursorTokenIdx {
 				write(renderSpan(st.Cursor.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 			} else if selected {
@@ -256,7 +257,7 @@ func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focus
 			} else {
 				style := st.Text
 				for _, sp := range highlights {
-					if tok.VisibleStartCol < sp.EndCol && tok.VisibleEndCol > sp.StartCol {
+					if tok.VisibleStartGraphemeCol < sp.EndGraphemeCol && tok.VisibleEndGraphemeCol > sp.StartGraphemeCol {
 						style = sp.Style.Inherit(st.Text)
 						break
 					}

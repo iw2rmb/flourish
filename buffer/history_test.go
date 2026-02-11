@@ -11,7 +11,7 @@ func TestBuffer_UndoRedo_BasicTyping(t *testing.T) {
 		t.Fatalf("expected CanRedo=false")
 	}
 
-	b.InsertRune('a')
+	b.InsertGrapheme("a")
 	if !b.CanUndo() {
 		t.Fatalf("expected CanUndo=true")
 	}
@@ -26,7 +26,7 @@ func TestBuffer_UndoRedo_BasicTyping(t *testing.T) {
 	if got, want := b.Text(), ""; got != want {
 		t.Fatalf("text=%q, want %q", got, want)
 	}
-	if got, want := b.Cursor(), (Pos{Row: 0, Col: 0}); got != want {
+	if got, want := b.Cursor(), (Pos{Row: 0, GraphemeCol: 0}); got != want {
 		t.Fatalf("cursor=%v, want %v", got, want)
 	}
 	if got := b.Version(); got != v+1 {
@@ -43,7 +43,7 @@ func TestBuffer_UndoRedo_BasicTyping(t *testing.T) {
 	if got, want := b.Text(), "a"; got != want {
 		t.Fatalf("text=%q, want %q", got, want)
 	}
-	if got, want := b.Cursor(), (Pos{Row: 0, Col: 1}); got != want {
+	if got, want := b.Cursor(), (Pos{Row: 0, GraphemeCol: 1}); got != want {
 		t.Fatalf("cursor=%v, want %v", got, want)
 	}
 	if got := b.Version(); got != v2+1 {
@@ -53,7 +53,7 @@ func TestBuffer_UndoRedo_BasicTyping(t *testing.T) {
 
 func TestBuffer_UndoRedo_EmptyStacks_NoMutation(t *testing.T) {
 	b := New("hi", Options{})
-	b.SetCursor(Pos{Row: 0, Col: 1})
+	b.SetCursor(Pos{Row: 0, GraphemeCol: 1})
 
 	text := b.Text()
 	cursor := b.Cursor()
@@ -82,8 +82,8 @@ func TestBuffer_UndoRedo_EmptyStacks_NoMutation(t *testing.T) {
 
 func TestBuffer_Undo_RestoresCursorAndSelection(t *testing.T) {
 	b := New("hello", Options{})
-	b.SetCursor(Pos{Row: 0, Col: 4})
-	b.SetSelection(Range{Start: Pos{Row: 0, Col: 1}, End: Pos{Row: 0, Col: 4}}) // "ell"
+	b.SetCursor(Pos{Row: 0, GraphemeCol: 4})
+	b.SetSelection(Range{Start: Pos{Row: 0, GraphemeCol: 1}, End: Pos{Row: 0, GraphemeCol: 4}}) // "ell"
 
 	b.InsertText("i")
 	if got, want := b.Text(), "hio"; got != want {
@@ -99,22 +99,22 @@ func TestBuffer_Undo_RestoresCursorAndSelection(t *testing.T) {
 	if got, want := b.Text(), "hello"; got != want {
 		t.Fatalf("text=%q, want %q", got, want)
 	}
-	if got, want := b.Cursor(), (Pos{Row: 0, Col: 4}); got != want {
+	if got, want := b.Cursor(), (Pos{Row: 0, GraphemeCol: 4}); got != want {
 		t.Fatalf("cursor=%v, want %v", got, want)
 	}
 	r, ok := b.Selection()
 	if !ok {
 		t.Fatalf("expected selection restored")
 	}
-	if got, want := r, (Range{Start: Pos{Row: 0, Col: 1}, End: Pos{Row: 0, Col: 4}}); got != want {
+	if got, want := r, (Range{Start: Pos{Row: 0, GraphemeCol: 1}, End: Pos{Row: 0, GraphemeCol: 4}}); got != want {
 		t.Fatalf("selection=%v, want %v", got, want)
 	}
 }
 
 func TestBuffer_Undo_RestoresSelectionAnchorDirection(t *testing.T) {
 	b := New("abcd", Options{})
-	b.SetCursor(Pos{Row: 0, Col: 1})
-	b.SetSelection(Range{Start: Pos{Row: 0, Col: 3}, End: Pos{Row: 0, Col: 1}}) // anchor right-to-left
+	b.SetCursor(Pos{Row: 0, GraphemeCol: 1})
+	b.SetSelection(Range{Start: Pos{Row: 0, GraphemeCol: 3}, End: Pos{Row: 0, GraphemeCol: 1}}) // anchor right-to-left
 
 	b.InsertText("X")
 	if got, want := b.Text(), "aXd"; got != want {
@@ -127,19 +127,19 @@ func TestBuffer_Undo_RestoresSelectionAnchorDirection(t *testing.T) {
 	if got, want := b.Text(), "abcd"; got != want {
 		t.Fatalf("text=%q, want %q", got, want)
 	}
-	if got, want := b.Cursor(), (Pos{Row: 0, Col: 1}); got != want {
+	if got, want := b.Cursor(), (Pos{Row: 0, GraphemeCol: 1}); got != want {
 		t.Fatalf("cursor=%v, want %v", got, want)
 	}
 
-	b.Move(Move{Unit: MoveRune, Dir: DirRight, Extend: true})
-	if got, want := b.Cursor(), (Pos{Row: 0, Col: 2}); got != want {
+	b.Move(Move{Unit: MoveGrapheme, Dir: DirRight, Extend: true})
+	if got, want := b.Cursor(), (Pos{Row: 0, GraphemeCol: 2}); got != want {
 		t.Fatalf("cursor=%v, want %v", got, want)
 	}
 	r, ok := b.Selection()
 	if !ok {
 		t.Fatalf("expected selection")
 	}
-	if got, want := r, (Range{Start: Pos{Row: 0, Col: 2}, End: Pos{Row: 0, Col: 3}}); got != want {
+	if got, want := r, (Range{Start: Pos{Row: 0, GraphemeCol: 2}, End: Pos{Row: 0, GraphemeCol: 3}}); got != want {
 		t.Fatalf("selection=%v, want %v", got, want)
 	}
 }
@@ -147,8 +147,8 @@ func TestBuffer_Undo_RestoresSelectionAnchorDirection(t *testing.T) {
 func TestBuffer_UndoRedo_ApplyIsSingleHistoryStep(t *testing.T) {
 	b := New("ab", Options{})
 	b.Apply(
-		TextEdit{Range: Range{Start: Pos{Row: 0, Col: 1}, End: Pos{Row: 0, Col: 1}}, Text: "X\nY"},
-		TextEdit{Range: Range{Start: Pos{Row: 1, Col: 1}, End: Pos{Row: 1, Col: 1}}, Text: "Z"},
+		TextEdit{Range: Range{Start: Pos{Row: 0, GraphemeCol: 1}, End: Pos{Row: 0, GraphemeCol: 1}}, Text: "X\nY"},
+		TextEdit{Range: Range{Start: Pos{Row: 1, GraphemeCol: 1}, End: Pos{Row: 1, GraphemeCol: 1}}, Text: "Z"},
 	)
 
 	if got, want := b.Text(), "aX\nYZb"; got != want {
@@ -228,13 +228,13 @@ func TestBuffer_UndoThenNewEdit_ClearsRedo(t *testing.T) {
 
 func TestBuffer_UndoRedo_DeleteBackward_JoinsLines_Unicode(t *testing.T) {
 	b := New("π\nテ", Options{})
-	b.SetCursor(Pos{Row: 1, Col: 0})
+	b.SetCursor(Pos{Row: 1, GraphemeCol: 0})
 
 	b.DeleteBackward()
 	if got, want := b.Text(), "πテ"; got != want {
 		t.Fatalf("text=%q, want %q", got, want)
 	}
-	if got, want := b.Cursor(), (Pos{Row: 0, Col: 1}); got != want {
+	if got, want := b.Cursor(), (Pos{Row: 0, GraphemeCol: 1}); got != want {
 		t.Fatalf("cursor=%v, want %v", got, want)
 	}
 
@@ -244,7 +244,7 @@ func TestBuffer_UndoRedo_DeleteBackward_JoinsLines_Unicode(t *testing.T) {
 	if got, want := b.Text(), "π\nテ"; got != want {
 		t.Fatalf("text=%q, want %q", got, want)
 	}
-	if got, want := b.Cursor(), (Pos{Row: 1, Col: 0}); got != want {
+	if got, want := b.Cursor(), (Pos{Row: 1, GraphemeCol: 0}); got != want {
 		t.Fatalf("cursor=%v, want %v", got, want)
 	}
 
@@ -254,7 +254,7 @@ func TestBuffer_UndoRedo_DeleteBackward_JoinsLines_Unicode(t *testing.T) {
 	if got, want := b.Text(), "πテ"; got != want {
 		t.Fatalf("text=%q, want %q", got, want)
 	}
-	if got, want := b.Cursor(), (Pos{Row: 0, Col: 1}); got != want {
+	if got, want := b.Cursor(), (Pos{Row: 0, GraphemeCol: 1}); got != want {
 		t.Fatalf("cursor=%v, want %v", got, want)
 	}
 }

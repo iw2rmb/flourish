@@ -52,8 +52,8 @@ func TestIterateGraphemeSteps_UnicodeBoundariesAndWidths(t *testing.T) {
 			}
 
 			for i, st := range steps {
-				if st.NextCol <= st.Col {
-					t.Fatalf("step %d does not advance boundary: col=%d next=%d", i, st.Col, st.NextCol)
+				if st.NextGraphemeCol <= st.GraphemeCol {
+					t.Fatalf("step %d does not advance boundary: col=%d next=%d", i, st.GraphemeCol, st.NextGraphemeCol)
 				}
 				if st.CellWidth < 0 {
 					t.Fatalf("step %d has negative width: %d", i, st.CellWidth)

@@ -24,7 +24,7 @@ func TestGhostProvider_CalledOnlyAtEOL_AndOnlyWhenFocused(t *testing.T) {
 		t.Fatalf("provider calls when not at EOL: got %d, want %d", calls, 0)
 	}
 
-	m.buf.SetCursor(buffer.Pos{Row: 0, Col: 2}) // EOL
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 2}) // EOL
 	if _, ok := m.ghostForCursor(); !ok {
 		t.Fatalf("expected ghost at EOL")
 	}
@@ -33,7 +33,7 @@ func TestGhostProvider_CalledOnlyAtEOL_AndOnlyWhenFocused(t *testing.T) {
 	}
 
 	m = m.Blur()
-	m.buf.SetCursor(buffer.Pos{Row: 0, Col: 2}) // keep at EOL
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 2}) // keep at EOL
 	if _, ok := m.ghostForCursor(); ok {
 		t.Fatalf("expected no ghost when blurred")
 	}
@@ -53,7 +53,7 @@ func TestGhostProvider_CacheHitAvoidsDuplicateCalls(t *testing.T) {
 	})
 	calls = 0
 
-	m.buf.SetCursor(buffer.Pos{Row: 0, Col: 2}) // EOL
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 2}) // EOL
 
 	if _, ok := m.ghostForCursor(); !ok {
 		t.Fatalf("expected ghost on first call")
@@ -81,7 +81,7 @@ func TestGhostProvider_ContextIncludesDocID_AndCacheKeysByIt(t *testing.T) {
 	calls = 0
 	seenDocIDs = nil
 
-	m.buf.SetCursor(buffer.Pos{Row: 0, Col: 2}) // EOL
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 2}) // EOL
 
 	if _, ok := m.ghostForCursor(); !ok {
 		t.Fatalf("expected ghost on first call")

@@ -25,8 +25,8 @@ func TestOnChange_FiresOnMutationsAndSkipsNoOps(t *testing.T) {
 	if got := events[0].Text; got != "ab" {
 		t.Fatalf("event text after move: got %q, want %q", got, "ab")
 	}
-	if got := events[0].Cursor; got != (buffer.Pos{Row: 0, Col: 1}) {
-		t.Fatalf("event cursor after move: got %v, want %v", got, buffer.Pos{Row: 0, Col: 1})
+	if got := events[0].Cursor; got != (buffer.Pos{Row: 0, GraphemeCol: 1}) {
+		t.Fatalf("event cursor after move: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 1})
 	}
 
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight}) // to EOL
@@ -47,4 +47,3 @@ func TestOnChange_FiresOnMutationsAndSkipsNoOps(t *testing.T) {
 		t.Fatalf("event text after insert: got %q, want %q", got, "abX")
 	}
 }
-

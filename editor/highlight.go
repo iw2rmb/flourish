@@ -4,14 +4,15 @@ import (
 	"sort"
 
 	"github.com/charmbracelet/lipgloss"
+	graphemeutil "github.com/iw2rmb/flouris/internal/grapheme"
 )
 
 type HighlightSpan struct {
-	// StartCol and EndCol are rune indices in the visible line text (after deletions),
-	// half-open [StartCol, EndCol).
-	StartCol int
-	EndCol   int
-	Style    lipgloss.Style
+	// StartGraphemeCol and EndGraphemeCol are grapheme indices in the visible line text (after deletions),
+	// half-open [StartGraphemeCol, EndGraphemeCol).
+	StartGraphemeCol int
+	EndGraphemeCol   int
+	Style            lipgloss.Style
 }
 
 type LineContext struct {
@@ -22,11 +23,11 @@ type LineContext struct {
 	// Text is the visible line text (unwrapped) after applying virtual deletions.
 	Text string
 
-	// CursorCol is the rune index within Text (visible line), if cursor is on this row; otherwise -1.
-	CursorCol int
-	// RawCursorCol is the rune index within RawText (buffer line), if cursor is on this row; otherwise -1.
-	RawCursorCol int
-	HasCursor    bool
+	// CursorGraphemeCol is the grapheme index within Text (visible line), if cursor is on this row; otherwise -1.
+	CursorGraphemeCol int
+	// RawCursorGraphemeCol is the grapheme index within RawText (buffer line), if cursor is on this row; otherwise -1.
+	RawCursorGraphemeCol int
+	HasCursor            bool
 }
 
 type Highlighter interface {
@@ -34,12 +35,12 @@ type Highlighter interface {
 }
 
 func visibleTextAfterDeletions(rawLine string, vt VirtualText) (visible string, rawToVisible []int) {
-	rawRunes := []rune(rawLine)
-	rawLen := len(rawRunes)
+	rawGraphemes := graphemeutil.Split(rawLine)
+	rawLen := len(rawGraphemes)
 	deleted := make([]bool, rawLen)
 	for _, d := range vt.Deletions {
-		start := clampInt(d.StartCol, 0, rawLen)
-		end := clampInt(d.EndCol, 0, rawLen)
+		start := clampInt(d.StartGraphemeCol, 0, rawLen)
+		end := clampInt(d.EndGraphemeCol, 0, rawLen)
 		if end < start {
 			start, end = end, start
 		}
@@ -48,17 +49,17 @@ func visibleTextAfterDeletions(rawLine string, vt VirtualText) (visible string, 
 		}
 	}
 
-	visibleRunes := make([]rune, 0, rawLen)
+	visibleGraphemes := make([]string, 0, rawLen)
 	visibleRawCols := make([]int, 0, rawLen)
-	for i, r := range rawRunes {
+	for i, gr := range rawGraphemes {
 		if deleted[i] {
 			continue
 		}
-		visibleRunes = append(visibleRunes, r)
+		visibleGraphemes = append(visibleGraphemes, gr)
 		visibleRawCols = append(visibleRawCols, i)
 	}
 
-	visLen := len(visibleRunes)
+	visLen := len(visibleGraphemes)
 	rawToVisible = make([]int, rawLen+1)
 	for i := range rawToVisible {
 		rawToVisible[i] = visLen
@@ -75,7 +76,7 @@ func visibleTextAfterDeletions(rawLine string, vt VirtualText) (visible string, 
 		}
 	}
 
-	return string(visibleRunes), rawToVisible
+	return graphemeutil.Join(visibleGraphemes), rawToVisible
 }
 
 func normalizeHighlightSpans(spans []HighlightSpan, lineLen int) []HighlightSpan {
@@ -86,22 +87,22 @@ func normalizeHighlightSpans(spans []HighlightSpan, lineLen int) []HighlightSpan
 
 	out := make([]HighlightSpan, 0, len(spans))
 	for _, sp := range spans {
-		start := clampInt(sp.StartCol, 0, lineLen)
-		end := clampInt(sp.EndCol, 0, lineLen)
+		start := clampInt(sp.StartGraphemeCol, 0, lineLen)
+		end := clampInt(sp.EndGraphemeCol, 0, lineLen)
 		if end < start {
 			start, end = end, start
 		}
 		if start == end {
 			continue
 		}
-		out = append(out, HighlightSpan{StartCol: start, EndCol: end, Style: sp.Style})
+		out = append(out, HighlightSpan{StartGraphemeCol: start, EndGraphemeCol: end, Style: sp.Style})
 	}
 
 	sort.Slice(out, func(i, j int) bool {
-		if out[i].StartCol != out[j].StartCol {
-			return out[i].StartCol < out[j].StartCol
+		if out[i].StartGraphemeCol != out[j].StartGraphemeCol {
+			return out[i].StartGraphemeCol < out[j].StartGraphemeCol
 		}
-		return out[i].EndCol < out[j].EndCol
+		return out[i].EndGraphemeCol < out[j].EndGraphemeCol
 	})
 
 	// v0: enforce non-overlap deterministically by dropping any overlapping spans.
@@ -112,7 +113,7 @@ func normalizeHighlightSpans(spans []HighlightSpan, lineLen int) []HighlightSpan
 			continue
 		}
 		last := merged[len(merged)-1]
-		if sp.StartCol < last.EndCol {
+		if sp.StartGraphemeCol < last.EndGraphemeCol {
 			continue
 		}
 		merged = append(merged, sp)
@@ -120,4 +121,3 @@ func normalizeHighlightSpans(spans []HighlightSpan, lineLen int) []HighlightSpan
 
 	return merged
 }
-

@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/iw2rmb/flouris/buffer"
+	"github.com/iw2rmb/flouris/internal/grapheme"
 )
 
 func (m Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
@@ -42,22 +43,22 @@ func (m Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 
 	switch {
 	case key.Matches(msg, km.Left):
-		m.buf.Move(buffer.Move{Unit: buffer.MoveRune, Dir: buffer.DirLeft})
+		m.buf.Move(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirLeft})
 	case key.Matches(msg, km.Right):
-		m.buf.Move(buffer.Move{Unit: buffer.MoveRune, Dir: buffer.DirRight})
+		m.buf.Move(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirRight})
 	case key.Matches(msg, km.Up):
-		m.buf.Move(buffer.Move{Unit: buffer.MoveRune, Dir: buffer.DirUp})
+		m.buf.Move(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirUp})
 	case key.Matches(msg, km.Down):
-		m.buf.Move(buffer.Move{Unit: buffer.MoveRune, Dir: buffer.DirDown})
+		m.buf.Move(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirDown})
 
 	case key.Matches(msg, km.ShiftLeft):
-		m.buf.Move(buffer.Move{Unit: buffer.MoveRune, Dir: buffer.DirLeft, Extend: true})
+		m.buf.Move(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirLeft, Extend: true})
 	case key.Matches(msg, km.ShiftRight):
-		m.buf.Move(buffer.Move{Unit: buffer.MoveRune, Dir: buffer.DirRight, Extend: true})
+		m.buf.Move(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirRight, Extend: true})
 	case key.Matches(msg, km.ShiftUp):
-		m.buf.Move(buffer.Move{Unit: buffer.MoveRune, Dir: buffer.DirUp, Extend: true})
+		m.buf.Move(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirUp, Extend: true})
 	case key.Matches(msg, km.ShiftDown):
-		m.buf.Move(buffer.Move{Unit: buffer.MoveRune, Dir: buffer.DirDown, Extend: true})
+		m.buf.Move(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirDown, Extend: true})
 
 	case key.Matches(msg, km.WordLeft):
 		m.buf.Move(buffer.Move{Unit: buffer.MoveWord, Dir: buffer.DirLeft})
@@ -111,7 +112,13 @@ func (m Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	default:
 		if msg.Type == tea.KeyTab {
 			if !m.cfg.ReadOnly {
-				m.buf.InsertRune('\t')
+				m.buf.InsertGrapheme("\t")
+			}
+			return m, nil
+		}
+		if msg.Type == tea.KeySpace && !msg.Alt {
+			if !m.cfg.ReadOnly {
+				m.buf.InsertGrapheme(" ")
 			}
 			return m, nil
 		}
@@ -186,11 +193,11 @@ func textInRange(text string, r buffer.Range) string {
 	}
 
 	if r.Start.Row == r.End.Row {
-		rr := []rune(lines[r.Start.Row])
-		if r.Start.Col < 0 || r.End.Col < 0 || r.Start.Col > len(rr) || r.End.Col > len(rr) {
+		rr := grapheme.Split(lines[r.Start.Row])
+		if r.Start.GraphemeCol < 0 || r.End.GraphemeCol < 0 || r.Start.GraphemeCol > len(rr) || r.End.GraphemeCol > len(rr) {
 			return ""
 		}
-		return string(rr[r.Start.Col:r.End.Col])
+		return grapheme.Join(rr[r.Start.GraphemeCol:r.End.GraphemeCol])
 	}
 
 	var sb strings.Builder
@@ -198,19 +205,19 @@ func textInRange(text string, r buffer.Range) string {
 		if row > r.Start.Row {
 			sb.WriteByte('\n')
 		}
-		rr := []rune(lines[row])
+		rr := grapheme.Split(lines[row])
 		startCol := 0
 		endCol := len(rr)
 		if row == r.Start.Row {
-			startCol = r.Start.Col
+			startCol = r.Start.GraphemeCol
 		}
 		if row == r.End.Row {
-			endCol = r.End.Col
+			endCol = r.End.GraphemeCol
 		}
 		if startCol < 0 || endCol < 0 || startCol > len(rr) || endCol > len(rr) || startCol > endCol {
 			return ""
 		}
-		sb.WriteString(string(rr[startCol:endCol]))
+		sb.WriteString(grapheme.Join(rr[startCol:endCol]))
 	}
 	return sb.String()
 }

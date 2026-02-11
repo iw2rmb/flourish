@@ -10,13 +10,13 @@ func TestWrapSegments_Grapheme_CoversLineAndRespectsWidth(t *testing.T) {
 	}
 
 	want := []wrappedSegment{
-		{StartCol: 0, EndCol: 2, Cells: 2},
-		{StartCol: 2, EndCol: 4, Cells: 2},
-		{StartCol: 4, EndCol: 6, Cells: 2},
+		{StartGraphemeCol: 0, EndGraphemeCol: 2, Cells: 2},
+		{StartGraphemeCol: 2, EndGraphemeCol: 4, Cells: 2},
+		{StartGraphemeCol: 4, EndGraphemeCol: 6, Cells: 2},
 	}
 	for i := range want {
 		got := segs[i]
-		if got.StartCol != want[i].StartCol || got.EndCol != want[i].EndCol || got.Cells != want[i].Cells {
+		if got.StartGraphemeCol != want[i].StartGraphemeCol || got.EndGraphemeCol != want[i].EndGraphemeCol || got.Cells != want[i].Cells {
 			t.Fatalf("segment %d: got %+v, want %+v", i, got, want[i])
 		}
 	}
@@ -28,10 +28,10 @@ func TestWrapSegments_Word_WhitespaceAndLongTokenFallback(t *testing.T) {
 	if len(wordSegs) != 2 {
 		t.Fatalf("word segment count: got %d, want %d", len(wordSegs), 2)
 	}
-	if got, want := wordSegs[0], (wrappedSegment{StartCol: 0, EndCol: 6, Cells: 6}); got.StartCol != want.StartCol || got.EndCol != want.EndCol || got.Cells != want.Cells {
+	if got, want := wordSegs[0], (wrappedSegment{StartGraphemeCol: 0, EndGraphemeCol: 6, Cells: 6}); got.StartGraphemeCol != want.StartGraphemeCol || got.EndGraphemeCol != want.EndGraphemeCol || got.Cells != want.Cells {
 		t.Fatalf("word segment[0]: got %+v, want %+v", got, want)
 	}
-	if got, want := wordSegs[1], (wrappedSegment{StartCol: 6, EndCol: 11, Cells: 5}); got.StartCol != want.StartCol || got.EndCol != want.EndCol || got.Cells != want.Cells {
+	if got, want := wordSegs[1], (wrappedSegment{StartGraphemeCol: 6, EndGraphemeCol: 11, Cells: 5}); got.StartGraphemeCol != want.StartGraphemeCol || got.EndGraphemeCol != want.EndGraphemeCol || got.Cells != want.Cells {
 		t.Fatalf("word segment[1]: got %+v, want %+v", got, want)
 	}
 
@@ -45,10 +45,10 @@ func TestWrapSegments_Word_WhitespaceAndLongTokenFallback(t *testing.T) {
 			t.Fatalf("fallback segment %d exceeds width: got %d, max %d", i, seg.Cells, 4)
 		}
 	}
-	if got, want := fallbackSegs[0].StartCol, 0; got != want {
+	if got, want := fallbackSegs[0].StartGraphemeCol, 0; got != want {
 		t.Fatalf("fallback start col: got %d, want %d", got, want)
 	}
-	if got, want := fallbackSegs[len(fallbackSegs)-1].EndCol, 10; got != want {
+	if got, want := fallbackSegs[len(fallbackSegs)-1].EndGraphemeCol, 10; got != want {
 		t.Fatalf("fallback final end col: got %d, want %d", got, want)
 	}
 }
@@ -62,7 +62,7 @@ func TestWrapSegments_Word_PunctuationHeuristic(t *testing.T) {
 
 	lineRunes := []rune("abc,def")
 	for i := 1; i < len(segs); i++ {
-		start := segs[i].StartCol
+		start := segs[i].StartGraphemeCol
 		if start >= 0 && start < len(lineRunes) && lineRunes[start] == ',' {
 			t.Fatalf("segment %d starts with punctuation at col %d", i, start)
 		}
@@ -75,8 +75,8 @@ func TestWrapSegments_EmptyAndSpaceOnlyStable(t *testing.T) {
 	if len(emptySegs) != 1 {
 		t.Fatalf("empty segment count: got %d, want %d", len(emptySegs), 1)
 	}
-	if got := emptySegs[0]; got.StartCol != 0 || got.EndCol != 0 || got.Cells != 0 {
-		t.Fatalf("empty segment: got %+v, want {StartCol:0 EndCol:0 Cells:0}", got)
+	if got := emptySegs[0]; got.StartGraphemeCol != 0 || got.EndGraphemeCol != 0 || got.Cells != 0 {
+		t.Fatalf("empty segment: got %+v, want {StartGraphemeCol:0 EndGraphemeCol:0 Cells:0}", got)
 	}
 
 	spaces := BuildVisualLine("     ", VirtualText{}, 4)
