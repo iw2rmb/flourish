@@ -85,6 +85,61 @@ func TestUpdate_UndoRedo(t *testing.T) {
 	}
 }
 
+func TestUpdate_OptLeftRight_JumpsByWord(t *testing.T) {
+	m := New(Config{Text: "alpha beta gamma"})
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight, Alt: true})
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, Col: 5}) {
+		t.Fatalf("cursor after opt+right from col 0: got %v, want %v", got, buffer.Pos{Row: 0, Col: 5})
+	}
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight, Alt: true})
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, Col: 10}) {
+		t.Fatalf("cursor after second opt+right: got %v, want %v", got, buffer.Pos{Row: 0, Col: 10})
+	}
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft, Alt: true})
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, Col: 6}) {
+		t.Fatalf("cursor after opt+left from col 10: got %v, want %v", got, buffer.Pos{Row: 0, Col: 6})
+	}
+}
+
+func TestUpdate_OptShiftLeftRight_ExtendsAndDeselection(t *testing.T) {
+	m := New(Config{Text: "alpha beta gamma"})
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyShiftRight, Alt: true})
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, Col: 5}) {
+		t.Fatalf("cursor after opt+shift+right: got %v, want %v", got, buffer.Pos{Row: 0, Col: 5})
+	}
+	if got, ok := m.buf.Selection(); !ok || got != (buffer.Range{Start: buffer.Pos{Row: 0, Col: 0}, End: buffer.Pos{Row: 0, Col: 5}}) {
+		t.Fatalf("selection after opt+shift+right: got (%v,%v), want (%v,%v)", got, ok, buffer.Range{Start: buffer.Pos{Row: 0, Col: 0}, End: buffer.Pos{Row: 0, Col: 5}}, true)
+	}
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyShiftRight, Alt: true})
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, Col: 10}) {
+		t.Fatalf("cursor after second opt+shift+right: got %v, want %v", got, buffer.Pos{Row: 0, Col: 10})
+	}
+	if got, ok := m.buf.Selection(); !ok || got != (buffer.Range{Start: buffer.Pos{Row: 0, Col: 0}, End: buffer.Pos{Row: 0, Col: 10}}) {
+		t.Fatalf("selection after second opt+shift+right: got (%v,%v), want (%v,%v)", got, ok, buffer.Range{Start: buffer.Pos{Row: 0, Col: 0}, End: buffer.Pos{Row: 0, Col: 10}}, true)
+	}
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyShiftLeft, Alt: true})
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, Col: 6}) {
+		t.Fatalf("cursor after opt+shift+left: got %v, want %v", got, buffer.Pos{Row: 0, Col: 6})
+	}
+	if got, ok := m.buf.Selection(); !ok || got != (buffer.Range{Start: buffer.Pos{Row: 0, Col: 0}, End: buffer.Pos{Row: 0, Col: 6}}) {
+		t.Fatalf("selection after opt+shift+left: got (%v,%v), want (%v,%v)", got, ok, buffer.Range{Start: buffer.Pos{Row: 0, Col: 0}, End: buffer.Pos{Row: 0, Col: 6}}, true)
+	}
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyShiftLeft, Alt: true})
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, Col: 0}) {
+		t.Fatalf("cursor after second opt+shift+left: got %v, want %v", got, buffer.Pos{Row: 0, Col: 0})
+	}
+	if _, ok := m.buf.Selection(); ok {
+		t.Fatalf("expected selection cleared after returning to anchor with opt+shift+left")
+	}
+}
+
 func TestUpdate_CopyCutPaste(t *testing.T) {
 	cb := &memClipboard{t: t}
 	m := New(Config{

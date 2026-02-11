@@ -64,7 +64,7 @@ Rendering uses `bubbles/viewport` for vertical scrolling and width/height clippi
 
 ## Key handling
 
-- Default keymap: `DefaultKeyMap()` (arrow movement, shift+arrows selection, ctrl/alt word movement fallbacks, backspace/delete/enter, undo/redo, copy/cut/paste).
+- Default keymap: `DefaultKeyMap()` (arrow movement, shift+arrows selection, ctrl/alt word movement fallbacks, ctrl/alt+shift word selection, backspace/delete/enter, undo/redo, copy/cut/paste).
 - `Config.ReadOnly=true` ignores buffer mutations but still allows movement and selection.
 - Clipboard integration is optional via `Config.Clipboard`. If nil, copy/cut/paste are disabled.
 - Ghost acceptance:

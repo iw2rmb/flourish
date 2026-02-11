@@ -63,6 +63,10 @@ func (m Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.buf.Move(buffer.Move{Unit: buffer.MoveWord, Dir: buffer.DirLeft})
 	case key.Matches(msg, km.WordRight):
 		m.buf.Move(buffer.Move{Unit: buffer.MoveWord, Dir: buffer.DirRight})
+	case key.Matches(msg, km.WordShiftLeft):
+		m.buf.Move(buffer.Move{Unit: buffer.MoveWord, Dir: buffer.DirLeft, Extend: true})
+	case key.Matches(msg, km.WordShiftRight):
+		m.buf.Move(buffer.Move{Unit: buffer.MoveWord, Dir: buffer.DirRight, Extend: true})
 
 	case key.Matches(msg, km.Home):
 		m.buf.Move(buffer.Move{Unit: buffer.MoveLine, Dir: buffer.DirHome})

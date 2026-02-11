@@ -9,6 +9,7 @@ type KeyMap struct {
 	Left, Right, Up, Down                     key.Binding
 	ShiftLeft, ShiftRight, ShiftUp, ShiftDown key.Binding
 	WordLeft, WordRight                       key.Binding
+	WordShiftLeft, WordShiftRight             key.Binding
 	Home, End                                 key.Binding
 
 	Backspace, Delete key.Binding
@@ -31,8 +32,10 @@ func DefaultKeyMap() KeyMap {
 		ShiftDown:  key.NewBinding(key.WithKeys("shift+down"), key.WithHelp("shift+↓", "select down")),
 
 		// Portable word movement: terminals vary between alt+arrows and ctrl+arrows.
-		WordLeft:  key.NewBinding(key.WithKeys("alt+left", "ctrl+left"), key.WithHelp("alt/ctrl+←", "word left")),
-		WordRight: key.NewBinding(key.WithKeys("alt+right", "ctrl+right"), key.WithHelp("alt/ctrl+→", "word right")),
+		WordLeft:       key.NewBinding(key.WithKeys("alt+left", "ctrl+left"), key.WithHelp("alt/ctrl+←", "word left")),
+		WordRight:      key.NewBinding(key.WithKeys("alt+right", "ctrl+right"), key.WithHelp("alt/ctrl+→", "word right")),
+		WordShiftLeft:  key.NewBinding(key.WithKeys("alt+shift+left", "ctrl+shift+left"), key.WithHelp("alt/ctrl+shift+←", "select word left")),
+		WordShiftRight: key.NewBinding(key.WithKeys("alt+shift+right", "ctrl+shift+right"), key.WithHelp("alt/ctrl+shift+→", "select word right")),
 
 		Home: key.NewBinding(key.WithKeys("home", "ctrl+a"), key.WithHelp("home", "line start")),
 		End:  key.NewBinding(key.WithKeys("end", "ctrl+e"), key.WithHelp("end", "line end")),
