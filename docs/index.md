@@ -1,18 +1,7 @@
-# Flourish — current state docs
+# Flourish Documentation
 
-This folder documents the behavior implemented in the repository *right now*.
+This directory contains current, package-oriented documentation.
 
-Design targets (future/intent): `design/spec.md`, `design/api.md`.
-
-## Implemented
-
-- `buffer` foundation: `docs/buffer.md` (Phase 1 in `roadmap/phase-1-buffer-foundation.md`)
-- `buffer` movement + selection: `docs/buffer.md` (Phase 2 in `roadmap/phase-2-buffer-movement-selection.md`)
-- `buffer` editing + deterministic apply: `docs/buffer.md` (Phase 3 in `roadmap/phase-3-buffer-editing-apply.md`)
-- `buffer` undo/redo: `docs/buffer.md` (Phase 4 in `roadmap/phase-4-buffer-undo-redo.md`)
-- `editor` keys + selection + scroll: `docs/editor.md` (Phase 6 in `roadmap/phase-6-editor-keys-selection-scroll.md`)
-- `editor` mouse + clipboard: `docs/editor.md` (Phase 7 in `roadmap/phase-7-editor-mouse-clipboard.md`)
-- `editor` visual-line mapping + virtual text: `docs/editor.md` (Phase 8 in `roadmap/phase-8-editor-visual-line-mapping.md`)
-- `editor` ghost + highlighting + change events: `docs/editor.md` (Phase 9 in `roadmap/phase-9-editor-ghost-highlight-events.md`)
-- `editor` horizontal scrolling (`WrapNone`): `docs/editor.md` (Phase 10 in `roadmap/phase-10-editor-horizontal-scrolling.md`)
-- `editor` soft wrapping (`WrapWord` + `WrapGrapheme`): `docs/editor.md` (Phase 11 in `roadmap/phase-11-editor-soft-wrapping.md`)
+Packages:
+- `docs/buffer.md` — `buffer` package behavior and contracts.
+- `docs/editor.md` — `editor` package behavior and integration contracts.

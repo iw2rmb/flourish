@@ -6,6 +6,7 @@ import (
 	"github.com/iw2rmb/flouris/internal/grapheme"
 )
 
+// InsertText inserts text at the cursor, or replaces the active selection.
 func (b *Buffer) InsertText(s string) {
 	if s == "" {
 		if _, ok := b.Selection(); ok {
@@ -32,6 +33,8 @@ func (b *Buffer) InsertText(s string) {
 	b.recordUndo(prev)
 }
 
+// InsertGrapheme inserts a single grapheme cluster at the cursor, or replaces
+// the active selection.
 func (b *Buffer) InsertGrapheme(g string) {
 	if g == "" {
 		return
@@ -39,10 +42,13 @@ func (b *Buffer) InsertGrapheme(g string) {
 	b.InsertText(g)
 }
 
+// InsertNewline inserts a line break at the cursor, or replaces the active
+// selection.
 func (b *Buffer) InsertNewline() {
 	b.InsertText("\n")
 }
 
+// DeleteBackward applies backspace semantics.
 func (b *Buffer) DeleteBackward() {
 	if _, ok := b.Selection(); ok {
 		b.DeleteSelection()
@@ -84,6 +90,7 @@ func (b *Buffer) DeleteBackward() {
 	b.recordUndo(prev)
 }
 
+// DeleteForward applies delete-key semantics.
 func (b *Buffer) DeleteForward() {
 	if _, ok := b.Selection(); ok {
 		b.DeleteSelection()
@@ -125,6 +132,7 @@ func (b *Buffer) DeleteForward() {
 	b.recordUndo(prev)
 }
 
+// DeleteSelection deletes the active selection, if any.
 func (b *Buffer) DeleteSelection() {
 	r, ok := b.Selection()
 	if !ok {

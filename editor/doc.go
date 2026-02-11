@@ -1,0 +1,7 @@
+// Package editor provides a Bubble Tea text editor component backed by the
+// buffer package.
+//
+// The package is responsible for input handling, viewport behavior,
+// grapheme-aware rendering, and host integration hooks (virtual text,
+// highlighting, ghost suggestions, and change events).
+package editor

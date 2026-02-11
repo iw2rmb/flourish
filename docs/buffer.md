@@ -1,100 +1,70 @@
-# `buffer` package — current state
+# Package `buffer`
 
-Source: `buffer/`
+The `buffer` package implements a pure document model for text editing.
+It has no Bubble Tea, rendering, or terminal dependencies.
 
-Design targets:
-- `design/spec.md` (architecture layering)
-- `design/api.md` (public API draft)
+## Overview
 
-Roadmap:
-- Phase 1: `roadmap/phase-1-buffer-foundation.md`
-- Phase 2: `roadmap/phase-2-buffer-movement-selection.md`
-- Phase 3: `roadmap/phase-3-buffer-editing-apply.md`
-- Phase 4: `roadmap/phase-4-buffer-undo-redo.md`
+The package stores text as logical lines split by `\n`.
+Each line is stored as grapheme clusters.
+All columns are grapheme indices.
 
-## Coordinates and ranges
+Core state:
+- text
+- cursor position
+- selection
+- undo/redo history
+- version counter
 
-- `Pos` is `(Row, GraphemeCol)` in **grapheme clusters**, 0-based.
-- `Range` is a **half-open** interval in document coordinates: `[Start, End)`.
+## Coordinates
+
+- `Pos` is `(Row, GraphemeCol)`, both 0-based.
+- `Range` is half-open: `[Start, End)`.
+- Empty ranges are valid values; active selections treat empty as inactive.
 
 Helpers:
-- `ComparePos(a, b)` orders positions in document order.
-- `NormalizeRange(r)` ensures `Start <= End`.
-- `ClampPos(p, rowCount, lineLen)` clamps to `0 <= Row < rowCount` and `0 <= GraphemeCol <= lineLen(Row)`.
-- `ClampRange(r, rowCount, lineLen)` clamps both endpoints.
+- `ComparePos(a, b)`
+- `NormalizeRange(r)`
+- `ClampPos(p, rowCount, lineLen)`
+- `ClampRange(r, rowCount, lineLen)`
 
-## Buffer state
+## Editing Semantics
 
-`Buffer` stores:
-- text as logical lines split on `\n` (each line is `[]string` grapheme clusters)
-- `Cursor` position (clamped)
-- optional `Selection` (normalized; empty selection is treated as inactive)
-- optional `SelectionRaw` (anchor/end without normalization; empty selection is treated as inactive)
-- `Version` counter
+Insertion:
+- `InsertText` inserts text at cursor or replaces active selection.
+- `InsertGrapheme` inserts one grapheme cluster.
+- `InsertNewline` inserts `\n`.
+
+Deletion:
+- with active selection: `DeleteBackward` and `DeleteForward` delete selection.
+- without selection:
+- `DeleteBackward` removes one grapheme cluster before cursor, joining lines at SOL.
+- `DeleteForward` removes one grapheme cluster at cursor, joining lines at EOL.
+
+Apply:
+- `Apply(edits ...TextEdit)` applies edits in order.
+- each edit range is interpreted against the current buffer state at apply time.
+- cursor moves to the end of the last effective edit.
+
+## Movement and Selection
+
+- `Move(Move)` supports grapheme, word, line, and document movement.
+- `Extend=true` keeps a stable anchor and updates selection end.
+- word movement is single-line and treats newline as a hard boundary.
 
 ## Versioning
 
-- `Version()` starts at 0.
-- `SetCursor` increments version only when the clamped cursor position changes.
-- `SetSelection` increments version only when the effective selection changes (including clearing an existing selection).
-- `ClearSelection` increments version only when it clears a non-empty active selection.
-- `Move` increments version only when it changes cursor and/or selection.
-- `Undo` / `Redo` increment version only when they succeed.
+`Version()` increments only on effective state changes:
+- cursor changes
+- selection changes
+- text mutations
+- successful undo/redo
 
-## Movement + selection
+No-op operations do not increment version.
 
-`Buffer.Move(Move)` updates cursor and selection using grapheme-accurate document coordinates.
+## Undo/Redo
 
-Selection APIs:
-- `Selection()` returns the normalized half-open range `[Start, End)`.
-- `SelectionRaw()` returns `{Start: anchor, End: end}` without normalization (direction-preserving).
-
-Types (from `design/api.md`):
-- `MoveUnit`: `MoveGrapheme`, `MoveWord`, `MoveLine`, `MoveDoc`
-- `MoveDir`: `DirLeft`, `DirRight`, `DirUp`, `DirDown`, `DirHome`, `DirEnd`
-- `Move`: `{Unit, Dir, Extend}`
-
-Rules:
-- `Extend=false` clears selection.
-- `Extend=true` keeps a stable selection anchor across repeated extend moves until the selection is cleared.
-- Word movement uses portable v0 semantics: skip whitespace, then skip non-whitespace (single-line; newline is a hard boundary).
-
-## Editing
-
-All editing operations are grapheme-accurate and follow selection-first semantics:
-- If a selection is active, insertion replaces the selection (including inserting `""`, which deletes the selection).
-- If a selection is active, backspace/delete delete the selection.
-- Otherwise, backspace deletes the grapheme cluster before the cursor (joining lines at SOL).
-- Otherwise, delete deletes the grapheme cluster at the cursor (joining lines at EOL).
-
-Implemented:
-- `InsertText(s string)` accepts `\n` and updates the cursor to the end of inserted text.
-- `InsertGrapheme(g string)` inserts one grapheme cluster.
-- `InsertNewline()` inserts `\n`.
-- `DeleteBackward()`, `DeleteForward()`, `DeleteSelection()`.
-
-## Deterministic apply
-
-`Apply(edits ...TextEdit)` applies edits sequentially, interpreting each edit’s range against the buffer state at the time the edit is applied.
-
-Current semantics:
-- Edit ranges are clamped into current document bounds.
-- Empty range + non-empty text inserts.
-- Cursor moves to the end of the last effective edit.
-- Selection is cleared if any edit applies.
-
-## Undo/redo
-
-Undo/redo are available via:
-- `CanUndo()`, `Undo()`
-- `CanRedo()`, `Redo()`
-
-History model (v0):
-- Each successful **public text mutation** creates exactly one undo step:
-  - `InsertText`, `InsertGrapheme`, `InsertNewline`
-  - `DeleteBackward`, `DeleteForward`, `DeleteSelection`
-  - `Apply(...)` (one step for the entire call, regardless of edit count)
-- No coalescing in v0 (each call is its own step).
-- Each step stores a full snapshot: text, cursor, and selection (including selection anchor direction).
-- Any new text mutation clears the redo stack.
-- Undo depth is bounded by `Options.HistoryLimit` (default 1000).
+- bounded by `Options.HistoryLimit` (default `1000`).
+- one undo step per public text mutation call.
+- undo/redo restore text, cursor, and selection (including selection direction).
+- new text mutations clear redo stack.
