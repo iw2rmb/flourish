@@ -14,12 +14,11 @@ type model struct {
 
 func newModel() model {
 	cfg := editor.Config{
-		Text:         "Hello from flourish.\n\nType to edit.\nUse arrows to move.\nCtrl+Q to quit.",
+		Text:         "Simple example\n\nType to edit.\nUse arrows to move.\nCtrl+Q to quit.",
 		ShowLineNums: true,
 		Style:        editor.DefaultStyle(),
 	}
-	m := model{editor: editor.New(cfg)}
-	return m
+	return model{editor: editor.New(cfg)}
 }
 
 func (m model) Init() tea.Cmd { return nil }

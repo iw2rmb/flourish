@@ -22,3 +22,12 @@ It provides a pure document buffer package and an editor component package.
 - package docs index: `docs/index.md`
 - buffer package docs: `docs/buffer.md`
 - editor package docs: `docs/editor.md`
+
+## Examples
+
+- `go run ./examples/simple`
+- `go run ./examples/wrap-modes`
+- `go run ./examples/inline-suggestions`
+- `go run ./examples/virtual-text`
+- `go run ./examples/highlighter`
+- `go run ./examples/on-change`
