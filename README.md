@@ -12,6 +12,7 @@ It provides a pure document buffer package and an editor component package.
 - bounded undo/redo history.
 - deterministic `Apply` API for host-driven edits.
 - `editor` Bubble Tea component with viewport integration.
+- host-facing viewport state and doc<->screen coordinate mapping APIs.
 - soft wrap (`WrapWord`, `WrapGrapheme`) and no-wrap horizontal scrolling.
 - mouse hit-testing and drag selection in terminal cell coordinates.
 - optional clipboard integration.

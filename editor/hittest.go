@@ -81,3 +81,61 @@ func (m *Model) screenToDocPos(x, y int) buffer.Pos {
 
 	return buffer.Pos{Row: row, GraphemeCol: col}
 }
+
+// docToScreenPos maps a document position to viewport-local mouse coordinates.
+//
+// ok is false when the mapped coordinate is outside the visible viewport.
+func (m *Model) docToScreenPos(pos buffer.Pos) (x int, y int, ok bool) {
+	if m.buf == nil {
+		return 0, 0, false
+	}
+
+	lines := rawLinesFromBufferText(m.buf.Text())
+	layout := m.ensureLayoutCache(lines)
+	if len(layout.lines) == 0 || len(layout.rows) == 0 {
+		return 0, 0, false
+	}
+
+	row := clampInt(pos.Row, 0, len(layout.lines)-1)
+	line := layout.lines[row]
+	if len(line.segments) == 0 {
+		return 0, 0, false
+	}
+
+	col := clampInt(pos.GraphemeCol, 0, line.visual.RawGraphemeLen)
+	cell := cursorCellForVisualLine(line.visual, col)
+
+	segIdx := len(line.segments) - 1
+	for i, seg := range line.segments {
+		if seg.Cells == 0 && cell == seg.startCell {
+			segIdx = i
+			break
+		}
+		if cell < seg.endCell {
+			segIdx = i
+			break
+		}
+	}
+
+	seg := line.segments[segIdx]
+	visualRow := line.firstVisualRow + segIdx
+	screenY := visualRow - m.viewport.YOffset
+
+	screenX := 0
+	if m.cfg.WrapMode == WrapNone {
+		screenX = cell - m.xOffset
+	} else {
+		screenX = cell - seg.startCell
+	}
+	screenX += m.gutterWidth(len(lines))
+
+	visibleRows := m.visibleRowCount()
+	if screenY < 0 || screenY >= visibleRows {
+		return screenX, screenY, false
+	}
+	if screenX < 0 || screenX >= m.viewport.Width {
+		return screenX, screenY, false
+	}
+
+	return screenX, screenY, true
+}

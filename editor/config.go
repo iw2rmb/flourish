@@ -14,6 +14,9 @@ type Config struct {
 	Style        Style
 	// WrapMode controls soft wrapping vs horizontal scrolling. Default is WrapNone.
 	WrapMode WrapMode
+	// ScrollPolicy controls whether viewport scrolling can diverge from cursor.
+	// Default is ScrollAllowManual.
+	ScrollPolicy ScrollPolicy
 
 	// VirtualTextProvider optionally supplies per-line view-only transforms
 	// (virtual deletions/insertions) used by the VisualLine mapping layer.

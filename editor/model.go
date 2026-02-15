@@ -138,7 +138,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		if m.cfg.OnChange != nil && m.buf != nil && m.buf.Version() != beforeVer {
 			m.cfg.OnChange(buildChangeEvent(m.buf))
 		}
-		// Don't force-follow cursor here; allow manual scrolling via mouse wheel.
+		// Don't force-follow cursor here; mouse scroll behavior is controlled by
+		// ScrollPolicy.
 		return m, cmd
 	case tea.KeyMsg:
 		beforeVer := uint64(0)

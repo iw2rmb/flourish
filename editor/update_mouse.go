@@ -8,7 +8,9 @@ import (
 
 func (m Model) updateMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 	var cmd tea.Cmd
-	m.viewport, cmd = m.viewport.Update(msg)
+	if m.cfg.ScrollPolicy == ScrollAllowManual || !isManualScrollMouse(msg) {
+		m.viewport, cmd = m.viewport.Update(msg)
+	}
 
 	if !m.focused || m.buf == nil {
 		return m, cmd
@@ -55,6 +57,14 @@ func (m Model) updateMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 	}
 
 	return m, cmd
+}
+
+func isManualScrollMouse(msg tea.MouseMsg) bool {
+	return msg.Action == tea.MouseActionPress &&
+		(msg.Button == tea.MouseButtonWheelUp ||
+			msg.Button == tea.MouseButtonWheelDown ||
+			msg.Button == tea.MouseButtonWheelLeft ||
+			msg.Button == tea.MouseButtonWheelRight)
 }
 
 func (m Model) mouseInBounds(x, y int) bool {

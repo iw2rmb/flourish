@@ -15,6 +15,9 @@ Primary API:
 - `Update(msg tea.Msg)`
 - `View()`
 - `Buffer()`
+- `ViewportState()`
+- `ScreenToDoc(x, y)`
+- `DocToScreen(pos)`
 
 ## Coordinate Model
 
@@ -42,6 +45,13 @@ Mouse:
 - shift+click to extend selection.
 - drag to update selection.
 - hit-testing maps from viewport-local `(x,y)` cells to document positions.
+- wheel scroll is controlled by `ScrollPolicy`.
+
+Viewport integration:
+- `ViewportState()` exposes top visual row, visible row count, wrap mode, and no-wrap horizontal offset.
+- `ScreenToDoc` and `DocToScreen` provide stable host-side coordinate mapping.
+- `ScrollAllowManual` keeps wheel/manual viewport scrolling enabled.
+- `ScrollFollowCursorOnly` ignores manual viewport scrolling and keeps viewport movement cursor-driven.
 
 ## Extension Points
 
