@@ -21,7 +21,7 @@ func newModel() model {
 	cfg := editor.Config{
 		Text: strings.Join([]string{
 			"Wrap modes example",
-			"Use ctrl+1 (none), ctrl+2 (word), ctrl+3 (grapheme).",
+			"Use ctrl+n (none), ctrl+w (word), ctrl+g (grapheme).",
 			"Then resize your terminal and move the cursor through long lines.",
 			"",
 			"A very_long_token_without_spaces_that_forces_grapheme_fallback_in_word_mode.",
@@ -47,13 +47,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+q":
 			return m, tea.Quit
-		case "ctrl+1", "f1":
+		case "ctrl+n":
 			m = m.setWrapMode(editor.WrapNone)
 			return m, nil
-		case "ctrl+2", "f2":
+		case "ctrl+w":
 			m = m.setWrapMode(editor.WrapWord)
 			return m, nil
-		case "ctrl+3", "f3":
+		case "ctrl+g":
 			m = m.setWrapMode(editor.WrapGrapheme)
 			return m, nil
 		}
@@ -65,7 +65,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	status := fmt.Sprintf("Mode: %s | ctrl+1 none, ctrl+2 word, ctrl+3 grapheme | ctrl+q quit", wrapLabel(m.wrapMode))
+	status := fmt.Sprintf("Mode: %s | ctrl+n none, ctrl+w word, ctrl+g grapheme | ctrl+q quit", wrapLabel(m.wrapMode))
 	return status + "\n" + m.editor.View()
 }
 
