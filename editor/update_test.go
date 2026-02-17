@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/iw2rmb/flouris/buffer"
+	"github.com/iw2rmb/flourish/buffer"
 )
 
 type memClipboard struct {

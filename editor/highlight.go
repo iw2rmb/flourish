@@ -4,7 +4,7 @@ import (
 	"sort"
 
 	"github.com/charmbracelet/lipgloss"
-	graphemeutil "github.com/iw2rmb/flouris/internal/grapheme"
+	graphemeutil "github.com/iw2rmb/flourish/internal/grapheme"
 )
 
 type HighlightSpan struct {

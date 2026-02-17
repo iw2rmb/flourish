@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
 
-	"github.com/iw2rmb/flouris/buffer"
+	"github.com/iw2rmb/flourish/buffer"
 )
 
 func TestRender_LineNumberAlignment_1To120(t *testing.T) {

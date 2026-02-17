@@ -1,4 +1,4 @@
-module github.com/iw2rmb/flouris
+module github.com/iw2rmb/flourish
 
 go 1.25.7
 

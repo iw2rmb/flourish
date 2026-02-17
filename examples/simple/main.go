@@ -5,7 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/iw2rmb/flouris/editor"
+	"github.com/iw2rmb/flourish/editor"
 )
 
 type model struct {

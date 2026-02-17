@@ -3,7 +3,7 @@ package buffer
 import (
 	"strings"
 
-	"github.com/iw2rmb/flouris/internal/grapheme"
+	"github.com/iw2rmb/flourish/internal/grapheme"
 )
 
 // InsertText inserts text at the cursor, or replaces the active selection.

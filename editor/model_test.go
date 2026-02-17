@@ -7,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/iw2rmb/flouris/buffer"
+	"github.com/iw2rmb/flourish/buffer"
 )
 
 func TestModel_SetSizeAffectsViewHeight(t *testing.T) {

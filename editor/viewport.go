@@ -1,6 +1,6 @@
 package editor
 
-import "github.com/iw2rmb/flouris/buffer"
+import "github.com/iw2rmb/flourish/buffer"
 
 type wrapLayoutCacheKey struct {
 	bufVersion uint64

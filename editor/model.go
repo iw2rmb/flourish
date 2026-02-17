@@ -7,8 +7,8 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/iw2rmb/flouris/buffer"
-	graphemeutil "github.com/iw2rmb/flouris/internal/grapheme"
+	"github.com/iw2rmb/flourish/buffer"
+	graphemeutil "github.com/iw2rmb/flourish/internal/grapheme"
 )
 
 // Model is a Bubble Tea component that renders and interacts with a buffer.

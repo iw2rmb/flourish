@@ -1,6 +1,6 @@
 package buffer
 
-import "github.com/iw2rmb/flouris/internal/grapheme"
+import "github.com/iw2rmb/flourish/internal/grapheme"
 
 type MoveUnit int
 

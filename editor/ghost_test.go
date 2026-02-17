@@ -3,7 +3,7 @@ package editor
 import (
 	"testing"
 
-	"github.com/iw2rmb/flouris/buffer"
+	"github.com/iw2rmb/flourish/buffer"
 )
 
 func TestGhostProvider_CalledAtAnyCol_AndOnlyWhenFocused(t *testing.T) {

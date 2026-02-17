@@ -1,8 +1,8 @@
 package editor
 
 import (
-	"github.com/iw2rmb/flouris/buffer"
-	graphemeutil "github.com/iw2rmb/flouris/internal/grapheme"
+	"github.com/iw2rmb/flourish/buffer"
+	graphemeutil "github.com/iw2rmb/flourish/internal/grapheme"
 )
 
 type GhostContext struct {

@@ -3,7 +3,7 @@ package editor
 import (
 	"strconv"
 
-	"github.com/iw2rmb/flouris/buffer"
+	"github.com/iw2rmb/flourish/buffer"
 )
 
 func gutterDigits(lineCount int) int {

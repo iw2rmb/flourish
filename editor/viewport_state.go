@@ -1,6 +1,6 @@
 package editor
 
-import "github.com/iw2rmb/flouris/buffer"
+import "github.com/iw2rmb/flourish/buffer"
 
 // ViewportState is a stable host-facing snapshot of editor camera state.
 type ViewportState struct {

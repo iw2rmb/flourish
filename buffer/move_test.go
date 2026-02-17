@@ -3,7 +3,7 @@ package buffer
 import (
 	"testing"
 
-	graphemeutil "github.com/iw2rmb/flouris/internal/grapheme"
+	graphemeutil "github.com/iw2rmb/flourish/internal/grapheme"
 )
 
 func TestBuffer_MoveGrapheme_BoundsAndLineCrossing(t *testing.T) {

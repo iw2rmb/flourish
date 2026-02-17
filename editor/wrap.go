@@ -1,7 +1,7 @@
 package editor
 
 import (
-	graphemeutil "github.com/iw2rmb/flouris/internal/grapheme"
+	graphemeutil "github.com/iw2rmb/flourish/internal/grapheme"
 )
 
 type wrappedSegment struct {

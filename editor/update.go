@@ -6,8 +6,8 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/iw2rmb/flouris/buffer"
-	"github.com/iw2rmb/flouris/internal/grapheme"
+	"github.com/iw2rmb/flourish/buffer"
+	"github.com/iw2rmb/flourish/internal/grapheme"
 )
 
 func (m Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {

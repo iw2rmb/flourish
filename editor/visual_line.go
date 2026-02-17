@@ -3,7 +3,7 @@ package editor
 import (
 	"strings"
 
-	graphemeutil "github.com/iw2rmb/flouris/internal/grapheme"
+	graphemeutil "github.com/iw2rmb/flourish/internal/grapheme"
 )
 
 type VisualTokenKind int

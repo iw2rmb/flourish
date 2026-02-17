@@ -3,7 +3,7 @@ package editor
 import (
 	"github.com/mattn/go-runewidth"
 
-	graphemeutil "github.com/iw2rmb/flouris/internal/grapheme"
+	graphemeutil "github.com/iw2rmb/flourish/internal/grapheme"
 	"github.com/rivo/uniseg"
 )
 
