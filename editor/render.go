@@ -182,6 +182,26 @@ func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focus
 	if renderEOLCursor {
 		eolCursorCell = cursorCellForVisualLine(vl, cursorCol)
 	}
+	eolBoundaryCursorTokenIdx := -1
+	if renderEOLCursor && eolCursorCell == right && right > left {
+		// When wrapped content fully occupies the row, the EOL placeholder cell is
+		// outside the visible [left,right) span. Fall back to the last visible
+		// doc-backed token so cursor remains visible.
+		for i := len(vl.Tokens) - 1; i >= 0; i-- {
+			tok := vl.Tokens[i]
+			if tok.Kind != VisualTokenDoc {
+				continue
+			}
+			segL := tok.StartCell
+			segR := tok.StartCell + tok.CellWidth
+			spanL := maxInt(segL, left)
+			spanR := minInt(segR, right)
+			if spanL < spanR {
+				eolBoundaryCursorTokenIdx = i
+				break
+			}
+		}
+	}
 
 	left = maxInt(left, 0)
 	if right < left {
@@ -212,6 +232,23 @@ func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focus
 		}
 		// Partial wide grapheme: preserve alignment with blanks.
 		return st.Text.Render(strings.Repeat(" ", spanWidth))
+	}
+
+	isTrailingWhitespaceFrom := func(tokIdx int) bool {
+		for j := tokIdx; j < len(vl.Tokens); j++ {
+			tok := vl.Tokens[j]
+			segL := tok.StartCell
+			segR := tok.StartCell + tok.CellWidth
+			spanL := maxInt(segL, left)
+			spanR := minInt(segR, right)
+			if spanL >= spanR {
+				continue
+			}
+			if !isAllSpaces(tok.Text) {
+				return false
+			}
+		}
+		return true
 	}
 
 	var sb strings.Builder
@@ -250,8 +287,20 @@ func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focus
 			write(renderSpan(style.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 		case VisualTokenDoc:
 			selected := hasSel && tok.DocStartGraphemeCol < selEndCol && tok.DocEndGraphemeCol > selStartCol
-			if hasCursor && i == cursorTokenIdx {
-				write(renderSpan(st.Cursor.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
+			if hasCursor && (i == cursorTokenIdx || i == eolBoundaryCursorTokenIdx) {
+				cursorStyle := st.Cursor.Render
+				if isAllSpaces(tok.Text) && isTrailingWhitespaceFrom(i) {
+					// Trailing ASCII spaces can be visually elided by terminals at line end.
+					// Render cursor whitespace as NBSP in that case so the cursor stays visible.
+					cursorStyle = func(parts ...string) string {
+						replaced := make([]string, len(parts))
+						for i, p := range parts {
+							replaced[i] = strings.ReplaceAll(p, " ", "\u00a0")
+						}
+						return st.Cursor.Render(replaced...)
+					}
+				}
+				write(renderSpan(cursorStyle, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 			} else if selected {
 				write(renderSpan(st.Selection.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 			} else {

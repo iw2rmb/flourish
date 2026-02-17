@@ -279,3 +279,66 @@ func TestRender_SoftWrap_GraphemeAndLineNumbers(t *testing.T) {
 		t.Fatalf("wrapped content with line nums: got %q, want %q", got, "1 abc\n  def")
 	}
 }
+
+func TestRender_SoftWrapWord_CursorOnTrailingSpace_UsesNBSP(t *testing.T) {
+	m := New(Config{
+		Text:     "hello world",
+		WrapMode: WrapWord,
+		Style: Style{
+			Text:   lipgloss.NewStyle(),
+			Cursor: lipgloss.NewStyle(),
+		},
+	})
+	m = m.SetSize(3, 4)
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 5}) // space after "hello"
+
+	got := m.renderContent()
+	want := "hel\nlo\u00a0\nwor\nld"
+	if got != want {
+		t.Fatalf("wrapped cursor on trailing space: got %q, want %q", got, want)
+	}
+}
+
+func TestRender_SoftWrapWord_CursorOnPenultimateTrailingSpace_UsesNBSP(t *testing.T) {
+	m := New(Config{
+		Text:     "hello  world",
+		WrapMode: WrapWord,
+		Style: Style{
+			Text:   lipgloss.NewStyle(),
+			Cursor: lipgloss.NewStyle(),
+		},
+	})
+	m = m.SetSize(7, 2)
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 5}) // first of two trailing spaces
+
+	got := m.renderContent()
+	want := "hello\u00a0 \nworld"
+	if got != want {
+		t.Fatalf("wrapped cursor on penultimate trailing space: got %q, want %q", got, want)
+	}
+}
+
+func TestRender_SoftWrapWord_CursorAtEOLOnFullRow_Visible(t *testing.T) {
+	r := lipgloss.NewRenderer(io.Discard)
+	r.SetColorProfile(termenv.TrueColor)
+	r.SetHasDarkBackground(true)
+
+	st := Style{
+		Text:   r.NewStyle(),
+		Cursor: r.NewStyle().Foreground(lipgloss.Color("1")),
+	}
+
+	m := New(Config{
+		Text:         "abc\ndef",
+		WrapMode:     WrapWord,
+		ShowLineNums: true,
+		Style:        st,
+	})
+	m = m.SetSize(5, 2) // gutter 2 + content 3, so "abc" fills the full visual row.
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 3})
+
+	got := m.renderContent()
+	if !strings.Contains(got, "\x1b[") {
+		t.Fatalf("expected visible cursor style at EOL on full wrapped row, got %q", got)
+	}
+}

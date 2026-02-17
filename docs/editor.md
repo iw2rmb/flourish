@@ -33,6 +33,9 @@ Primary API:
 - `WrapWord`: wraps at word boundaries with fallback behavior.
 - `WrapGrapheme`: wraps at grapheme boundaries.
 - layout mapping preserves doc<->visual conversions, including wide glyphs.
+- cursor rendering keeps visibility at soft-wrap boundaries:
+- EOL cursor remains visible when a wrapped row exactly fills content width.
+- trailing whitespace cursor cells are rendered with non-breaking spaces to avoid terminal elision.
 
 ## Input Behavior
 
