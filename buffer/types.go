@@ -52,14 +52,22 @@ type RemapReport struct {
 }
 
 type ApplyRemoteOptions struct {
-	BaseVersion uint64
-	ClampPolicy ConvertPolicy
+	BaseVersion         uint64
+	ClampPolicy         ConvertPolicy
+	VersionMismatchMode VersionMismatchMode
 }
 
 type ApplyRemoteResult struct {
 	Change Change
 	Remap  RemapReport
 }
+
+type VersionMismatchMode uint8
+
+const (
+	VersionMismatchReject VersionMismatchMode = iota
+	VersionMismatchForceApply
+)
 
 func ComparePos(a, b Pos) int {
 	if a.Row < b.Row {

@@ -82,11 +82,27 @@ Apply:
 Remote apply (Phase 3 API surface):
 - `ApplyRemote(edits []RemoteEdit, opts ApplyRemoteOptions) (ApplyRemoteResult, bool)` applies remote edits in call order.
 - remote edit payload type: `RemoteEdit { Range, Text, OpID }` (`OpID` is metadata only).
+- options:
+- `ApplyRemoteOptions.BaseVersion` is compared to current `Version()`.
+- `ApplyRemoteOptions.VersionMismatchMode` controls mismatch behavior:
+- `VersionMismatchReject` (default): reject and return `changed=false`.
+- `VersionMismatchForceApply`: continue and apply.
+- `ApplyRemoteOptions.ClampPolicy.ClampMode` controls range endpoint handling:
+- `OffsetError`: reject if any endpoint is out of bounds.
+- `OffsetClamp`: clamp endpoints into bounds before each edit.
 - result includes:
 - `Change` with `Source=ChangeSourceRemote`.
 - `Remap` report with cursor and selection endpoints (`RemapPoint { Before, After, Status }`).
 - remap status enum: `RemapUnchanged`, `RemapMoved`, `RemapClamped`, `RemapInvalidated`.
-- current baseline remap behavior is clamp-first endpoint preservation; full deterministic remap/causality policy handling is tracked in `roadmap/collab/phase-3-buffer-apply-remote-remap.md`.
+- deterministic remap rules:
+- edits are interpreted against evolving state in explicit call order.
+- overlap resolution follows edit order only (same list => same final result).
+- endpoint status rules:
+- `RemapUnchanged`: endpoint unaffected by effective edits.
+- `RemapMoved`: endpoint shifted by edits before it.
+- `RemapClamped`: endpoint fell inside a replaced range and snapped to replacement boundary.
+- `RemapInvalidated`: selection collapsed after remap and is cleared.
+- insertion at an endpoint uses right-bias (`off >= insertPos` shifts by inserted rune length).
 
 ## Change Model
 
