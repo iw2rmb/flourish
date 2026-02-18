@@ -40,7 +40,7 @@ Legend: [ ] todo, [x] done.
   - Example: in `"é"`, byte offset `1` is inside one grapheme, so conversion correctly fails instead of returning a broken cursor position.
   - Example: in `"a\nb"`, offset after newline maps to row `1`, col `0`, so line boundary behavior is explicit and stable.
 
-- [ ] Update `docs/buffer.md` with conversion contracts and policy semantics — make host integration rules explicit
+- [x] Update `docs/buffer.md` with conversion contracts and policy semantics — make host integration rules explicit
   - Repository: `flourish`
   - Component: docs
   - Scope: document round-trip rules, clamp behavior, newline treatment, and failure behavior
