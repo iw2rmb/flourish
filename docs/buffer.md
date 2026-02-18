@@ -28,6 +28,33 @@ Helpers:
 - `ClampPos(p, rowCount, lineLen)`
 - `ClampRange(r, rowCount, lineLen)`
 
+## Conversion APIs (Baseline)
+
+`buffer` now exposes canonical coordinate conversions with explicit policy.
+
+Types:
+- `OffsetClampMode`: `OffsetError`, `OffsetClamp`
+- `NewlineMode`: `NewlineAsSingleRune`
+- `ConvertPolicy`: `{ ClampMode, NewlineMode }`
+- `GapBias`: `GapBiasLeft`, `GapBiasRight`
+- `Gap`: `{ RuneOffset, Bias }`
+
+Methods:
+- `PosFromByteOffset(off, policy) (Pos, bool)`
+- `ByteOffsetFromPos(pos, policy) (int, bool)`
+- `PosFromRuneOffset(off, policy) (Pos, bool)`
+- `RuneOffsetFromPos(pos, policy) (int, bool)`
+- `GapFromPos(pos, bias) (Gap, bool)`
+- `PosFromGap(gap, policy) (Pos, bool)`
+
+Behavior:
+- Offsets are document-global over `Text()`.
+- Newline separators between lines count as one byte and one rune (`\n`).
+- `OffsetError` rejects out-of-range offsets and invalid positions.
+- `OffsetClamp` clamps out-of-range offsets/positions to valid document bounds.
+- In-range byte/rune offsets that are not at grapheme boundaries are rejected.
+- `PosFromGap` maps through gap rune offset conversion with the supplied policy.
+
 ## Editing Semantics
 
 Insertion:
