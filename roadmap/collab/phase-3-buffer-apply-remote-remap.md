@@ -43,12 +43,14 @@ Legend: [ ] todo, [x] done.
   - Example: with `VersionMismatchReject`, mismatched remote batches return `changed=false`; with `VersionMismatchForceApply`, the same batch applies.
 
 ## Quality Gates
-- [ ] Add property/fuzz tests for random remote edit sequences — protect against edge-case drift
+- [x] Add property/fuzz tests for random remote edit sequences — protect against edge-case drift
   - Repository: `flourish`
   - Component: `buffer` tests
   - Scope: random batched edit generation with invariants for valid positions and stable policy outcomes
   - Snippets: fuzz target around `ApplyRemote` + invariant assertions
   - Tests: fuzz pass with no panics and invariant violations
+  - Essence (simple): random remote batches are decoded from fuzz bytes and replayed twice; both runs must produce identical state and result.
+  - Example: the same seed must produce identical `changed`, `ApplyRemoteResult`, and final text/cursor/selection/version across repeated runs.
 
 - [ ] Update `docs/buffer.md` with `ApplyRemote` semantics and remap table — ensure host integrations are deterministic by contract
   - Repository: `flourish`
