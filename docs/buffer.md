@@ -54,6 +54,12 @@ Behavior:
 - `OffsetClamp` clamps out-of-range offsets/positions to valid document bounds.
 - In-range byte/rune offsets that are not at grapheme boundaries are rejected.
 - `PosFromGap` maps through gap rune offset conversion with the supplied policy.
+- Unicode fixture examples now covered by tests:
+- `"a"`: offset `1` maps to `(Row:0, GraphemeCol:1)`.
+- `"é"`: byte offset `1` is inside one grapheme and is rejected.
+- `"e\u0301"`: rune offset `1` is inside one grapheme and is rejected.
+- `"👨‍👩‍👧‍👦"`: interior byte/rune offsets are rejected; only start/end map.
+- `"a\nb"`: newline boundary maps from offset `2` to `(Row:1, GraphemeCol:0)`.
 
 ## Editing Semantics
 

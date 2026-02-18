@@ -30,12 +30,15 @@ Legend: [ ] todo, [x] done.
   - Tests: round-trip tests `Pos -> Gap -> Pos`; boundary tests at BOF/EOF and line breaks — stable results
 
 ## Quality Gates
-- [ ] Add Unicode fixture coverage (ASCII, multibyte UTF-8, combining marks, ZWJ emoji, multiline boundaries) — lock correctness for collaborative contexts
+- [x] Add Unicode fixture coverage (ASCII, multibyte UTF-8, combining marks, ZWJ emoji, multiline boundaries) — lock correctness for collaborative contexts
   - Repository: `flourish`
   - Component: `buffer` tests
   - Scope: add dedicated conversion test file and reusable fixtures for text corpus
   - Snippets: fixture rows containing `"a"`, `"é"`, `"e\u0301"`, `"👨‍👩‍👧‍👦"`, `"\n"` boundaries
   - Tests: run `go test ./buffer` — all fixture cases pass with exact expected coordinates/offsets
+  - Essence (simple): we now test how offsets behave on real Unicode text that users type in collaborative editors.
+  - Example: in `"é"`, byte offset `1` is inside one grapheme, so conversion correctly fails instead of returning a broken cursor position.
+  - Example: in `"a\nb"`, offset after newline maps to row `1`, col `0`, so line boundary behavior is explicit and stable.
 
 - [ ] Update `docs/buffer.md` with conversion contracts and policy semantics — make host integration rules explicit
   - Repository: `flourish`
