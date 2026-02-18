@@ -11,3 +11,4 @@ Examples:
 - `examples/virtual-text/main.go` — virtual deletions/insertions overlay behavior.
 - `examples/highlighter/main.go` — line highlighter integration.
 - `examples/on-change/main.go` — delta-backed `OnChange` event reporting (`buffer.Change` payload).
+- `examples/intent-mode/main.go` — intent emission with host-controlled local-apply decisions.

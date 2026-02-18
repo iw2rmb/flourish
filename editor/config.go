@@ -52,4 +52,11 @@ type Config struct {
 	// Update. The payload is delta-first (`ChangeEvent.Change` backed by
 	// `buffer.Change`). It is not fired for host-driven buffer changes.
 	OnChange func(ChangeEvent)
+
+	// MutationMode controls whether key handling mutates locally, emits intents,
+	// or does both. Zero value is MutateInEditor.
+	MutationMode MutationMode
+	// OnIntent, if set, receives key-derived semantic intents in intent modes.
+	// In EmitIntentsAndMutate mode, the return value decides local apply.
+	OnIntent func(IntentBatch) IntentDecision
 }
