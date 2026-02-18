@@ -15,14 +15,14 @@ Legend: [ ] todo, [x] done.
   - Tests: compile-level API exposure + behavior tests for each function signature — all new APIs callable from unit tests
 
 ## Conversion Engine
-- [ ] Implement deterministic byte/rune walking across multi-line grapheme-backed content — ensure identical results for repeated calls
+- [x] Implement deterministic byte/rune walking across multi-line grapheme-backed content — ensure identical results for repeated calls
   - Repository: `flourish`
   - Component: `buffer`
   - Scope: implement internal helpers for newline accounting, line traversal, and clamp/error behavior; ensure conversion behavior is independent of call site
   - Snippets: internal helper pattern `offsetToPos(off, unit, policy)`
   - Tests: table-driven tests for in-range and out-of-range offsets — expected `Pos` and `ok` results match policy
 
-- [ ] Implement gap conversion model bound to rune offsets and explicit bias — remove host-side ad-hoc anchor math
+- [x] Implement gap conversion model bound to rune offsets and explicit bias — remove host-side ad-hoc anchor math
   - Repository: `flourish`
   - Component: `buffer`
   - Scope: define `Gap` and `GapBias`; implement forward and reverse mapping between `Pos` and insertion gap

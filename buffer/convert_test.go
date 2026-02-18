@@ -190,6 +190,98 @@ func TestBuffer_GapConversions(t *testing.T) {
 	}
 }
 
+func TestBuffer_OffsetConversions_DeterministicAcrossCalls(t *testing.T) {
+	b := New("aé\ne\u0301\n👨‍👩‍👧‍👦", Options{})
+	p := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
+
+	assertDeterministic := func(start, end int, fn func(int) (Pos, bool)) {
+		for off := start; off <= end; off++ {
+			wantPos, wantOK := fn(off)
+			for i := 0; i < 8; i++ {
+				gotPos, gotOK := fn(off)
+				if gotOK != wantOK || gotPos != wantPos {
+					t.Fatalf("off=%d call=%d got=(%v,%v) want=(%v,%v)", off, i, gotPos, gotOK, wantPos, wantOK)
+				}
+			}
+		}
+	}
+
+	assertDeterministic(-1, b.docLen(offsetUnitByte)+1, func(off int) (Pos, bool) {
+		return b.PosFromByteOffset(off, p)
+	})
+	assertDeterministic(-1, b.docLen(offsetUnitRune)+1, func(off int) (Pos, bool) {
+		return b.PosFromRuneOffset(off, p)
+	})
+}
+
+func TestBuffer_OffsetConversions_RoundTripAtBoundaries(t *testing.T) {
+	b := New("é\ne\u0301\n👨‍👩‍👧‍👦", Options{})
+	p := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
+
+	cases := []Pos{
+		{Row: 0, GraphemeCol: 0},
+		{Row: 0, GraphemeCol: 1},
+		{Row: 1, GraphemeCol: 0},
+		{Row: 1, GraphemeCol: 1},
+		{Row: 2, GraphemeCol: 0},
+		{Row: 2, GraphemeCol: 1},
+	}
+
+	for _, pos := range cases {
+		byteOff, ok := b.ByteOffsetFromPos(pos, p)
+		if !ok {
+			t.Fatalf("ByteOffsetFromPos(%v) failed", pos)
+		}
+		gotPos, ok := b.PosFromByteOffset(byteOff, p)
+		if !ok || gotPos != pos {
+			t.Fatalf("byte round-trip pos=%v got=(%v,%v)", pos, gotPos, ok)
+		}
+
+		runeOff, ok := b.RuneOffsetFromPos(pos, p)
+		if !ok {
+			t.Fatalf("RuneOffsetFromPos(%v) failed", pos)
+		}
+		gotPos, ok = b.PosFromRuneOffset(runeOff, p)
+		if !ok || gotPos != pos {
+			t.Fatalf("rune round-trip pos=%v got=(%v,%v)", pos, gotPos, ok)
+		}
+	}
+}
+
+func TestBuffer_GapConversions_Boundaries(t *testing.T) {
+	b := New("a\nβ", Options{})
+	p := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
+
+	cases := []struct {
+		pos      Pos
+		wantRune int
+	}{
+		{pos: Pos{Row: 0, GraphemeCol: 0}, wantRune: 0},
+		{pos: Pos{Row: 0, GraphemeCol: 1}, wantRune: 1},
+		{pos: Pos{Row: 1, GraphemeCol: 0}, wantRune: 2},
+		{pos: Pos{Row: 1, GraphemeCol: 1}, wantRune: 3},
+	}
+	biases := []GapBias{GapBiasLeft, GapBiasRight}
+
+	for _, tc := range cases {
+		for _, bias := range biases {
+			g, ok := b.GapFromPos(tc.pos, bias)
+			if !ok {
+				t.Fatalf("GapFromPos(%v,%v) failed", tc.pos, bias)
+			}
+			wantGap := Gap{RuneOffset: tc.wantRune, Bias: bias}
+			if g != wantGap {
+				t.Fatalf("GapFromPos(%v,%v)=%v want=%v", tc.pos, bias, g, wantGap)
+			}
+
+			gotPos, ok := b.PosFromGap(g, p)
+			if !ok || gotPos != tc.pos {
+				t.Fatalf("PosFromGap(%v)=(%v,%v), want (%v,true)", g, gotPos, ok, tc.pos)
+			}
+		}
+	}
+}
+
 func TestBuffer_ConversionAPIs_InvalidNewlineMode(t *testing.T) {
 	b := New("ab", Options{})
 	p := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineMode(99)}

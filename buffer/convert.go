@@ -32,16 +32,23 @@ type Gap struct {
 	Bias       GapBias
 }
 
+type offsetUnit uint8
+
+const (
+	offsetUnitByte offsetUnit = iota
+	offsetUnitRune
+)
+
 func (b *Buffer) PosFromByteOffset(off int, p ConvertPolicy) (Pos, bool) {
 	if !validNewlineMode(p.NewlineMode) {
 		return Pos{}, false
 	}
 
-	off, ok := clampOffset(off, b.docByteLen(), p.ClampMode)
+	off, ok := clampOffset(off, b.docLen(offsetUnitByte), p.ClampMode)
 	if !ok {
 		return Pos{}, false
 	}
-	return b.byteOffsetToPos(off)
+	return b.posFromOffset(off, offsetUnitByte)
 }
 
 func (b *Buffer) ByteOffsetFromPos(pos Pos, p ConvertPolicy) (int, bool) {
@@ -53,7 +60,7 @@ func (b *Buffer) ByteOffsetFromPos(pos Pos, p ConvertPolicy) (int, bool) {
 	if !ok {
 		return 0, false
 	}
-	return b.posToByteOffset(pos), true
+	return b.offsetFromPos(pos, offsetUnitByte), true
 }
 
 func (b *Buffer) PosFromRuneOffset(off int, p ConvertPolicy) (Pos, bool) {
@@ -61,11 +68,11 @@ func (b *Buffer) PosFromRuneOffset(off int, p ConvertPolicy) (Pos, bool) {
 		return Pos{}, false
 	}
 
-	off, ok := clampOffset(off, b.docRuneLen(), p.ClampMode)
+	off, ok := clampOffset(off, b.docLen(offsetUnitRune), p.ClampMode)
 	if !ok {
 		return Pos{}, false
 	}
-	return b.runeOffsetToPos(off)
+	return b.posFromOffset(off, offsetUnitRune)
 }
 
 func (b *Buffer) RuneOffsetFromPos(pos Pos, p ConvertPolicy) (int, bool) {
@@ -77,7 +84,7 @@ func (b *Buffer) RuneOffsetFromPos(pos Pos, p ConvertPolicy) (int, bool) {
 	if !ok {
 		return 0, false
 	}
-	return b.posToRuneOffset(pos), true
+	return b.offsetFromPos(pos, offsetUnitRune), true
 }
 
 func (b *Buffer) GapFromPos(pos Pos, bias GapBias) (Gap, bool) {
@@ -144,11 +151,18 @@ func (b *Buffer) normalizePosForMode(pos Pos, mode OffsetClampMode) (Pos, bool) 
 	}
 }
 
-func (b *Buffer) docByteLen() int {
+func unitWidth(cluster string, unit offsetUnit) int {
+	if unit == offsetUnitRune {
+		return utf8.RuneCountInString(cluster)
+	}
+	return len(cluster)
+}
+
+func (b *Buffer) docLen(unit offsetUnit) int {
 	total := 0
 	for row, line := range b.lines {
 		for _, cluster := range line {
-			total += len(cluster)
+			total += unitWidth(cluster, unit)
 		}
 		if row < len(b.lines)-1 {
 			total++
@@ -157,20 +171,7 @@ func (b *Buffer) docByteLen() int {
 	return total
 }
 
-func (b *Buffer) docRuneLen() int {
-	total := 0
-	for row, line := range b.lines {
-		for _, cluster := range line {
-			total += utf8.RuneCountInString(cluster)
-		}
-		if row < len(b.lines)-1 {
-			total++
-		}
-	}
-	return total
-}
-
-func (b *Buffer) byteOffsetToPos(off int) (Pos, bool) {
+func (b *Buffer) posFromOffset(off int, unit offsetUnit) (Pos, bool) {
 	cur := 0
 
 	for row, line := range b.lines {
@@ -180,7 +181,7 @@ func (b *Buffer) byteOffsetToPos(off int) (Pos, bool) {
 		}
 
 		for _, cluster := range line {
-			next := cur + len(cluster)
+			next := cur + unitWidth(cluster, unit)
 			if off > cur && off < next {
 				return Pos{}, false
 			}
@@ -202,67 +203,18 @@ func (b *Buffer) byteOffsetToPos(off int) (Pos, bool) {
 	return Pos{}, false
 }
 
-func (b *Buffer) runeOffsetToPos(off int) (Pos, bool) {
-	cur := 0
-
-	for row, line := range b.lines {
-		col := 0
-		if off == cur {
-			return Pos{Row: row, GraphemeCol: col}, true
-		}
-
-		for _, cluster := range line {
-			next := cur + utf8.RuneCountInString(cluster)
-			if off > cur && off < next {
-				return Pos{}, false
-			}
-			cur = next
-			col++
-			if off == cur {
-				return Pos{Row: row, GraphemeCol: col}, true
-			}
-		}
-
-		if row < len(b.lines)-1 {
-			cur++
-			if off == cur {
-				return Pos{Row: row + 1, GraphemeCol: 0}, true
-			}
-		}
-	}
-
-	return Pos{}, false
-}
-
-func (b *Buffer) posToByteOffset(pos Pos) int {
+func (b *Buffer) offsetFromPos(pos Pos, unit offsetUnit) int {
 	off := 0
 
 	for row := 0; row < pos.Row; row++ {
 		for _, cluster := range b.lines[row] {
-			off += len(cluster)
+			off += unitWidth(cluster, unit)
 		}
 		off++
 	}
 
 	for col := 0; col < pos.GraphemeCol; col++ {
-		off += len(b.lines[pos.Row][col])
-	}
-
-	return off
-}
-
-func (b *Buffer) posToRuneOffset(pos Pos) int {
-	off := 0
-
-	for row := 0; row < pos.Row; row++ {
-		for _, cluster := range b.lines[row] {
-			off += utf8.RuneCountInString(cluster)
-		}
-		off++
-	}
-
-	for col := 0; col < pos.GraphemeCol; col++ {
-		off += utf8.RuneCountInString(b.lines[pos.Row][col])
+		off += unitWidth(b.lines[pos.Row][col], unit)
 	}
 
 	return off
