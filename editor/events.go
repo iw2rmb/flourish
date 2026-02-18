@@ -3,26 +3,13 @@ package editor
 import "github.com/iw2rmb/flourish/buffer"
 
 type ChangeEvent struct {
-	Version   uint64
-	Cursor    buffer.Pos
-	Selection struct {
-		Range  buffer.Range
-		Active bool
-	}
-
-	// v0: simplest payload; host can diff if needed.
-	Text string
+	Change buffer.Change
 }
 
-func buildChangeEvent(b *buffer.Buffer) ChangeEvent {
-	ev := ChangeEvent{
-		Version: b.Version(),
-		Cursor:  b.Cursor(),
-		Text:    b.Text(),
+func buildChangeEvent(b *buffer.Buffer) (ChangeEvent, bool) {
+	change, ok := b.LastChange()
+	if !ok {
+		return ChangeEvent{}, false
 	}
-	if r, ok := b.Selection(); ok {
-		ev.Selection.Active = true
-		ev.Selection.Range = r
-	}
-	return ev
+	return ChangeEvent{Change: change}, true
 }

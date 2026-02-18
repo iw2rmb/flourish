@@ -73,7 +73,14 @@ Virtual text rules:
 ## Change Events
 
 `OnChange` receives:
-- current version
-- cursor
-- selection state
-- full text payload (v0)
+- `ChangeEvent{ Change buffer.Change }`
+
+Event contract:
+- delta-first payload (no full text snapshot).
+- `Change` includes version/cursor/selection before+after and ordered `AppliedEdits`.
+- cursor/selection-only changes have `AppliedEdits=[]`.
+- no-op updates emit no event.
+
+Examples:
+- move right once: `AppliedEdits=[]`, cursor changes from `(0,0)` to `(0,1)`, version increments.
+- type `"X"` at `(0,2)`: one `AppliedEdit` with `InsertText="X"` and the exact before/after ranges.

@@ -48,7 +48,8 @@ type Config struct {
 	// text after virtual deletions.
 	Highlighter Highlighter
 
-	// OnChange, if set, fires after every successful buffer mutation triggered
-	// via Update. It is not fired for host-driven buffer changes.
+	// OnChange, if set, fires after every effective buffer change triggered via
+	// Update. The payload is delta-first (`ChangeEvent.Change` backed by
+	// `buffer.Change`). It is not fired for host-driven buffer changes.
 	OnChange func(ChangeEvent)
 }

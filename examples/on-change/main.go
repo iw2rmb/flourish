@@ -7,28 +7,19 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/iw2rmb/flourish/buffer"
 	"github.com/iw2rmb/flourish/editor"
 )
 
 type eventState struct {
-	count int
-	last  editor.ChangeEvent
+	count   int
+	hasLast bool
+	last    editor.ChangeEvent
 }
 
 func (s *eventState) handleChange(ev editor.ChangeEvent) {
 	s.count++
+	s.hasLast = true
 	s.last = ev
-}
-
-func (s *eventState) initFromBuffer(buf *buffer.Buffer) {
-	s.last.Version = buf.Version()
-	s.last.Cursor = buf.Cursor()
-	s.last.Text = buf.Text()
-	if r, ok := buf.Selection(); ok {
-		s.last.Selection.Active = true
-		s.last.Selection.Range = r
-	}
 }
 
 type model struct {
@@ -51,7 +42,6 @@ func newModel() model {
 	}
 
 	m := model{editor: editor.New(cfg), events: state}
-	m.events.initFromBuffer(m.editor.Buffer())
 	return m
 }
 
@@ -74,21 +64,50 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	selection := "none"
-	if m.events.last.Selection.Active {
-		r := m.events.last.Selection.Range
-		selection = fmt.Sprintf("[%d:%d -> %d:%d)", r.Start.Row, r.Start.GraphemeCol, r.End.Row, r.End.GraphemeCol)
-	}
-
-	status := strings.Join([]string{
+	statusLines := []string{
 		"",
 		"OnChange status:",
 		fmt.Sprintf("events: %d", m.events.count),
-		fmt.Sprintf("version: %d", m.events.last.Version),
-		fmt.Sprintf("cursor: row=%d col=%d", m.events.last.Cursor.Row, m.events.last.Cursor.GraphemeCol),
-		fmt.Sprintf("selection: %s", selection),
-		fmt.Sprintf("text bytes: %d", len(m.events.last.Text)),
-	}, "\n")
+	}
+	if m.events.hasLast {
+		ch := m.events.last.Change
+		selection := "none"
+		if ch.SelectionAfter.Active {
+			r := ch.SelectionAfter.Range
+			selection = fmt.Sprintf("[%d:%d -> %d:%d)", r.Start.Row, r.Start.GraphemeCol, r.End.Row, r.End.GraphemeCol)
+		}
+
+		editSummary := "none"
+		if len(ch.AppliedEdits) > 0 {
+			e := ch.AppliedEdits[len(ch.AppliedEdits)-1]
+			editSummary = fmt.Sprintf(
+				"insert=%q delete=%q before=[%d:%d -> %d:%d) after=[%d:%d -> %d:%d)",
+				e.InsertText,
+				e.DeletedText,
+				e.RangeBefore.Start.Row, e.RangeBefore.Start.GraphemeCol,
+				e.RangeBefore.End.Row, e.RangeBefore.End.GraphemeCol,
+				e.RangeAfter.Start.Row, e.RangeAfter.Start.GraphemeCol,
+				e.RangeAfter.End.Row, e.RangeAfter.End.GraphemeCol,
+			)
+		}
+
+		statusLines = append(
+			statusLines,
+			fmt.Sprintf("version: %d -> %d", ch.VersionBefore, ch.VersionAfter),
+			fmt.Sprintf(
+				"cursor: row=%d col=%d -> row=%d col=%d",
+				ch.CursorBefore.Row, ch.CursorBefore.GraphemeCol,
+				ch.CursorAfter.Row, ch.CursorAfter.GraphemeCol,
+			),
+			fmt.Sprintf("selection after: %s", selection),
+			fmt.Sprintf("applied edits: %d", len(ch.AppliedEdits)),
+			fmt.Sprintf("last edit: %s", editSummary),
+		)
+	} else {
+		statusLines = append(statusLines, "last change: none yet")
+	}
+
+	status := strings.Join(statusLines, "\n")
 
 	return m.editor.View() + status
 }
