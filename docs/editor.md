@@ -18,6 +18,9 @@ Primary API:
 - `ViewportState()`
 - `ScreenToDoc(x, y)`
 - `DocToScreen(pos)`
+- `RenderSnapshot()`
+- `ScreenToDocWithSnapshot(snapshot, x, y)`
+- `DocToScreenWithSnapshot(snapshot, pos)`
 
 ## Coordinate Model
 
@@ -54,6 +57,7 @@ Mouse:
 Viewport integration:
 - `ViewportState()` exposes top visual row, visible row count, wrap mode, and no-wrap horizontal offset.
 - `ScreenToDoc` and `DocToScreen` provide stable host-side coordinate mapping.
+- snapshot-bound mapping APIs (`RenderSnapshot`, `ScreenToDocWithSnapshot`, `DocToScreenWithSnapshot`) provide frame-stable mapping with stale-token rejection.
 - `ScrollAllowManual` keeps wheel/manual viewport scrolling enabled.
 - `ScrollFollowCursorOnly` ignores manual viewport scrolling and keeps viewport movement cursor-driven.
 
@@ -116,6 +120,34 @@ cfg := editor.Config{
         }
         return editor.IntentDecision{ApplyLocally: true}
     },
+}
+```
+
+## Render Snapshot Lifecycle
+
+`RenderSnapshot` captures immutable mapping state for the currently rendered frame:
+- `Token`: frame identity for host cache keying.
+- `BufferVersion`: current buffer version.
+- `Viewport`: camera state (`TopVisualRow`, `VisibleRows`, `LeftCellOffset`, `WrapMode`).
+- `Rows`: visible row mapping (`ScreenRow`, `DocRow`, doc grapheme span, and per-cell doc column map).
+
+Token contract:
+- same frame/state -> same token.
+- mapping-affecting changes (buffer/version, viewport offsets/size, wrap mode, line-number gutter, focus/decoration context) -> different token.
+- snapshot-bound mapping methods return `ok=false` when token is stale.
+
+Host usage pattern:
+
+```go
+snap := ed.RenderSnapshot()
+cache[snap.Token] = snap
+
+if pos, ok := ed.ScreenToDocWithSnapshot(snap, mouseX, mouseY); ok {
+    // safe mapping for the same frame
+    _ = pos
+} else {
+    // snapshot stale: refresh and retry
+    snap = ed.RenderSnapshot()
 }
 ```
 
