@@ -20,6 +20,47 @@ type TextEdit struct {
 	Text  string
 }
 
+// RemoteEdit replaces the text in Range with Text as part of a remote batch.
+//
+// OpID is an optional host-level operation identifier and is not interpreted
+// by the buffer package.
+type RemoteEdit struct {
+	Range Range
+	Text  string
+	OpID  string
+}
+
+type RemapStatus uint8
+
+const (
+	RemapUnchanged RemapStatus = iota
+	RemapMoved
+	RemapClamped
+	RemapInvalidated
+)
+
+type RemapPoint struct {
+	Before Pos
+	After  Pos
+	Status RemapStatus
+}
+
+type RemapReport struct {
+	Cursor   RemapPoint
+	SelStart RemapPoint
+	SelEnd   RemapPoint
+}
+
+type ApplyRemoteOptions struct {
+	BaseVersion uint64
+	ClampPolicy ConvertPolicy
+}
+
+type ApplyRemoteResult struct {
+	Change Change
+	Remap  RemapReport
+}
+
 func ComparePos(a, b Pos) int {
 	if a.Row < b.Row {
 		return -1

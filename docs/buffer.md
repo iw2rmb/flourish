@@ -79,6 +79,15 @@ Apply:
 - each edit range is interpreted against the current buffer state at apply time.
 - cursor moves to the end of the last effective edit.
 
+Remote apply (Phase 3 API surface):
+- `ApplyRemote(edits []RemoteEdit, opts ApplyRemoteOptions) (ApplyRemoteResult, bool)` applies remote edits in call order.
+- remote edit payload type: `RemoteEdit { Range, Text, OpID }` (`OpID` is metadata only).
+- result includes:
+- `Change` with `Source=ChangeSourceRemote`.
+- `Remap` report with cursor and selection endpoints (`RemapPoint { Before, After, Status }`).
+- remap status enum: `RemapUnchanged`, `RemapMoved`, `RemapClamped`, `RemapInvalidated`.
+- current baseline remap behavior is clamp-first endpoint preservation; full deterministic remap/causality policy handling is tracked in `roadmap/collab/phase-3-buffer-apply-remote-remap.md`.
+
 ## Change Model
 
 `buffer` now emits structured mutation payloads via:
