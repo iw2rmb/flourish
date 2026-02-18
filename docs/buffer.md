@@ -85,24 +85,41 @@ Remote apply (Phase 3 API surface):
 - options:
 - `ApplyRemoteOptions.BaseVersion` is compared to current `Version()`.
 - `ApplyRemoteOptions.VersionMismatchMode` controls mismatch behavior:
-- `VersionMismatchReject` (default): reject and return `changed=false`.
-- `VersionMismatchForceApply`: continue and apply.
-- `ApplyRemoteOptions.ClampPolicy.ClampMode` controls range endpoint handling:
-- `OffsetError`: reject if any endpoint is out of bounds.
+- `VersionMismatchReject` (default): if `BaseVersion != Version()`, reject and return `changed=false`.
+- `VersionMismatchForceApply`: apply anyway, even when base version mismatches.
+- `ApplyRemoteOptions.ClampPolicy.ClampMode` controls range endpoint handling for each edit:
+- `OffsetError`: reject the whole call if any endpoint is out of bounds.
 - `OffsetClamp`: clamp endpoints into bounds before each edit.
-- result includes:
-- `Change` with `Source=ChangeSourceRemote`.
-- `Remap` report with cursor and selection endpoints (`RemapPoint { Before, After, Status }`).
-- remap status enum: `RemapUnchanged`, `RemapMoved`, `RemapClamped`, `RemapInvalidated`.
-- deterministic remap rules:
-- edits are interpreted against evolving state in explicit call order.
-- overlap resolution follows edit order only (same list => same final result).
-- endpoint status rules:
-- `RemapUnchanged`: endpoint unaffected by effective edits.
-- `RemapMoved`: endpoint shifted by edits before it.
-- `RemapClamped`: endpoint fell inside a replaced range and snapped to replacement boundary.
-- `RemapInvalidated`: selection collapsed after remap and is cleared.
+- result:
+- on effective mutation (`changed=true`): `Change.Source` is `ChangeSourceRemote`; `Remap` reports cursor/selection endpoint remaps.
+- on no-op/reject/invalid options (`changed=false`): return zero-value `ApplyRemoteResult`.
+
+Deterministic ordering and overlap:
+- edits are interpreted against evolving state in explicit list order.
+- overlap resolution follows edit order only (same list -> same final result).
+- order changes output when ranges overlap.
+- example:
+- on `"abcdef"`, `[1,4)->"X"` then `[1,3)->"YZ"` yields `"aYZf"`.
+- reversing order (`[1,3)->"YZ"` then `[1,4)->"X"`) yields `"aXef"`.
+
+Remap statuses:
+- `Remap` contains `Cursor`, `SelStart`, and `SelEnd` as `RemapPoint { Before, After, Status }`.
+- status enum: `RemapUnchanged`, `RemapMoved`, `RemapClamped`, `RemapInvalidated`.
 - insertion at an endpoint uses right-bias (`off >= insertPos` shifts by inserted rune length).
+
+| Status | Meaning | Typical Trigger | Host Action Hint |
+| --- | --- | --- | --- |
+| `RemapUnchanged` | Endpoint position is unaffected by effective edits. | Edits happen strictly after the endpoint, or net offset delta is zero. | Keep cursor/selection endpoint where it is. |
+| `RemapMoved` | Endpoint shifts because edits before it changed document length. | Insertion before endpoint, or replacement before endpoint with non-zero net delta. | Move endpoint to reported `After`. |
+| `RemapClamped` | Endpoint falls inside a replaced/deleted range and snaps to replacement boundary. | Cursor or selection endpoint lies in removed range. | Use `After`; do not try to preserve old interior position. |
+| `RemapInvalidated` | Selection endpoint pair collapsed after remap and selection was cleared. | `SelStart.After == SelEnd.After` after applying batch. | Clear selection UI state. |
+
+Examples:
+- cursor clamped: cursor at grapheme `2` in `"abc"`, apply remote delete `[0,3)->""` -> cursor becomes `0`, status `RemapClamped`.
+- selection invalidated: selection `[1,3)` in `"abcd"`, apply delete `[0,4)->""` -> selection is cleared, both endpoints report `RemapInvalidated`.
+- version mismatch policy:
+- with `VersionMismatchReject`, mismatched `BaseVersion` returns `changed=false` and leaves state unchanged.
+- with `VersionMismatchForceApply`, the same mismatched batch can still apply and produce remote change/remap output.
 
 ## Change Model
 

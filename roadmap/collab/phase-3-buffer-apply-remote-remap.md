@@ -52,9 +52,11 @@ Legend: [ ] todo, [x] done.
   - Essence (simple): random remote batches are decoded from fuzz bytes and replayed twice; both runs must produce identical state and result.
   - Example: the same seed must produce identical `changed`, `ApplyRemoteResult`, and final text/cursor/selection/version across repeated runs.
 
-- [ ] Update `docs/buffer.md` with `ApplyRemote` semantics and remap table — ensure host integrations are deterministic by contract
+- [x] Update `docs/buffer.md` with `ApplyRemote` semantics and remap table — ensure host integrations are deterministic by contract
   - Repository: `flourish`
   - Component: docs
   - Scope: document ordering, overlap semantics, remap statuses, and version mismatch handling
   - Snippets: examples showing remap status outcomes
   - Tests: doc review against tests and API definitions
+  - Essence (simple): docs now spell out the exact remote-apply rules so hosts do not guess behavior for overlaps, remap statuses, or version mismatches.
+  - Example: docs include side-by-side overlap order outcomes (`"aYZf"` vs `"aXef"`) and a remap status table for `unchanged|moved|clamped|invalidated`.
