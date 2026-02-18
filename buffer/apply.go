@@ -14,17 +14,19 @@ func (b *Buffer) Apply(edits ...TextEdit) {
 	}
 
 	prev := b.snapshot()
+	change := b.beginChange(ChangeSourceLocal)
 
 	anyChanged := false
 	lastCursor := b.cursor
 
 	for _, e := range edits {
-		nextCursor, changed := b.replaceRange(e.Range, e.Text)
+		nextCursor, applied, changed := b.replaceRange(e.Range, e.Text)
 		if !changed {
 			continue
 		}
 		anyChanged = true
 		lastCursor = nextCursor
+		change.addAppliedEdit(applied)
 	}
 
 	if !anyChanged {
@@ -35,4 +37,5 @@ func (b *Buffer) Apply(edits ...TextEdit) {
 	b.sel = selectionState{}
 	b.version++
 	b.recordUndo(prev)
+	b.commitChange(change)
 }

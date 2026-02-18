@@ -24,6 +24,9 @@ type Buffer struct {
 	cursor Pos
 	sel    selectionState
 
+	lastChange    Change
+	hasLastChange bool
+
 	opt  Options
 	hist historyState
 }
@@ -65,8 +68,10 @@ func (b *Buffer) SetCursor(p Pos) {
 	if next == b.cursor {
 		return
 	}
+	change := b.beginChange(ChangeSourceLocal)
 	b.cursor = next
 	b.version++
+	b.commitChange(change)
 }
 
 func (b *Buffer) Selection() (Range, bool) {
@@ -92,6 +97,8 @@ func (b *Buffer) SelectionRaw() (Range, bool) {
 }
 
 func (b *Buffer) SetSelection(r Range) {
+	change := b.beginChange(ChangeSourceLocal)
+
 	clamped := ClampRange(r, len(b.lines), b.lineLen)
 	next := selectionState{
 		active: true,
@@ -119,18 +126,21 @@ func (b *Buffer) SetSelection(r Range) {
 
 	b.sel = next
 	b.version++
+	b.commitChange(change)
 }
 
 func (b *Buffer) ClearSelection() {
 	if !b.sel.active {
 		return
 	}
+	change := b.beginChange(ChangeSourceLocal)
 	if r, ok := b.Selection(); !ok || r.IsEmpty() {
 		b.sel = selectionState{}
 		return
 	}
 	b.sel = selectionState{}
 	b.version++
+	b.commitChange(change)
 }
 
 func (b *Buffer) lineLen(row int) int {

@@ -16,13 +16,14 @@ func (b *Buffer) InsertText(s string) {
 	}
 
 	prev := b.snapshot()
+	change := b.beginChange(ChangeSourceLocal)
 
 	r, ok := b.Selection()
 	if !ok {
 		r = Range{Start: b.cursor, End: b.cursor}
 	}
 
-	nextCursor, changed := b.replaceRange(r, s)
+	nextCursor, applied, changed := b.replaceRange(r, s)
 	if !changed {
 		return
 	}
@@ -31,6 +32,8 @@ func (b *Buffer) InsertText(s string) {
 	b.sel = selectionState{}
 	b.version++
 	b.recordUndo(prev)
+	change.addAppliedEdit(applied)
+	b.commitChange(change)
 }
 
 // InsertGrapheme inserts a single grapheme cluster at the cursor, or replaces
@@ -61,11 +64,12 @@ func (b *Buffer) DeleteBackward() {
 	}
 
 	prev := b.snapshot()
+	change := b.beginChange(ChangeSourceLocal)
 
 	if col > 0 {
 		start := Pos{Row: row, GraphemeCol: col - 1}
 		end := Pos{Row: row, GraphemeCol: col}
-		nextCursor, changed := b.replaceRange(Range{Start: start, End: end}, "")
+		nextCursor, applied, changed := b.replaceRange(Range{Start: start, End: end}, "")
 		if !changed {
 			return
 		}
@@ -73,6 +77,8 @@ func (b *Buffer) DeleteBackward() {
 		b.sel = selectionState{}
 		b.version++
 		b.recordUndo(prev)
+		change.addAppliedEdit(applied)
+		b.commitChange(change)
 		return
 	}
 
@@ -80,7 +86,7 @@ func (b *Buffer) DeleteBackward() {
 	prevRow := row - 1
 	start := Pos{Row: prevRow, GraphemeCol: len(b.lines[prevRow])}
 	end := Pos{Row: row, GraphemeCol: 0}
-	nextCursor, changed := b.replaceRange(Range{Start: start, End: end}, "")
+	nextCursor, applied, changed := b.replaceRange(Range{Start: start, End: end}, "")
 	if !changed {
 		return
 	}
@@ -88,6 +94,8 @@ func (b *Buffer) DeleteBackward() {
 	b.sel = selectionState{}
 	b.version++
 	b.recordUndo(prev)
+	change.addAppliedEdit(applied)
+	b.commitChange(change)
 }
 
 // DeleteForward applies delete-key semantics.
@@ -104,11 +112,12 @@ func (b *Buffer) DeleteForward() {
 	}
 
 	prev := b.snapshot()
+	change := b.beginChange(ChangeSourceLocal)
 
 	if col < len(b.lines[row]) {
 		start := Pos{Row: row, GraphemeCol: col}
 		end := Pos{Row: row, GraphemeCol: col + 1}
-		nextCursor, changed := b.replaceRange(Range{Start: start, End: end}, "")
+		nextCursor, applied, changed := b.replaceRange(Range{Start: start, End: end}, "")
 		if !changed {
 			return
 		}
@@ -116,13 +125,15 @@ func (b *Buffer) DeleteForward() {
 		b.sel = selectionState{}
 		b.version++
 		b.recordUndo(prev)
+		change.addAppliedEdit(applied)
+		b.commitChange(change)
 		return
 	}
 
 	// Join with next line (delete the newline).
 	start := Pos{Row: row, GraphemeCol: col}
 	end := Pos{Row: row + 1, GraphemeCol: 0}
-	nextCursor, changed := b.replaceRange(Range{Start: start, End: end}, "")
+	nextCursor, applied, changed := b.replaceRange(Range{Start: start, End: end}, "")
 	if !changed {
 		return
 	}
@@ -130,6 +141,8 @@ func (b *Buffer) DeleteForward() {
 	b.sel = selectionState{}
 	b.version++
 	b.recordUndo(prev)
+	change.addAppliedEdit(applied)
+	b.commitChange(change)
 }
 
 // DeleteSelection deletes the active selection, if any.
@@ -139,7 +152,8 @@ func (b *Buffer) DeleteSelection() {
 		return
 	}
 	prev := b.snapshot()
-	nextCursor, changed := b.replaceRange(r, "")
+	change := b.beginChange(ChangeSourceLocal)
+	nextCursor, applied, changed := b.replaceRange(r, "")
 	if !changed {
 		return
 	}
@@ -147,20 +161,26 @@ func (b *Buffer) DeleteSelection() {
 	b.sel = selectionState{}
 	b.version++
 	b.recordUndo(prev)
+	change.addAppliedEdit(applied)
+	b.commitChange(change)
 }
 
-func (b *Buffer) replaceRange(r Range, text string) (nextCursor Pos, changed bool) {
+func (b *Buffer) replaceRange(r Range, text string) (nextCursor Pos, applied AppliedEdit, changed bool) {
 	r = NormalizeRange(ClampRange(r, len(b.lines), b.lineLen))
 	if r.IsEmpty() && text == "" {
-		return b.cursor, false
+		return b.cursor, AppliedEdit{}, false
 	}
 
 	if r.Start.Row == r.End.Row && r.Start.GraphemeCol == r.End.GraphemeCol && text == "" {
-		return b.cursor, false
+		return b.cursor, AppliedEdit{}, false
 	}
 
 	startRow, startCol := r.Start.Row, r.Start.GraphemeCol
 	endRow, endCol := r.End.Row, r.End.GraphemeCol
+	deletedText := textForLinesRange(b.lines, r)
+	if deletedText == text {
+		return b.cursor, AppliedEdit{}, false
+	}
 
 	prefix := append([]string(nil), b.lines[startRow][:startCol]...)
 	suffix := append([]string(nil), b.lines[endRow][endCol:]...)
@@ -208,18 +228,48 @@ func (b *Buffer) replaceRange(r Range, text string) (nextCursor Pos, changed boo
 		out = [][]string{nil}
 	}
 
-	// No-op detection for "replace with identical text".
-	// Only check in the simple single-line case to keep this cheap.
-	if startRow == endRow && len(ins) == 1 {
-		old := b.lines[startRow]
-		if startCol <= len(old) && endCol <= len(old) {
-			if grapheme.Join(old[startCol:endCol]) == text && len(before)+1+len(after) == len(out) {
-				// Range text equals replacement and no line count change => no-op.
-				return b.cursor, false
-			}
-		}
+	b.lines = out
+	applied = AppliedEdit{
+		RangeBefore: r,
+		RangeAfter: Range{
+			Start: r.Start,
+			End:   nextCursor,
+		},
+		InsertText:  text,
+		DeletedText: deletedText,
+	}
+	return nextCursor, applied, true
+}
+
+func textForLinesRange(lines [][]string, r Range) string {
+	r = NormalizeRange(r)
+	if r.IsEmpty() {
+		return ""
 	}
 
-	b.lines = out
-	return nextCursor, true
+	startRow := r.Start.Row
+	endRow := r.End.Row
+	startCol := r.Start.GraphemeCol
+	endCol := r.End.GraphemeCol
+
+	if startRow == endRow {
+		return grapheme.Join(lines[startRow][startCol:endCol])
+	}
+
+	var sb strings.Builder
+	for row := startRow; row <= endRow; row++ {
+		if row > startRow {
+			sb.WriteByte('\n')
+		}
+		partStart := 0
+		partEnd := len(lines[row])
+		if row == startRow {
+			partStart = startCol
+		}
+		if row == endRow {
+			partEnd = endCol
+		}
+		sb.WriteString(grapheme.Join(lines[row][partStart:partEnd]))
+	}
+	return sb.String()
 }

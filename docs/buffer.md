@@ -79,6 +79,31 @@ Apply:
 - each edit range is interpreted against the current buffer state at apply time.
 - cursor moves to the end of the last effective edit.
 
+## Change Model
+
+`buffer` now emits structured mutation payloads via:
+- `LastChange() (Change, bool)`
+
+Types:
+- `ChangeSource`: `ChangeSourceLocal`, `ChangeSourceRemote`
+- `SelectionState`: `{ Active, Range }`
+- `AppliedEdit`: `{ RangeBefore, RangeAfter, InsertText, DeletedText }`
+- `Change`: version/cursor/selection before/after plus ordered `AppliedEdits`
+
+Rules:
+- only effective mutations create a new `Change`.
+- no-op calls do not increment version and do not replace the previous change.
+- text mutation calls (`Insert*`, `Delete*`, `Apply`) populate `AppliedEdits` in apply order.
+- cursor/selection-only state changes emit a `Change` with empty `AppliedEdits`.
+- `Undo`/`Redo` emit one deterministic replacement `AppliedEdit` representing the text transition.
+
+Example:
+- inserting `"X"` at `(0,1)` reports one `AppliedEdit`:
+- `RangeBefore=[(0,1)->(0,1))`
+- `RangeAfter=[(0,1)->(0,2))`
+- `InsertText="X"`
+- `DeletedText=""`
+
 ## Movement and Selection
 
 - `Move(Move)` supports grapheme, word, line, and document movement.

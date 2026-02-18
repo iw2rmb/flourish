@@ -29,6 +29,8 @@ type Move struct {
 }
 
 func (b *Buffer) Move(m Move) {
+	change := b.beginChange(ChangeSourceLocal)
+
 	prevCursor := b.cursor
 	prevSel := b.sel
 
@@ -53,6 +55,7 @@ func (b *Buffer) Move(m Move) {
 	b.cursor = nextCursor
 	b.sel = nextSel
 	b.version++
+	b.commitChange(change)
 }
 
 func selectionStateEqual(a, b selectionState) bool {

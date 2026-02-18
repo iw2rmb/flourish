@@ -60,6 +60,7 @@ func (b *Buffer) Undo() bool {
 	}
 
 	cur := b.snapshot()
+	change := b.beginChange(ChangeSourceLocal)
 
 	i := len(b.hist.undo) - 1
 	prev := b.hist.undo[i]
@@ -68,6 +69,10 @@ func (b *Buffer) Undo() bool {
 
 	b.restore(prev)
 	b.version++
+	if applied, ok := replacementAppliedEdit(cur.text, prev.text); ok {
+		change.addAppliedEdit(applied)
+	}
+	b.commitChange(change)
 	return true
 }
 
@@ -77,6 +82,7 @@ func (b *Buffer) Redo() bool {
 	}
 
 	cur := b.snapshot()
+	change := b.beginChange(ChangeSourceLocal)
 
 	i := len(b.hist.redo) - 1
 	next := b.hist.redo[i]
@@ -92,5 +98,9 @@ func (b *Buffer) Redo() bool {
 
 	b.restore(next)
 	b.version++
+	if applied, ok := replacementAppliedEdit(cur.text, next.text); ok {
+		change.addAppliedEdit(applied)
+	}
+	b.commitChange(change)
 	return true
 }
