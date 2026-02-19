@@ -13,6 +13,7 @@ type SnapshotToken uint64
 type RowMap struct {
 	ScreenRow        int
 	DocRow           int
+	SegmentIndex     int
 	DocStartGrapheme int
 	DocEndGrapheme   int
 	VisibleDocCols   []int
@@ -173,13 +174,14 @@ func (m *Model) buildRenderSnapshot(token SnapshotToken) RenderSnapshot {
 
 	s.Rows = make([]RowMap, 0, end-start)
 	for visualRow := start; visualRow < end; visualRow++ {
-		docRow, line, seg, _, ok := layout.lineAndSegmentAt(visualRow)
+		docRow, line, seg, segIdx, ok := layout.lineAndSegmentAt(visualRow)
 		if !ok {
 			continue
 		}
 		row := RowMap{
 			ScreenRow:        visualRow - s.Viewport.TopVisualRow,
 			DocRow:           docRow,
+			SegmentIndex:     segIdx,
 			DocStartGrapheme: seg.StartGraphemeCol,
 			DocEndGrapheme:   seg.EndGraphemeCol,
 		}

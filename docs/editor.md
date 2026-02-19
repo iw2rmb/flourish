@@ -130,6 +130,8 @@ cfg := editor.Config{
 - `BufferVersion`: current buffer version.
 - `Viewport`: camera state (`TopVisualRow`, `VisibleRows`, `LeftCellOffset`, `WrapMode`).
 - `Rows`: visible row mapping (`ScreenRow`, `DocRow`, doc grapheme span, and per-cell doc column map).
+- `Rows`: visible row mapping (`ScreenRow`, `DocRow`, `SegmentIndex`, doc grapheme span, and per-cell doc column map).
+  `SegmentIndex` is zero-based within a wrapped doc row (`0` is the first segment, `>0` are continuations).
 
 Token contract:
 - same frame/state -> same token.

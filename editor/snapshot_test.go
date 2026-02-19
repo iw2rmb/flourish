@@ -32,6 +32,9 @@ func TestRenderSnapshot_NonEmptyAndStableForSameFrame(t *testing.T) {
 	if len(s1.Rows) == 0 {
 		t.Fatalf("snapshot rows must be non-empty")
 	}
+	if got := s1.Rows[0].SegmentIndex; got != 0 {
+		t.Fatalf("first row segment index: got %d, want %d", got, 0)
+	}
 
 	s2 := m.RenderSnapshot()
 	if s2.Token != s1.Token {
@@ -47,6 +50,38 @@ func TestRenderSnapshot_NonEmptyAndStableForSameFrame(t *testing.T) {
 	s3 := m.RenderSnapshot()
 	if len(s3.Rows[0].VisibleDocCols) > 0 && s3.Rows[0].VisibleDocCols[0] == 999 {
 		t.Fatalf("snapshot clone isolation violated")
+	}
+}
+
+func TestRenderSnapshot_SegmentIndexForWrappedRows(t *testing.T) {
+	m := New(Config{
+		Text:     "abcdef\ngh",
+		WrapMode: WrapGrapheme,
+	})
+	m = m.SetSize(3, 3)
+
+	s := m.RenderSnapshot()
+	if len(s.Rows) < 3 {
+		t.Fatalf("wrapped snapshot rows: got %d, want at least %d", len(s.Rows), 3)
+	}
+
+	if got, want := s.Rows[0].DocRow, 0; got != want {
+		t.Fatalf("row0 doc row: got %d, want %d", got, want)
+	}
+	if got, want := s.Rows[0].SegmentIndex, 0; got != want {
+		t.Fatalf("row0 segment index: got %d, want %d", got, want)
+	}
+	if got, want := s.Rows[1].DocRow, 0; got != want {
+		t.Fatalf("row1 doc row: got %d, want %d", got, want)
+	}
+	if got, want := s.Rows[1].SegmentIndex, 1; got != want {
+		t.Fatalf("row1 segment index: got %d, want %d", got, want)
+	}
+	if got, want := s.Rows[2].DocRow, 1; got != want {
+		t.Fatalf("row2 doc row: got %d, want %d", got, want)
+	}
+	if got, want := s.Rows[2].SegmentIndex, 0; got != want {
+		t.Fatalf("row2 segment index: got %d, want %d", got, want)
 	}
 }
 
