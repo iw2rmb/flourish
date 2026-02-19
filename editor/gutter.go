@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	graphemeutil "github.com/iw2rmb/flourish/internal/grapheme"
 )
 
@@ -39,13 +40,23 @@ type GutterCellContext struct {
 }
 
 type GutterCell struct {
+	// Segments contains style-addressable text chunks for this gutter cell.
+	// Segment text is normalized/clipped/padded to the resolved gutter width.
+	Segments []GutterSegment
+	// ClickCol maps gutter clicks to a document grapheme column.
+	// Negative values are clamped to 0.
+	ClickCol int
+}
+
+type GutterSegment struct {
 	Text string
 	// StyleKey optionally selects a keyed style via Config.GutterStyleForKey.
 	// Empty means use Style.Gutter.
 	StyleKey string
-	// ClickCol maps gutter clicks to a document grapheme column.
-	// Negative values are clamped to 0.
-	ClickCol int
+	// Style optionally overrides StyleKey for this segment.
+	// Returned styles should avoid layout-affecting options (padding/margin/width)
+	// to keep render mapping deterministic.
+	Style *lipgloss.Style
 }
 
 // LineNumberGutter returns the built-in line-number gutter behavior.
@@ -72,8 +83,9 @@ func lineNumberGutterCell(ctx GutterCellContext) GutterCell {
 
 	if ctx.SegmentIndex > 0 {
 		return GutterCell{
-			Text:     strings.Repeat(" ", ctx.Width),
-			StyleKey: "line_num",
+			Segments: []GutterSegment{
+				{Text: strings.Repeat(" ", ctx.Width), StyleKey: "line_num"},
+			},
 			ClickCol: 0,
 		}
 	}
@@ -84,8 +96,9 @@ func lineNumberGutterCell(ctx GutterCellContext) GutterCell {
 	}
 
 	return GutterCell{
-		Text:     fmt.Sprintf("%*d ", digits, ctx.Row+1),
-		StyleKey: styleKey,
+		Segments: []GutterSegment{
+			{Text: fmt.Sprintf("%*d ", digits, ctx.Row+1), StyleKey: styleKey},
+		},
 		ClickCol: 0,
 	}
 }
@@ -136,42 +149,114 @@ func (m Model) resolveGutterCell(row, segmentIndex int, lineText string, lineCou
 			DocVersion:   m.docVersion(),
 		})
 	}
-	cell.Text = normalizeGutterText(cell.Text, width)
+	cell.Segments = normalizeGutterSegments(cell.Segments, width)
 	if cell.ClickCol < 0 {
 		cell.ClickCol = 0
 	}
 	return cell
 }
 
-func normalizeGutterText(text string, width int) string {
+func normalizeGutterSegments(in []GutterSegment, width int) []GutterSegment {
 	if width <= 0 {
-		return ""
-	}
-	text = sanitizeSingleLine(text)
-	if text == "" {
-		return strings.Repeat(" ", width)
+		return nil
 	}
 
-	var sb strings.Builder
 	used := 0
-	for _, gr := range graphemeutil.Split(text) {
-		w := graphemeCellWidth(gr, used, 4)
-		if w < 0 {
-			w = 0
+	out := make([]GutterSegment, 0, width)
+	appendSegment := func(seg GutterSegment, text string) {
+		if text == "" {
+			return
 		}
-		if used+w > width {
-			sb.WriteString(strings.Repeat(" ", width-used))
-			used = width
-			break
+		out = append(out, GutterSegment{
+			Text:     text,
+			StyleKey: seg.StyleKey,
+			Style:    seg.Style,
+		})
+	}
+
+	for _, seg := range in {
+		text := sanitizeGutterSegmentText(seg.Text)
+		if text == "" {
+			continue
 		}
-		sb.WriteString(gr)
-		used += w
-		if used == width {
+		for _, gr := range graphemeutil.Split(text) {
+			if used >= width {
+				break
+			}
+			w := graphemeCellWidth(gr, used, 4)
+			if w < 1 {
+				w = 1
+			}
+			if used+w > width {
+				remaining := width - used
+				appendSegment(seg, strings.Repeat(" ", remaining))
+				used = width
+				break
+			}
+			appendSegment(seg, gr)
+			used += w
+		}
+		if used >= width {
 			break
 		}
 	}
+
 	if used < width {
-		sb.WriteString(strings.Repeat(" ", width-used))
+		out = append(out, GutterSegment{Text: strings.Repeat(" ", width-used)})
+	}
+	if len(out) == 0 {
+		out = append(out, GutterSegment{Text: strings.Repeat(" ", width)})
+	}
+	return out
+}
+
+func sanitizeGutterSegmentText(s string) string {
+	s = sanitizeSingleLine(s)
+	if s == "" {
+		return ""
+	}
+	return strings.Map(func(r rune) rune {
+		if r == '\t' {
+			return r
+		}
+		if r < 0x20 || r == 0x7f {
+			return -1
+		}
+		return r
+	}, s)
+}
+
+func resolveGutterSegmentStyle(
+	base lipgloss.Style,
+	styleForKey func(string) (lipgloss.Style, bool),
+	seg GutterSegment,
+) lipgloss.Style {
+	if seg.Style != nil {
+		return seg.Style.Inherit(base)
+	}
+	if styleForKey != nil && seg.StyleKey != "" {
+		if keyed, ok := styleForKey(seg.StyleKey); ok {
+			return keyed.Inherit(base)
+		}
+	}
+	return base
+}
+
+func renderGutterCell(
+	base lipgloss.Style,
+	styleForKey func(string) (lipgloss.Style, bool),
+	cell GutterCell,
+) string {
+	if len(cell.Segments) == 0 {
+		return ""
+	}
+	var sb strings.Builder
+	for _, seg := range cell.Segments {
+		if seg.Text == "" {
+			continue
+		}
+		style := resolveGutterSegmentStyle(base, styleForKey, seg)
+		sb.WriteString(style.Render(seg.Text))
 	}
 	return sb.String()
 }

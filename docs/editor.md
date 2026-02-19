@@ -65,8 +65,8 @@ Viewport integration:
 
 `Config` supports optional hooks:
 - `Gutter.Width` to resolve gutter width in terminal cells for the current frame.
-- `Gutter.Cell` to resolve per-row gutter text/style key/click mapping.
-- `GutterStyleForKey` to resolve keyed gutter styles (fallback: `Style.Gutter`).
+- `Gutter.Cell` to resolve per-row gutter segments (`[]GutterSegment`) and click mapping.
+- `GutterStyleForKey` to resolve keyed gutter segment styles (fallback: `Style.Gutter`).
 - `VirtualTextProvider` for per-line virtual deletions/insertions.
 - `Highlighter` for per-line highlight spans.
 - `GhostProvider` for inline ghost suggestions at cursor column.
@@ -85,11 +85,12 @@ Virtual text rules:
 
 Gutter rules:
 - gutter is disabled when `Gutter.Width` is nil (or resolves to `<=0`).
+- gutter content is provided as `GutterCell.Segments`; each segment can provide `StyleKey` or direct `Style`.
 - `Gutter.Cell` receives `LineText` (raw unwrapped document line text).
 - gutter click mapping uses `GutterCell.ClickCol` (default `0`, clamped per row).
 - `LineNumberGutter()` provides built-in line-number behavior.
 - line-number gutter style keys are `line_num` and `line_num_active`.
-- gutter text is normalized to the resolved gutter width per row.
+- segment text is normalized to the resolved gutter width per row.
 
 ## Intent Mode
 

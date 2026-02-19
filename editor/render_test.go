@@ -349,7 +349,9 @@ func TestRender_GutterStyleKey_UsesCallbackAndFallback(t *testing.T) {
 		Gutter: Gutter{
 			Width: func(GutterWidthContext) int { return 2 },
 			Cell: func(GutterCellContext) GutterCell {
-				return GutterCell{Text: "|", StyleKey: "em"}
+				return GutterCell{
+					Segments: []GutterSegment{{Text: "|", StyleKey: "em"}},
+				}
 			},
 		},
 		GutterStyleForKey: func(key string) (lipgloss.Style, bool) {
@@ -369,7 +371,9 @@ func TestRender_GutterStyleKey_UsesCallbackAndFallback(t *testing.T) {
 		Gutter: Gutter{
 			Width: func(GutterWidthContext) int { return 2 },
 			Cell: func(GutterCellContext) GutterCell {
-				return GutterCell{Text: "|", StyleKey: "unknown"}
+				return GutterCell{
+					Segments: []GutterSegment{{Text: "|", StyleKey: "unknown"}},
+				}
 			},
 		},
 		GutterStyleForKey: func(key string) (lipgloss.Style, bool) {
@@ -385,6 +389,35 @@ func TestRender_GutterStyleKey_UsesCallbackAndFallback(t *testing.T) {
 	}
 }
 
+func TestRender_GutterSegment_InlineStyleOverridesKey(t *testing.T) {
+	segStyle := lipgloss.NewStyle().PaddingRight(1)
+
+	m := New(Config{
+		Text: "ab",
+		Gutter: Gutter{
+			Width: func(GutterWidthContext) int { return 2 },
+			Cell: func(GutterCellContext) GutterCell {
+				return GutterCell{
+					Segments: []GutterSegment{
+						{Text: "|", StyleKey: "unknown", Style: &segStyle},
+					},
+				}
+			},
+		},
+		GutterStyleForKey: func(key string) (lipgloss.Style, bool) {
+			if key == "em" {
+				return lipgloss.NewStyle().Bold(true), true
+			}
+			return lipgloss.Style{}, false
+		},
+	})
+	m = m.Blur()
+
+	if got := stripANSI(m.renderContent()); got != "|  ab" {
+		t.Fatalf("gutter inline style render: got %q, want %q", got, "|  ab")
+	}
+}
+
 func TestRender_GutterCellContext_LineTextProvided(t *testing.T) {
 	m := New(Config{
 		Text: "ax\nby",
@@ -392,9 +425,9 @@ func TestRender_GutterCellContext_LineTextProvided(t *testing.T) {
 			Width: func(GutterWidthContext) int { return 2 },
 			Cell: func(ctx GutterCellContext) GutterCell {
 				if ctx.LineText == "" {
-					return GutterCell{Text: "?"}
+					return GutterCell{Segments: []GutterSegment{{Text: "?"}}}
 				}
-				return GutterCell{Text: ctx.LineText[:1]}
+				return GutterCell{Segments: []GutterSegment{{Text: ctx.LineText[:1]}}}
 			},
 		},
 	})

@@ -14,7 +14,7 @@ type Config struct {
 	// Rendering options.
 	Gutter Gutter
 	Style  Style
-	// GutterStyleForKey resolves a gutter style override by key.
+	// GutterStyleForKey resolves a gutter segment style override by key.
 	// When nil or key is unresolved, Style.Gutter is used.
 	//
 	// Returned styles should avoid layout-affecting options (padding/margin/width)

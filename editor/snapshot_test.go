@@ -170,7 +170,7 @@ func TestRenderSnapshot_TokenInvalidationMatrix(t *testing.T) {
 		m.cfg.Gutter = Gutter{
 			Width: func(GutterWidthContext) int { return 1 },
 			Cell: func(GutterCellContext) GutterCell {
-				return GutterCell{Text: " "}
+				return GutterCell{Segments: []GutterSegment{{Text: " "}}}
 			},
 		}
 		t1 := m.RenderSnapshot().Token

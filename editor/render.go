@@ -75,13 +75,7 @@ func (m *Model) renderContent() string {
 
 		if gutterWidth > 0 {
 			cell := m.resolveGutterCell(row, ref.segmentIndex, line.rawLine, lineCount, gutterWidth, row == cursor.Row)
-			gutterStyle := m.cfg.Style.Gutter
-			if m.cfg.GutterStyleForKey != nil && cell.StyleKey != "" {
-				if keyed, ok := m.cfg.GutterStyleForKey(cell.StyleKey); ok {
-					gutterStyle = keyed
-				}
-			}
-			sb.WriteString(gutterStyle.Render(cell.Text))
+			sb.WriteString(renderGutterCell(m.cfg.Style.Gutter, m.cfg.GutterStyleForKey, cell))
 		}
 
 		left := leftNoWrap

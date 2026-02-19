@@ -47,9 +47,15 @@ func TestHitTest_CustomGutter_ClickMapsToConfiguredCol(t *testing.T) {
 			Width: func(GutterWidthContext) int { return 3 },
 			Cell: func(ctx GutterCellContext) GutterCell {
 				if ctx.Row == 0 {
-					return GutterCell{Text: "A  ", ClickCol: 2}
+					return GutterCell{
+						Segments: []GutterSegment{{Text: "A  "}},
+						ClickCol: 2,
+					}
 				}
-				return GutterCell{Text: "B  ", ClickCol: 1}
+				return GutterCell{
+					Segments: []GutterSegment{{Text: "B  "}},
+					ClickCol: 1,
+				}
 			},
 		},
 	})
