@@ -6,9 +6,7 @@ import "github.com/charmbracelet/lipgloss"
 //
 // This is a minimal subset used in Phase 5.
 type Style struct {
-	Gutter        lipgloss.Style
-	LineNum       lipgloss.Style
-	LineNumActive lipgloss.Style
+	Gutter lipgloss.Style
 
 	Text      lipgloss.Style
 	Selection lipgloss.Style
@@ -21,13 +19,11 @@ type Style struct {
 func DefaultStyle() Style {
 	gutter := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	return Style{
-		Gutter:        gutter,
-		LineNum:       gutter,
-		LineNumActive: lipgloss.NewStyle().Foreground(lipgloss.Color("250")).Bold(true),
-		Text:          lipgloss.NewStyle(),
-		Selection:     lipgloss.NewStyle().Background(lipgloss.Color("237")),
-		Cursor:        lipgloss.NewStyle().Reverse(true),
-		Ghost:         lipgloss.NewStyle().Foreground(lipgloss.Color("242")).Faint(true),
+		Gutter:    gutter,
+		Text:      lipgloss.NewStyle(),
+		Selection: lipgloss.NewStyle().Background(lipgloss.Color("237")),
+		Cursor:    lipgloss.NewStyle().Reverse(true),
+		Ghost:     lipgloss.NewStyle().Foreground(lipgloss.Color("242")).Faint(true),
 		VirtualOverlay: lipgloss.NewStyle().
 			Foreground(lipgloss.Color("245")).
 			Faint(true),

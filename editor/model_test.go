@@ -27,8 +27,8 @@ func TestModel_SetSizeAffectsViewHeight(t *testing.T) {
 
 func TestView_SnapshotFixedSize(t *testing.T) {
 	m := New(Config{
-		Text:         "one\ntwo\nthree\nfour\nfive",
-		ShowLineNums: true,
+		Text:   "one\ntwo\nthree\nfour\nfive",
+		Gutter: LineNumberGutter(),
 	})
 	m = m.Blur()
 	m = m.SetSize(8, 3)

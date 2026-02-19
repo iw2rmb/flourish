@@ -242,8 +242,8 @@ func TestUpdate_ClipboardErrorsIgnored(t *testing.T) {
 
 func TestUpdate_MouseClickShiftClickAndDrag(t *testing.T) {
 	m := New(Config{
-		Text:         "abcd\nefgh",
-		ShowLineNums: true,
+		Text:   "abcd\nefgh",
+		Gutter: LineNumberGutter(),
 	})
 	m = m.SetSize(20, 2)
 

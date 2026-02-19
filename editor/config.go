@@ -12,8 +12,14 @@ type Config struct {
 	DocID string
 
 	// Rendering options.
-	ShowLineNums bool
-	Style        Style
+	Gutter Gutter
+	Style  Style
+	// GutterStyleForKey resolves a gutter style override by key.
+	// When nil or key is unresolved, Style.Gutter is used.
+	//
+	// Returned styles should avoid layout-affecting options (padding/margin/width)
+	// to keep render mapping deterministic.
+	GutterStyleForKey func(key string) (lipgloss.Style, bool)
 	// WrapMode controls soft wrapping vs horizontal scrolling. Default is WrapNone.
 	WrapMode WrapMode
 	// ScrollPolicy controls whether viewport scrolling can diverge from cursor.

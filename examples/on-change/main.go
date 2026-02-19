@@ -36,9 +36,9 @@ func newModel() model {
 			"Movement and selection updates also fire events when state changes.",
 			"Ctrl+Q quits.",
 		}, "\n"),
-		ShowLineNums: true,
-		Style:        editor.DefaultStyle(),
-		OnChange:     state.handleChange,
+		Gutter:   editor.LineNumberGutter(),
+		Style:    editor.DefaultStyle(),
+		OnChange: state.handleChange,
 	}
 
 	m := model{editor: editor.New(cfg), events: state}

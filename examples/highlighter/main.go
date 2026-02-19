@@ -43,8 +43,8 @@ func newModel() model {
 			"\treturn \"zero\"",
 			"}",
 		}, "\n"),
-		ShowLineNums: true,
-		Style:        editor.DefaultStyle(),
+		Gutter: editor.LineNumberGutter(),
+		Style:  editor.DefaultStyle(),
 		Highlighter: demoHighlighter{
 			keywordStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true),
 			todoStyle:    lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true),

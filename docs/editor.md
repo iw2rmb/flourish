@@ -30,7 +30,7 @@ Primary API:
 
 ## Rendering and Layout
 
-- optional line number gutter (`ShowLineNums`).
+- optional custom gutter via `Config.Gutter` callbacks.
 - wrap modes:
 - `WrapNone`: no soft wrap; horizontal scroll (`xOffset`) keeps cursor visible.
 - `WrapWord`: wraps at word boundaries with fallback behavior.
@@ -64,6 +64,9 @@ Viewport integration:
 ## Extension Points
 
 `Config` supports optional hooks:
+- `Gutter.Width` to resolve gutter width in terminal cells for the current frame.
+- `Gutter.Cell` to resolve per-row gutter text/style key/click mapping.
+- `GutterStyleForKey` to resolve keyed gutter styles (fallback: `Style.Gutter`).
 - `VirtualTextProvider` for per-line virtual deletions/insertions.
 - `Highlighter` for per-line highlight spans.
 - `GhostProvider` for inline ghost suggestions at cursor column.
@@ -79,6 +82,14 @@ Virtual text rules:
 - ghost insertions are single-line and non-interactive.
 - ghost suggestions can provide `StyleKey` for callback-based style resolution.
 - cursor/selection remain document-based.
+
+Gutter rules:
+- gutter is disabled when `Gutter.Width` is nil (or resolves to `<=0`).
+- `Gutter.Cell` receives `LineText` (raw unwrapped document line text).
+- gutter click mapping uses `GutterCell.ClickCol` (default `0`, clamped per row).
+- `LineNumberGutter()` provides built-in line-number behavior.
+- line-number gutter style keys are `line_num` and `line_num_active`.
+- gutter text is normalized to the resolved gutter width per row.
 
 ## Intent Mode
 
@@ -139,7 +150,7 @@ cfg := editor.Config{
 
 Token contract:
 - same frame/state -> same token.
-- mapping-affecting changes (buffer/version, viewport offsets/size, wrap mode, line-number gutter, focus/decoration context) -> different token.
+- mapping-affecting changes (buffer/version, viewport offsets/size, wrap mode, gutter callbacks/width, focus/decoration context) -> different token.
 - snapshot-bound mapping methods return `ok=false` when token is stale.
 
 Host usage pattern:

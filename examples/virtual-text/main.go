@@ -24,8 +24,8 @@ func newModel() model {
 			"TODO: add retry logic",
 			"API_KEY=\"abcd1234\"",
 		}, "\n"),
-		ShowLineNums: true,
-		Style:        editor.DefaultStyle(),
+		Gutter: editor.LineNumberGutter(),
+		Style:  editor.DefaultStyle(),
 		VirtualTextProvider: func(ctx editor.VirtualTextContext) editor.VirtualText {
 			var vt editor.VirtualText
 

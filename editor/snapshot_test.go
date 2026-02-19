@@ -17,8 +17,8 @@ func (snapshotNoopHighlighter) HighlightLine(LineContext) ([]HighlightSpan, erro
 
 func TestRenderSnapshot_NonEmptyAndStableForSameFrame(t *testing.T) {
 	m := New(Config{
-		Text:         "ab\ncd\nef",
-		ShowLineNums: true,
+		Text:   "ab\ncd\nef",
+		Gutter: LineNumberGutter(),
 	})
 	m = m.SetSize(8, 2)
 
@@ -159,6 +159,26 @@ func TestRenderSnapshot_TokenInvalidationMatrix(t *testing.T) {
 		}
 	})
 
+	t.Run("gutter callback change", func(t *testing.T) {
+		m := New(Config{
+			Text:   "ab",
+			Gutter: LineNumberGutter(),
+		})
+		m = m.SetSize(4, 1)
+		t0 := m.RenderSnapshot().Token
+
+		m.cfg.Gutter = Gutter{
+			Width: func(GutterWidthContext) int { return 1 },
+			Cell: func(GutterCellContext) GutterCell {
+				return GutterCell{Text: " "}
+			},
+		}
+		t1 := m.RenderSnapshot().Token
+		if t1 == t0 {
+			t.Fatalf("token must change after gutter callback change")
+		}
+	})
+
 	t.Run("no changes keeps token", func(t *testing.T) {
 		m := New(Config{Text: "ab"})
 		m = m.SetSize(8, 1)
@@ -203,9 +223,9 @@ func TestSnapshotMapping_RejectsStaleAndMatchesFresh(t *testing.T) {
 
 func TestSnapshotMapping_ParityWrapAndDecorated(t *testing.T) {
 	m := New(Config{
-		Text:         "abcdef\nghijkl",
-		ShowLineNums: true,
-		WrapMode:     WrapGrapheme,
+		Text:     "abcdef\nghijkl",
+		Gutter:   LineNumberGutter(),
+		WrapMode: WrapGrapheme,
 		VirtualTextProvider: func(ctx VirtualTextContext) VirtualText {
 			if ctx.Row == 0 {
 				return VirtualText{

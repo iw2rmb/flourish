@@ -6,7 +6,7 @@ import (
 	"github.com/iw2rmb/flourish/buffer"
 )
 
-func TestHitTest_NoLineNums_ClampsAndYOffset(t *testing.T) {
+func TestHitTest_NoGutter_ClampsAndYOffset(t *testing.T) {
 	m := New(Config{Text: "abc\ndef\nghi"})
 	m.viewport.YOffset = 1
 
@@ -21,7 +21,7 @@ func TestHitTest_NoLineNums_ClampsAndYOffset(t *testing.T) {
 }
 
 func TestHitTest_WithLineNums_GutterMapsToStartOfLine(t *testing.T) {
-	m := New(Config{Text: "abcd\nefgh", ShowLineNums: true})
+	m := New(Config{Text: "abcd\nefgh", Gutter: LineNumberGutter()})
 
 	// 2 lines => 1 digit + 1 gutter space => width 2.
 	if got := m.screenToDocPos(0, 0); got != (buffer.Pos{Row: 0, GraphemeCol: 0}) {
@@ -37,6 +37,28 @@ func TestHitTest_WithLineNums_GutterMapsToStartOfLine(t *testing.T) {
 	}
 	if got := m.screenToDocPos(3, 0); got != (buffer.Pos{Row: 0, GraphemeCol: 1}) {
 		t.Fatalf("second cell x=3: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 1})
+	}
+}
+
+func TestHitTest_CustomGutter_ClickMapsToConfiguredCol(t *testing.T) {
+	m := New(Config{
+		Text: "abcd\nefgh",
+		Gutter: Gutter{
+			Width: func(GutterWidthContext) int { return 3 },
+			Cell: func(ctx GutterCellContext) GutterCell {
+				if ctx.Row == 0 {
+					return GutterCell{Text: "A  ", ClickCol: 2}
+				}
+				return GutterCell{Text: "B  ", ClickCol: 1}
+			},
+		},
+	})
+
+	if got := m.screenToDocPos(0, 0); got != (buffer.Pos{Row: 0, GraphemeCol: 2}) {
+		t.Fatalf("custom gutter click row0 x=0: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 2})
+	}
+	if got := m.screenToDocPos(1, 1); got != (buffer.Pos{Row: 1, GraphemeCol: 1}) {
+		t.Fatalf("custom gutter click row1 x=1: got %v, want %v", got, buffer.Pos{Row: 1, GraphemeCol: 1})
 	}
 }
 

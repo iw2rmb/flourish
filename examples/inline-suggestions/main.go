@@ -29,8 +29,8 @@ func newModel() model {
 			"\tfmt.",
 			"}",
 		}, "\n"),
-		ShowLineNums: true,
-		Style:        editor.DefaultStyle(),
+		Gutter: editor.LineNumberGutter(),
+		Style:  editor.DefaultStyle(),
 		GhostProvider: func(ctx editor.GhostContext) (editor.Ghost, bool) {
 			if !ctx.IsEndOfLine {
 				return editor.Ghost{}, false

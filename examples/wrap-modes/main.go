@@ -27,9 +27,9 @@ func newModel() model {
 			"A very_long_token_without_spaces_that_forces_grapheme_fallback_in_word_mode.",
 			"This sentence has natural word boundaries and demonstrates word wrapping behavior.",
 		}, "\n"),
-		ShowLineNums: true,
-		Style:        editor.DefaultStyle(),
-		WrapMode:     editor.WrapNone,
+		Gutter:   editor.LineNumberGutter(),
+		Style:    editor.DefaultStyle(),
+		WrapMode: editor.WrapNone,
 	}
 	return model{editor: editor.New(cfg), wrapMode: editor.WrapNone}
 }
@@ -81,10 +81,10 @@ func (m model) setWrapMode(mode editor.WrapMode) model {
 	focused := m.editor.Focused()
 
 	next := editor.New(editor.Config{
-		Text:         text,
-		ShowLineNums: true,
-		Style:        editor.DefaultStyle(),
-		WrapMode:     mode,
+		Text:     text,
+		Gutter:   editor.LineNumberGutter(),
+		Style:    editor.DefaultStyle(),
+		WrapMode: mode,
 	})
 	next = next.SetSize(m.width, editorHeight(m.height))
 	if !focused {

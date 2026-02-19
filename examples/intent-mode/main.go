@@ -55,7 +55,7 @@ func newModel() model {
 			"Typing/deletes/paste are emitted and not applied locally.",
 			"Ctrl+Q quits.",
 		}, "\n"),
-		ShowLineNums: true,
+		Gutter:       editor.LineNumberGutter(),
 		Style:        editor.DefaultStyle(),
 		MutationMode: editor.EmitIntentsAndMutate,
 		OnIntent:     state.handleIntent,

@@ -1,7 +1,6 @@
 package editor
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -19,10 +18,8 @@ func (m *Model) renderContent() string {
 
 	cursor := m.buf.Cursor()
 	sel, selOK := m.buf.Selection()
-	digitCount := 0
-	if m.cfg.ShowLineNums {
-		digitCount = gutterDigits(len(lines))
-	}
+	lineCount := len(lines)
+	gutterWidth := m.resolvedGutterWidth(lineCount)
 
 	highlightsByLine := make([][]HighlightSpan, len(layout.lines))
 	if m.cfg.Highlighter != nil {
@@ -56,7 +53,7 @@ func (m *Model) renderContent() string {
 
 	out := make([]string, 0, len(layout.rows))
 	maxIntVal := int(^uint(0) >> 1)
-	contentWidth := m.contentWidth(len(lines))
+	contentWidth := m.contentWidth(lineCount)
 	leftNoWrap := maxInt(m.xOffset, 0)
 	rightNoWrap := maxIntVal
 	if m.cfg.WrapMode == WrapNone && contentWidth > 0 {
@@ -76,17 +73,15 @@ func (m *Model) renderContent() string {
 
 		var sb strings.Builder
 
-		if m.cfg.ShowLineNums {
-			numStyle := m.cfg.Style.LineNum
-			if m.focused && row == cursor.Row && ref.segmentIndex == 0 {
-				numStyle = m.cfg.Style.LineNumActive
+		if gutterWidth > 0 {
+			cell := m.resolveGutterCell(row, ref.segmentIndex, line.rawLine, lineCount, gutterWidth, row == cursor.Row)
+			gutterStyle := m.cfg.Style.Gutter
+			if m.cfg.GutterStyleForKey != nil && cell.StyleKey != "" {
+				if keyed, ok := m.cfg.GutterStyleForKey(cell.StyleKey); ok {
+					gutterStyle = keyed
+				}
 			}
-			num := fmt.Sprintf("%*s", digitCount, "")
-			if ref.segmentIndex == 0 {
-				num = fmt.Sprintf("%*d", digitCount, row+1)
-			}
-			sb.WriteString(numStyle.Render(num))
-			sb.WriteString(m.cfg.Style.Gutter.Render(" "))
+			sb.WriteString(gutterStyle.Render(cell.Text))
 		}
 
 		left := leftNoWrap

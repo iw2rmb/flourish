@@ -13,7 +13,7 @@ import (
 
 // Model is a Bubble Tea component that renders and interacts with a buffer.
 //
-// Phase 5 includes sizing, focus, viewport, line numbers, and cursor rendering.
+// Phase 5 includes sizing, focus, viewport, optional gutter, and cursor rendering.
 type Model struct {
 	cfg Config
 	buf *buffer.Buffer
@@ -194,7 +194,7 @@ func (m *Model) rebuildContent() {
 }
 
 func (m Model) contentWidth(lineCount int) int {
-	w := m.viewport.Width - m.viewport.Style.GetHorizontalFrameSize() - m.gutterWidth(lineCount)
+	w := m.viewport.Width - m.viewport.Style.GetHorizontalFrameSize() - m.resolvedGutterWidth(lineCount)
 	if w < 0 {
 		w = 0
 	}

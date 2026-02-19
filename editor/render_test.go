@@ -22,8 +22,8 @@ func TestRender_LineNumberAlignment_1To120(t *testing.T) {
 	}
 
 	m := New(Config{
-		Text:         sb.String(),
-		ShowLineNums: true,
+		Text:   sb.String(),
+		Gutter: LineNumberGutter(),
 	})
 	m = m.Blur()
 	m = m.SetSize(10, 120)
@@ -267,10 +267,10 @@ func TestRender_SoftWrap_GraphemeAndLineNumbers(t *testing.T) {
 	}
 
 	withNums := New(Config{
-		Text:         "abcdef",
-		WrapMode:     WrapGrapheme,
-		ShowLineNums: true,
-		Style:        st,
+		Text:     "abcdef",
+		WrapMode: WrapGrapheme,
+		Gutter:   LineNumberGutter(),
+		Style:    st,
 	})
 	withNums = withNums.Blur()
 	withNums = withNums.SetSize(5, 2) // gutter 2 + content 3
@@ -329,10 +329,10 @@ func TestRender_SoftWrapWord_CursorAtEOLOnFullRow_Visible(t *testing.T) {
 	}
 
 	m := New(Config{
-		Text:         "abc\ndef",
-		WrapMode:     WrapWord,
-		ShowLineNums: true,
-		Style:        st,
+		Text:     "abc\ndef",
+		WrapMode: WrapWord,
+		Gutter:   LineNumberGutter(),
+		Style:    st,
 	})
 	m = m.SetSize(5, 2) // gutter 2 + content 3, so "abc" fills the full visual row.
 	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 3})
@@ -340,6 +340,69 @@ func TestRender_SoftWrapWord_CursorAtEOLOnFullRow_Visible(t *testing.T) {
 	got := m.renderContent()
 	if !strings.Contains(got, "\x1b[") {
 		t.Fatalf("expected visible cursor style at EOL on full wrapped row, got %q", got)
+	}
+}
+
+func TestRender_GutterStyleKey_UsesCallbackAndFallback(t *testing.T) {
+	withKey := New(Config{
+		Text: "ab",
+		Gutter: Gutter{
+			Width: func(GutterWidthContext) int { return 2 },
+			Cell: func(GutterCellContext) GutterCell {
+				return GutterCell{Text: "|", StyleKey: "em"}
+			},
+		},
+		GutterStyleForKey: func(key string) (lipgloss.Style, bool) {
+			if key == "em" {
+				return lipgloss.NewStyle().PaddingRight(1), true
+			}
+			return lipgloss.Style{}, false
+		},
+	})
+	withKey = withKey.Blur()
+	if got := stripANSI(withKey.renderContent()); got != "|  ab" {
+		t.Fatalf("gutter style key render: got %q, want %q", got, "|  ab")
+	}
+
+	fallback := New(Config{
+		Text: "ab",
+		Gutter: Gutter{
+			Width: func(GutterWidthContext) int { return 2 },
+			Cell: func(GutterCellContext) GutterCell {
+				return GutterCell{Text: "|", StyleKey: "unknown"}
+			},
+		},
+		GutterStyleForKey: func(key string) (lipgloss.Style, bool) {
+			if key == "em" {
+				return lipgloss.NewStyle().PaddingRight(1), true
+			}
+			return lipgloss.Style{}, false
+		},
+	})
+	fallback = fallback.Blur()
+	if got := stripANSI(fallback.renderContent()); got != "| ab" {
+		t.Fatalf("gutter fallback render: got %q, want %q", got, "| ab")
+	}
+}
+
+func TestRender_GutterCellContext_LineTextProvided(t *testing.T) {
+	m := New(Config{
+		Text: "ax\nby",
+		Gutter: Gutter{
+			Width: func(GutterWidthContext) int { return 2 },
+			Cell: func(ctx GutterCellContext) GutterCell {
+				if ctx.LineText == "" {
+					return GutterCell{Text: "?"}
+				}
+				return GutterCell{Text: ctx.LineText[:1]}
+			},
+		},
+	})
+	m = m.Blur()
+	m = m.SetSize(8, 2)
+
+	if got := stripANSI(m.renderContent()); got != "a ax\nb by" {
+		t.Fatalf("gutter line text context render: got %q, want %q", got, "a ax\nb by")
 	}
 }
 

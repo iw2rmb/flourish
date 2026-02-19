@@ -14,9 +14,9 @@ type model struct {
 
 func newModel() model {
 	cfg := editor.Config{
-		Text:         "Simple example\n\nType to edit.\nUse arrows to move.\nCtrl+Q to quit.",
-		ShowLineNums: true,
-		Style:        editor.DefaultStyle(),
+		Text:   "Simple example\n\nType to edit.\nUse arrows to move.\nCtrl+Q to quit.",
+		Gutter: editor.LineNumberGutter(),
+		Style:  editor.DefaultStyle(),
 	}
 	return model{editor: editor.New(cfg)}
 }
