@@ -90,7 +90,8 @@ Gutter rules:
 - gutter content is provided as `GutterCell.Segments`; each segment can provide `StyleKey` or direct `Style`.
 - `Gutter.Cell` receives `LineText` (raw unwrapped document line text).
 - gutter click mapping uses `GutterCell.ClickCol` (default `0`, clamped per row).
-- use `InvalidateGutter()` / `InvalidateGutterRows(...)` when host-side gutter dependencies change outside editor updates.
+- use `InvalidateGutter()` when host-side gutter dependencies changed broadly outside editor updates.
+- use `InvalidateGutterRows(...)` for row-scoped gutter dependency changes; only targeted rows are rerendered.
 - `LineNumberGutter()` provides built-in line-number behavior.
 - `LineNumberWidth(lineCount)` and `LineNumberSegment(ctx)` expose reusable line-number pieces for custom gutters.
 - line-number gutter style keys are `line_num` and `line_num_active`.

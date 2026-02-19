@@ -36,6 +36,7 @@ type Model struct {
 	layout wrapLayoutCache
 
 	gutterInvalidationVersion uint64
+	renderedRows              []string
 }
 
 func New(cfg Config) Model {
@@ -126,14 +127,16 @@ func (m Model) InvalidateGutter() Model {
 }
 
 // InvalidateGutterRows marks specific gutter rows as stale and rebuilds view
-// content. Currently this invalidates the rendered gutter globally; row scoping is
-// retained as API-level intent for future optimization.
+// content for those rows. If partial row refresh cannot be applied, it falls back
+// to a full content rebuild.
 func (m Model) InvalidateGutterRows(rows ...int) Model {
 	if len(rows) == 0 {
 		return m
 	}
 	m.gutterInvalidationVersion++
-	m.rebuildContent()
+	if !m.rebuildGutterRows(rows) {
+		m.rebuildContent()
+	}
 	return m
 }
 
@@ -213,7 +216,19 @@ func (m *Model) syncFromBuffer() (cursorChanged bool, versionChanged bool) {
 
 func (m *Model) rebuildContent() {
 	m.invalidateLayoutCache()
-	m.viewport.SetContent(m.renderContent())
+	if m.buf == nil {
+		m.setRenderedRows(nil)
+		return
+	}
+	lines := rawLinesFromBufferText(m.buf.Text())
+	layout := m.ensureLayoutCache(lines)
+	rows := m.renderRows(lines, layout, nil, false)
+	m.setRenderedRows(rows)
+}
+
+func (m *Model) setRenderedRows(rows []string) {
+	m.renderedRows = append([]string(nil), rows...)
+	m.viewport.SetContent(strings.Join(rows, "\n"))
 }
 
 func (m Model) contentWidth(lineCount int) int {

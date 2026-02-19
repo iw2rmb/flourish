@@ -143,3 +143,34 @@ func TestModel_InvalidateGutterRows_EmptyIsNoop(t *testing.T) {
 		t.Fatalf("empty row invalidation should be no-op: got version %d, want %d", got, before)
 	}
 }
+
+func TestModel_InvalidateGutterRows_RerendersOnlyTargetRows(t *testing.T) {
+	callsByRow := map[int]int{}
+	m := New(Config{
+		Text: "a\nb\nc",
+		Gutter: Gutter{
+			Width: func(GutterWidthContext) int { return 2 },
+			Cell: func(ctx GutterCellContext) GutterCell {
+				callsByRow[ctx.Row]++
+				return GutterCell{
+					Segments: []GutterSegment{{Text: fmt.Sprintf("%d", ctx.Row)}},
+				}
+			},
+		},
+	})
+	m = m.Blur()
+	m = m.SetSize(6, 3)
+
+	callsByRow = map[int]int{}
+	m = m.InvalidateGutterRows(1)
+
+	if got := callsByRow[0]; got != 0 {
+		t.Fatalf("row 0 gutter rerender calls: got %d, want %d", got, 0)
+	}
+	if got := callsByRow[1]; got != 1 {
+		t.Fatalf("row 1 gutter rerender calls: got %d, want %d", got, 1)
+	}
+	if got := callsByRow[2]; got != 0 {
+		t.Fatalf("row 2 gutter rerender calls: got %d, want %d", got, 0)
+	}
+}

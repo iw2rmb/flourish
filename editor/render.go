@@ -15,41 +15,40 @@ func (m *Model) renderContent() string {
 
 	lines := rawLinesFromBufferText(m.buf.Text())
 	layout := m.ensureLayoutCache(lines)
+	rows := m.renderRows(lines, layout, nil, false)
+	return strings.Join(rows, "\n")
+}
 
+func (m *Model) renderRows(
+	lines []string,
+	layout wrapLayoutCache,
+	dirtyLogicalRows map[int]struct{},
+	useCachedRows bool,
+) []string {
 	cursor := m.buf.Cursor()
 	sel, selOK := m.buf.Selection()
 	lineCount := len(lines)
 	gutterWidth := m.resolvedGutterWidth(lineCount)
 
-	highlightsByLine := make([][]HighlightSpan, len(layout.lines))
+	highlightVisible := make([]bool, len(layout.lines))
 	if m.cfg.Highlighter != nil {
 		h := m.viewport.Height - m.viewport.Style.GetVerticalFrameSize()
 		if h > 0 {
-			start := m.viewport.YOffset
-			if start < 0 {
-				start = 0
-			}
-			if start > len(layout.rows) {
-				start = len(layout.rows)
-			}
+			start := clampInt(m.viewport.YOffset, 0, len(layout.rows))
 			end := start + h
 			if end > len(layout.rows) {
 				end = len(layout.rows)
 			}
-
-			marked := make([]bool, len(layout.lines))
 			for visualRow := start; visualRow < end; visualRow++ {
 				ref := layout.rows[visualRow]
-				row := ref.logicalRow
-				if row < 0 || row >= len(layout.lines) || marked[row] {
-					continue
+				if ref.logicalRow >= 0 && ref.logicalRow < len(layout.lines) {
+					highlightVisible[ref.logicalRow] = true
 				}
-				marked[row] = true
-				line := layout.lines[row]
-				highlightsByLine[row] = m.highlightForLine(row, line.rawLine, line.vt, cursor)
 			}
 		}
 	}
+	highlightsByLine := make([][]HighlightSpan, len(layout.lines))
+	highlightsComputed := make([]bool, len(layout.lines))
 
 	out := make([]string, 0, len(layout.rows))
 	maxIntVal := int(^uint(0) >> 1)
@@ -60,52 +59,124 @@ func (m *Model) renderContent() string {
 		rightNoWrap = leftNoWrap + contentWidth
 	}
 
-	for _, ref := range layout.rows {
+	for visualRow, ref := range layout.rows {
 		row := ref.logicalRow
-		if row < 0 || row >= len(layout.lines) {
-			continue
-		}
-		line := layout.lines[row]
-		if ref.segmentIndex < 0 || ref.segmentIndex >= len(line.segments) {
-			continue
-		}
-		seg := line.segments[ref.segmentIndex]
-
-		var sb strings.Builder
-
-		if gutterWidth > 0 {
-			cell := m.resolveGutterCell(row, ref.segmentIndex, line.rawLine, lineCount, gutterWidth, row == cursor.Row)
-			sb.WriteString(renderGutterCell(m.cfg.Style.Gutter, m.cfg.GutterStyleForKey, cell))
-		}
-
-		left := leftNoWrap
-		right := rightNoWrap
-		if m.cfg.WrapMode != WrapNone {
-			left = seg.startCell
-			right = seg.endCell
-			if seg.Cells == 0 {
-				right = left + 1
+		if dirtyLogicalRows != nil {
+			if _, dirty := dirtyLogicalRows[row]; !dirty && useCachedRows && visualRow < len(m.renderedRows) {
+				out = append(out, m.renderedRows[visualRow])
+				continue
 			}
 		}
-		sb.WriteString(renderVisualLine(
-			m.cfg.Style,
-			m.cfg.GhostStyleForKey,
-			m.cfg.VirtualOverlayStyleForKey,
-			line.visual,
-			row,
+		if m.cfg.Highlighter != nil && row >= 0 && row < len(layout.lines) && highlightVisible[row] && !highlightsComputed[row] {
+			line := layout.lines[row]
+			highlightsByLine[row] = m.highlightForLine(row, line.rawLine, line.vt, cursor)
+			highlightsComputed[row] = true
+		}
+		highlights := []HighlightSpan(nil)
+		if row >= 0 && row < len(highlightsByLine) {
+			highlights = highlightsByLine[row]
+		}
+		rendered, ok := m.renderLayoutRow(
+			layout,
+			ref,
+			lineCount,
+			gutterWidth,
 			cursor,
-			m.focused,
 			sel,
 			selOK,
-			highlightsByLine[row],
-			left,
-			right,
-		))
+			highlights,
+			leftNoWrap,
+			rightNoWrap,
+		)
+		if !ok {
+			if useCachedRows && visualRow < len(m.renderedRows) {
+				out = append(out, m.renderedRows[visualRow])
+			}
+			continue
+		}
+		out = append(out, rendered)
+	}
+	return out
+}
 
-		out = append(out, sb.String())
+func (m *Model) renderLayoutRow(
+	layout wrapLayoutCache,
+	ref wrapLayoutRow,
+	lineCount, gutterWidth int,
+	cursor buffer.Pos,
+	sel buffer.Range,
+	selOK bool,
+	highlights []HighlightSpan,
+	leftNoWrap, rightNoWrap int,
+) (string, bool) {
+	row := ref.logicalRow
+	if row < 0 || row >= len(layout.lines) {
+		return "", false
+	}
+	line := layout.lines[row]
+	if ref.segmentIndex < 0 || ref.segmentIndex >= len(line.segments) {
+		return "", false
+	}
+	seg := line.segments[ref.segmentIndex]
+
+	var sb strings.Builder
+	if gutterWidth > 0 {
+		cell := m.resolveGutterCell(row, ref.segmentIndex, line.rawLine, lineCount, gutterWidth, row == cursor.Row)
+		sb.WriteString(renderGutterCell(m.cfg.Style.Gutter, m.cfg.GutterStyleForKey, cell))
 	}
 
-	return strings.Join(out, "\n")
+	left := leftNoWrap
+	right := rightNoWrap
+	if m.cfg.WrapMode != WrapNone {
+		left = seg.startCell
+		right = seg.endCell
+		if seg.Cells == 0 {
+			right = left + 1
+		}
+	}
+	sb.WriteString(renderVisualLine(
+		m.cfg.Style,
+		m.cfg.GhostStyleForKey,
+		m.cfg.VirtualOverlayStyleForKey,
+		line.visual,
+		row,
+		cursor,
+		m.focused,
+		sel,
+		selOK,
+		highlights,
+		left,
+		right,
+	))
+	return sb.String(), true
+}
+
+func (m *Model) rebuildGutterRows(rows []int) bool {
+	if m.buf == nil {
+		return false
+	}
+	lines := rawLinesFromBufferText(m.buf.Text())
+	layout := m.ensureLayoutCache(lines)
+	if len(layout.rows) == 0 || len(m.renderedRows) != len(layout.rows) {
+		return false
+	}
+
+	dirty := make(map[int]struct{}, len(rows))
+	for _, row := range rows {
+		if row >= 0 && row < len(layout.lines) {
+			dirty[row] = struct{}{}
+		}
+	}
+	if len(dirty) == 0 {
+		return true
+	}
+
+	rendered := m.renderRows(lines, layout, dirty, true)
+	if len(rendered) != len(layout.rows) {
+		return false
+	}
+	m.setRenderedRows(rendered)
+	return true
 }
 
 func (m *Model) highlightForLine(row int, rawLine string, vt VirtualText, cursor buffer.Pos) []HighlightSpan {
