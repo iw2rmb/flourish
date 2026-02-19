@@ -34,6 +34,8 @@ type Model struct {
 	mouseAnchor   buffer.Pos
 
 	layout wrapLayoutCache
+
+	gutterInvalidationVersion uint64
 }
 
 func New(cfg Config) Model {
@@ -113,6 +115,27 @@ func (m Model) Blur() Model {
 }
 
 func (m Model) Focused() bool { return m.focused }
+
+// InvalidateGutter marks gutter rendering as stale for all rows and rebuilds view
+// content. Use this when gutter callbacks depend on host-managed state that changed
+// outside of editor Update flow.
+func (m Model) InvalidateGutter() Model {
+	m.gutterInvalidationVersion++
+	m.rebuildContent()
+	return m
+}
+
+// InvalidateGutterRows marks specific gutter rows as stale and rebuilds view
+// content. Currently this invalidates the rendered gutter globally; row scoping is
+// retained as API-level intent for future optimization.
+func (m Model) InvalidateGutterRows(rows ...int) Model {
+	if len(rows) == 0 {
+		return m
+	}
+	m.gutterInvalidationVersion++
+	m.rebuildContent()
+	return m
+}
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {

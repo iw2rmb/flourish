@@ -101,3 +101,45 @@ func TestVirtualTextProvider_ContextPerLine(t *testing.T) {
 		t.Fatalf("selection ctx row 2: got (has=%v,%d..%d), want (true,0..1)", got[2].HasSelection, got[2].SelectionStartGraphemeCol, got[2].SelectionEndGraphemeCol)
 	}
 }
+
+func TestModel_InvalidateGutter_RebuildsFromExternalState(t *testing.T) {
+	label := "A"
+	m := New(Config{
+		Text: "x",
+		Gutter: Gutter{
+			Width: func(GutterWidthContext) int { return 2 },
+			Cell: func(GutterCellContext) GutterCell {
+				return GutterCell{
+					Segments: []GutterSegment{{Text: label}},
+				}
+			},
+		},
+	})
+	m = m.Blur()
+	m = m.SetSize(4, 1)
+
+	if got := strings.TrimRight(stripANSI(m.View()), " "); got != "A x" {
+		t.Fatalf("initial gutter render: got %q, want %q", got, "A x")
+	}
+
+	label = "B"
+	m = m.InvalidateGutter()
+	if got := strings.TrimRight(stripANSI(m.View()), " "); got != "B x" {
+		t.Fatalf("gutter render after invalidate: got %q, want %q", got, "B x")
+	}
+}
+
+func TestModel_InvalidateGutterRows_EmptyIsNoop(t *testing.T) {
+	m := New(Config{
+		Text:   "x",
+		Gutter: LineNumberGutter(),
+	})
+	m = m.Blur()
+	m = m.SetSize(4, 1)
+	before := m.gutterInvalidationVersion
+
+	m = m.InvalidateGutterRows()
+	if got := m.gutterInvalidationVersion; got != before {
+		t.Fatalf("empty row invalidation should be no-op: got version %d, want %d", got, before)
+	}
+}

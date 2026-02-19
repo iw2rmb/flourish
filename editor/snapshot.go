@@ -32,16 +32,17 @@ type snapshotSignature struct {
 	sel        buffer.Range
 	selOK      bool
 
-	viewportWidth   int
-	viewportHeight  int
-	viewportStyleH  int
-	viewportStyleV  int
-	viewportYOffset int
-	xOffset         int
-	wrapMode        WrapMode
-	tabWidth        int
-	focused         bool
-	docID           string
+	viewportWidth             int
+	viewportHeight            int
+	viewportStyleH            int
+	viewportStyleV            int
+	viewportYOffset           int
+	xOffset                   int
+	wrapMode                  WrapMode
+	tabWidth                  int
+	focused                   bool
+	docID                     string
+	gutterInvalidationVersion uint64
 
 	gutterWidthProvider uintptr
 	gutterCellProvider  uintptr
@@ -71,26 +72,27 @@ func providerPtr(v any) uintptr {
 
 func (m *Model) currentSnapshotSignature() snapshotSignature {
 	sig := snapshotSignature{
-		viewportWidth:       m.viewport.Width,
-		viewportHeight:      m.viewport.Height,
-		viewportStyleH:      m.viewport.Style.GetHorizontalFrameSize(),
-		viewportStyleV:      m.viewport.Style.GetVerticalFrameSize(),
-		viewportYOffset:     m.viewport.YOffset,
-		xOffset:             m.xOffset,
-		wrapMode:            m.cfg.WrapMode,
-		tabWidth:            m.cfg.TabWidth,
-		focused:             m.focused,
-		docID:               m.cfg.DocID,
-		gutterWidthProvider: providerPtr(m.cfg.Gutter.Width),
-		gutterCellProvider:  providerPtr(m.cfg.Gutter.Cell),
-		gutterWidthSet:      m.cfg.Gutter.Width != nil,
-		gutterCellSet:       m.cfg.Gutter.Cell != nil,
-		virtualProvider:     providerPtr(m.cfg.VirtualTextProvider),
-		ghostProvider:       providerPtr(m.cfg.GhostProvider),
-		highlighter:         providerPtr(m.cfg.Highlighter),
-		virtualSet:          m.cfg.VirtualTextProvider != nil,
-		ghostSet:            m.cfg.GhostProvider != nil,
-		highlighterSet:      m.cfg.Highlighter != nil,
+		viewportWidth:             m.viewport.Width,
+		viewportHeight:            m.viewport.Height,
+		viewportStyleH:            m.viewport.Style.GetHorizontalFrameSize(),
+		viewportStyleV:            m.viewport.Style.GetVerticalFrameSize(),
+		viewportYOffset:           m.viewport.YOffset,
+		xOffset:                   m.xOffset,
+		wrapMode:                  m.cfg.WrapMode,
+		tabWidth:                  m.cfg.TabWidth,
+		focused:                   m.focused,
+		docID:                     m.cfg.DocID,
+		gutterInvalidationVersion: m.gutterInvalidationVersion,
+		gutterWidthProvider:       providerPtr(m.cfg.Gutter.Width),
+		gutterCellProvider:        providerPtr(m.cfg.Gutter.Cell),
+		gutterWidthSet:            m.cfg.Gutter.Width != nil,
+		gutterCellSet:             m.cfg.Gutter.Cell != nil,
+		virtualProvider:           providerPtr(m.cfg.VirtualTextProvider),
+		ghostProvider:             providerPtr(m.cfg.GhostProvider),
+		highlighter:               providerPtr(m.cfg.Highlighter),
+		virtualSet:                m.cfg.VirtualTextProvider != nil,
+		ghostSet:                  m.cfg.GhostProvider != nil,
+		highlighterSet:            m.cfg.Highlighter != nil,
 	}
 
 	if m.buf != nil {
@@ -139,6 +141,7 @@ func hashSnapshotSignature(sig snapshotSignature) SnapshotToken {
 	writeI(sig.tabWidth)
 	writeB(sig.focused)
 	writeS(sig.docID)
+	writeU64(sig.gutterInvalidationVersion)
 	writeU64(uint64(sig.gutterWidthProvider))
 	writeU64(uint64(sig.gutterCellProvider))
 	writeB(sig.gutterWidthSet)

@@ -12,6 +12,8 @@ Primary API:
 - `New(Config) Model`
 - `SetSize(width, height)`
 - `Focus()`, `Blur()`, `Focused()`
+- `InvalidateGutter()`
+- `InvalidateGutterRows(rows ...int)`
 - `Update(msg tea.Msg)`
 - `View()`
 - `Buffer()`
@@ -88,6 +90,7 @@ Gutter rules:
 - gutter content is provided as `GutterCell.Segments`; each segment can provide `StyleKey` or direct `Style`.
 - `Gutter.Cell` receives `LineText` (raw unwrapped document line text).
 - gutter click mapping uses `GutterCell.ClickCol` (default `0`, clamped per row).
+- use `InvalidateGutter()` / `InvalidateGutterRows(...)` when host-side gutter dependencies change outside editor updates.
 - `LineNumberGutter()` provides built-in line-number behavior.
 - `LineNumberWidth(lineCount)` and `LineNumberSegment(ctx)` expose reusable line-number pieces for custom gutters.
 - line-number gutter style keys are `line_num` and `line_num_active`.
@@ -152,7 +155,7 @@ cfg := editor.Config{
 
 Token contract:
 - same frame/state -> same token.
-- mapping-affecting changes (buffer/version, viewport offsets/size, wrap mode, gutter callbacks/width, focus/decoration context) -> different token.
+- mapping-affecting changes (buffer/version, viewport offsets/size, wrap mode, gutter callbacks/width, explicit gutter invalidation, focus/decoration context) -> different token.
 - snapshot-bound mapping methods return `ok=false` when token is stale.
 
 Host usage pattern:

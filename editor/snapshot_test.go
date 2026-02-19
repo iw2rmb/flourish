@@ -179,6 +179,21 @@ func TestRenderSnapshot_TokenInvalidationMatrix(t *testing.T) {
 		}
 	})
 
+	t.Run("gutter explicit invalidation", func(t *testing.T) {
+		m := New(Config{
+			Text:   "ab",
+			Gutter: LineNumberGutter(),
+		})
+		m = m.SetSize(4, 1)
+		t0 := m.RenderSnapshot().Token
+
+		m = m.InvalidateGutterRows(0)
+		t1 := m.RenderSnapshot().Token
+		if t1 == t0 {
+			t.Fatalf("token must change after gutter explicit invalidation")
+		}
+	})
+
 	t.Run("no changes keeps token", func(t *testing.T) {
 		m := New(Config{Text: "ab"})
 		m = m.SetSize(8, 1)
