@@ -17,8 +17,9 @@ type GhostContext struct {
 }
 
 type Ghost struct {
-	Text  string
-	Edits []buffer.TextEdit // deterministic apply
+	Text     string
+	StyleKey string
+	Edits    []buffer.TextEdit // deterministic apply
 }
 
 type GhostProvider func(ctx GhostContext) (Ghost, bool)
@@ -117,6 +118,11 @@ func (m *Model) virtualTextWithGhost(row int, rawLine string, vt VirtualText) Vi
 		return vt
 	}
 
-	vt.Insertions = append(vt.Insertions, VirtualInsertion{GraphemeCol: col, Text: ghost.Text, Role: VirtualRoleGhost})
+	vt.Insertions = append(vt.Insertions, VirtualInsertion{
+		GraphemeCol: col,
+		Text:        ghost.Text,
+		Role:        VirtualRoleGhost,
+		StyleKey:    ghost.StyleKey,
+	})
 	return normalizeVirtualText(vt, rawLen)
 }

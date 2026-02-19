@@ -37,6 +37,8 @@ type VisualToken struct {
 
 	// Role is meaningful only for virtual tokens.
 	Role VirtualRole
+	// StyleKey is meaningful only for virtual tokens.
+	StyleKey string
 }
 
 type VisualLine struct {
@@ -110,7 +112,7 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 	var visualCellToDoc []int
 	visualCol := 0
 
-	appendToken := func(kind VisualTokenKind, text string, cellWidth int, visibleStart, visibleEnd int, docStart, docEnd int, role VirtualRole) {
+	appendToken := func(kind VisualTokenKind, text string, cellWidth int, visibleStart, visibleEnd int, docStart, docEnd int, role VirtualRole, styleKey string) {
 		if cellWidth < 1 {
 			cellWidth = 1
 		}
@@ -136,6 +138,7 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 			DocStartGraphemeCol:     docStart,
 			DocEndGraphemeCol:       docEnd,
 			Role:                    role,
+			StyleKey:                styleKey,
 		})
 		visualCol += cellWidth
 	}
@@ -147,7 +150,7 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 			if width < 1 {
 				width = 1
 			}
-			appendToken(VisualTokenVirtual, text, width, -1, -1, in.GraphemeCol, in.GraphemeCol, in.Role)
+			appendToken(VisualTokenVirtual, text, width, -1, -1, in.GraphemeCol, in.GraphemeCol, in.Role, in.StyleKey)
 		}
 	}
 
@@ -161,14 +164,14 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 		text := dg.text
 		if text == "\t" {
 			adv := tabAdvance(visualCol, tabWidth)
-			appendToken(VisualTokenDoc, strings.Repeat(" ", adv), adv, dg.visStart, dg.visEnd, dg.rawStart, dg.rawEnd, 0)
+			appendToken(VisualTokenDoc, strings.Repeat(" ", adv), adv, dg.visStart, dg.visEnd, dg.rawStart, dg.rawEnd, 0, "")
 			continue
 		}
 		width := graphemeCellWidth(text, visualCol, tabWidth)
 		if width < 1 {
 			width = 1
 		}
-		appendToken(VisualTokenDoc, text, width, dg.visStart, dg.visEnd, dg.rawStart, dg.rawEnd, 0)
+		appendToken(VisualTokenDoc, text, width, dg.visStart, dg.visEnd, dg.rawStart, dg.rawEnd, 0, "")
 	}
 
 	// Emit any remaining insertions (including EOL insertions).

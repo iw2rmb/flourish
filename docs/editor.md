@@ -67,13 +67,17 @@ Viewport integration:
 - `VirtualTextProvider` for per-line virtual deletions/insertions.
 - `Highlighter` for per-line highlight spans.
 - `GhostProvider` for inline ghost suggestions at cursor column.
+- `VirtualOverlayStyleForKey` to resolve keyed overlay insertion styles (fallback: `Style.VirtualOverlay`).
+- `GhostStyleForKey` to resolve keyed ghost insertion styles (fallback: `Style.Ghost`).
 - `OnChange` for post-mutation change events.
 - `OnIntent` for key-derived semantic intent batches (when intent mode is enabled).
 
 Virtual text rules:
 - deletions hide grapheme ranges from view.
 - insertions are view-only and anchored to document grapheme columns.
+- insertions can provide `StyleKey` for callback-based style resolution.
 - ghost insertions are single-line and non-interactive.
+- ghost suggestions can provide `StyleKey` for callback-based style resolution.
 - cursor/selection remain document-based.
 
 ## Intent Mode

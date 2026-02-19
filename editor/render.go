@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/iw2rmb/flourish/buffer"
 	graphemeutil "github.com/iw2rmb/flourish/internal/grapheme"
 )
@@ -97,7 +98,20 @@ func (m *Model) renderContent() string {
 				right = left + 1
 			}
 		}
-		sb.WriteString(renderVisualLine(m.cfg.Style, line.visual, row, cursor, m.focused, sel, selOK, highlightsByLine[row], left, right))
+		sb.WriteString(renderVisualLine(
+			m.cfg.Style,
+			m.cfg.GhostStyleForKey,
+			m.cfg.VirtualOverlayStyleForKey,
+			line.visual,
+			row,
+			cursor,
+			m.focused,
+			sel,
+			selOK,
+			highlightsByLine[row],
+			left,
+			right,
+		))
 
 		out = append(out, sb.String())
 	}
@@ -140,7 +154,19 @@ func (m *Model) highlightForLine(row int, rawLine string, vt VirtualText, cursor
 	return normalizeHighlightSpans(spans, visLen)
 }
 
-func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focused bool, sel buffer.Range, selOK bool, highlights []HighlightSpan, left, right int) string {
+func renderVisualLine(
+	st Style,
+	ghostStyleForKey func(string) (lipgloss.Style, bool),
+	overlayStyleForKey func(string) (lipgloss.Style, bool),
+	vl VisualLine,
+	row int,
+	cursor buffer.Pos,
+	focused bool,
+	sel buffer.Range,
+	selOK bool,
+	highlights []HighlightSpan,
+	left, right int,
+) string {
 	rawLen := vl.RawGraphemeLen
 
 	cursorCol := cursor.GraphemeCol
@@ -281,8 +307,18 @@ func renderVisualLine(st Style, vl VisualLine, row int, cursor buffer.Pos, focus
 			switch tok.Role {
 			case VirtualRoleGhost:
 				style = st.Ghost.Inherit(st.Text)
+				if ghostStyleForKey != nil && tok.StyleKey != "" {
+					if keyed, ok := ghostStyleForKey(tok.StyleKey); ok {
+						style = keyed.Inherit(st.Text)
+					}
+				}
 			case VirtualRoleOverlay:
 				style = st.VirtualOverlay.Inherit(st.Text)
+				if overlayStyleForKey != nil && tok.StyleKey != "" {
+					if keyed, ok := overlayStyleForKey(tok.StyleKey); ok {
+						style = keyed.Inherit(st.Text)
+					}
+				}
 			}
 			write(renderSpan(style.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 		case VisualTokenDoc:

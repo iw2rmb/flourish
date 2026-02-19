@@ -27,6 +27,9 @@ type VirtualInsertion struct {
 	GraphemeCol int
 	Text        string
 	Role        VirtualRole
+	// StyleKey optionally selects a keyed style via config style callbacks.
+	// Empty means use role default style.
+	StyleKey string
 }
 
 type VirtualText struct {
@@ -101,7 +104,7 @@ func normalizeVirtualText(vt VirtualText, rawLineLen int) VirtualText {
 			if text == "" {
 				continue
 			}
-			ins = append(ins, VirtualInsertion{GraphemeCol: col, Text: text, Role: in.Role})
+			ins = append(ins, VirtualInsertion{GraphemeCol: col, Text: text, Role: in.Role, StyleKey: in.StyleKey})
 		}
 
 		// If an insertion anchor falls inside a deleted range, anchor at the deleted range start.

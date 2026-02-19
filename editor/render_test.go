@@ -342,3 +342,90 @@ func TestRender_SoftWrapWord_CursorAtEOLOnFullRow_Visible(t *testing.T) {
 		t.Fatalf("expected visible cursor style at EOL on full wrapped row, got %q", got)
 	}
 }
+
+func TestRender_VirtualOverlayStyleKey_UsesCallbackAndFallback(t *testing.T) {
+	st := Style{
+		Text:   lipgloss.NewStyle(),
+		Cursor: lipgloss.NewStyle().Reverse(true), // prevent default style replacement
+	}
+
+	withKey := New(Config{
+		Text:  "ab",
+		Style: st,
+		VirtualTextProvider: func(VirtualTextContext) VirtualText {
+			return VirtualText{
+				Insertions: []VirtualInsertion{
+					{GraphemeCol: 1, Text: "X", Role: VirtualRoleOverlay, StyleKey: "em"},
+				},
+			}
+		},
+		VirtualOverlayStyleForKey: func(key string) (lipgloss.Style, bool) {
+			if key == "em" {
+				return lipgloss.NewStyle().PaddingLeft(1).PaddingRight(1), true
+			}
+			return lipgloss.Style{}, false
+		},
+	})
+	withKey = withKey.Blur()
+	if got := stripANSI(withKey.renderContent()); got != "a X b" {
+		t.Fatalf("overlay style key render: got %q, want %q", got, "a X b")
+	}
+
+	fallback := New(Config{
+		Text:  "ab",
+		Style: st,
+		VirtualTextProvider: func(VirtualTextContext) VirtualText {
+			return VirtualText{
+				Insertions: []VirtualInsertion{
+					{GraphemeCol: 1, Text: "X", Role: VirtualRoleOverlay, StyleKey: "unknown"},
+				},
+			}
+		},
+		VirtualOverlayStyleForKey: func(key string) (lipgloss.Style, bool) {
+			if key == "em" {
+				return lipgloss.NewStyle().PaddingLeft(1).PaddingRight(1), true
+			}
+			return lipgloss.Style{}, false
+		},
+	})
+	fallback = fallback.Blur()
+	if got := stripANSI(fallback.renderContent()); got != "aXb" {
+		t.Fatalf("overlay fallback render: got %q, want %q", got, "aXb")
+	}
+}
+
+func TestRender_GhostStyleKey_UsesCallbackAndFallback(t *testing.T) {
+	withKey := New(Config{
+		Text: "ab",
+		GhostProvider: func(GhostContext) (Ghost, bool) {
+			return Ghost{Text: "X", StyleKey: "em"}, true
+		},
+		GhostStyleForKey: func(key string) (lipgloss.Style, bool) {
+			if key == "em" {
+				return lipgloss.NewStyle().PaddingLeft(1).PaddingRight(1), true
+			}
+			return lipgloss.Style{}, false
+		},
+	})
+	withKey.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 1})
+	if got := stripANSI(withKey.renderContent()); got != "a X b" {
+		t.Fatalf("ghost style key render: got %q, want %q", got, "a X b")
+	}
+
+	fallback := New(Config{
+		Text: "ab",
+		GhostProvider: func(GhostContext) (Ghost, bool) {
+			return Ghost{Text: "X", StyleKey: "unknown"}, true
+		},
+		GhostStyleForKey: func(key string) (lipgloss.Style, bool) {
+			if key == "em" {
+				return lipgloss.NewStyle().PaddingLeft(1).PaddingRight(1), true
+			}
+			return lipgloss.Style{}, false
+		},
+	})
+	fallback.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 1})
+	if got := stripANSI(fallback.renderContent()); got != "aXb" {
+		t.Fatalf("ghost fallback render: got %q, want %q", got, "aXb")
+	}
+}

@@ -1,5 +1,7 @@
 package editor
 
+import "github.com/charmbracelet/lipgloss"
+
 // Config configures the editor Model.
 //
 // Phase 6 adds key handling, selection rendering, and scroll-follow behavior.
@@ -43,6 +45,18 @@ type Config struct {
 	GhostProvider GhostProvider
 	// GhostAccept configures accept keys. Zero value defaults to Tab+Right.
 	GhostAccept GhostAccept
+	// GhostStyleForKey resolves a ghost insertion style override by key.
+	// When nil or key is unresolved, Style.Ghost is used.
+	//
+	// Returned styles should avoid layout-affecting options (padding/margin/width)
+	// to keep render mapping deterministic.
+	GhostStyleForKey func(key string) (lipgloss.Style, bool)
+	// VirtualOverlayStyleForKey resolves a virtual overlay style override by key.
+	// When nil or key is unresolved, Style.VirtualOverlay is used.
+	//
+	// Returned styles should avoid layout-affecting options (padding/margin/width)
+	// to keep render mapping deterministic.
+	VirtualOverlayStyleForKey func(key string) (lipgloss.Style, bool)
 
 	// Highlighter optionally provides per-line highlight spans over the visible
 	// text after virtual deletions.
