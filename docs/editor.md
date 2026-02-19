@@ -89,6 +89,7 @@ Gutter rules:
 - `Gutter.Cell` receives `LineText` (raw unwrapped document line text).
 - gutter click mapping uses `GutterCell.ClickCol` (default `0`, clamped per row).
 - `LineNumberGutter()` provides built-in line-number behavior.
+- `LineNumberWidth(lineCount)` and `LineNumberSegment(ctx)` expose reusable line-number pieces for custom gutters.
 - line-number gutter style keys are `line_num` and `line_num_active`.
 - segment text is normalized to the resolved gutter width per row.
 

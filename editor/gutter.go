@@ -62,18 +62,27 @@ type GutterSegment struct {
 // LineNumberGutter returns the built-in line-number gutter behavior.
 func LineNumberGutter() Gutter {
 	return Gutter{
-		Width: lineNumberGutterWidth,
-		Cell:  lineNumberGutterCell,
+		Width: func(ctx GutterWidthContext) int {
+			return LineNumberWidth(ctx.LineCount)
+		},
+		Cell: func(ctx GutterCellContext) GutterCell {
+			return GutterCell{
+				Segments: []GutterSegment{LineNumberSegment(ctx)},
+				ClickCol: 0,
+			}
+		},
 	}
 }
 
-func lineNumberGutterWidth(ctx GutterWidthContext) int {
-	return gutterDigits(ctx.LineCount) + 1
+// LineNumberWidth returns the default line-number gutter width for lineCount.
+func LineNumberWidth(lineCount int) int {
+	return gutterDigits(lineCount) + 1
 }
 
-func lineNumberGutterCell(ctx GutterCellContext) GutterCell {
+// LineNumberSegment returns the default line-number segment for one gutter row.
+func LineNumberSegment(ctx GutterCellContext) GutterSegment {
 	if ctx.Width <= 0 {
-		return GutterCell{}
+		return GutterSegment{}
 	}
 
 	digits := ctx.DigitCount
@@ -82,11 +91,9 @@ func lineNumberGutterCell(ctx GutterCellContext) GutterCell {
 	}
 
 	if ctx.SegmentIndex > 0 {
-		return GutterCell{
-			Segments: []GutterSegment{
-				{Text: strings.Repeat(" ", ctx.Width), StyleKey: "line_num"},
-			},
-			ClickCol: 0,
+		return GutterSegment{
+			Text:     strings.Repeat(" ", ctx.Width),
+			StyleKey: "line_num",
 		}
 	}
 
@@ -95,11 +102,9 @@ func lineNumberGutterCell(ctx GutterCellContext) GutterCell {
 		styleKey = "line_num_active"
 	}
 
-	return GutterCell{
-		Segments: []GutterSegment{
-			{Text: fmt.Sprintf("%*d ", digits, ctx.Row+1), StyleKey: styleKey},
-		},
-		ClickCol: 0,
+	return GutterSegment{
+		Text:     fmt.Sprintf("%*d ", digits, ctx.Row+1),
+		StyleKey: styleKey,
 	}
 }
 

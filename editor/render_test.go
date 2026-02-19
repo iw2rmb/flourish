@@ -439,6 +439,32 @@ func TestRender_GutterCellContext_LineTextProvided(t *testing.T) {
 	}
 }
 
+func TestRender_CustomGutter_ComposesLineNumberSegment(t *testing.T) {
+	m := New(Config{
+		Text: "ab\ncd",
+		Gutter: Gutter{
+			Width: func(ctx GutterWidthContext) int {
+				return LineNumberWidth(ctx.LineCount) + 1
+			},
+			Cell: func(ctx GutterCellContext) GutterCell {
+				return GutterCell{
+					Segments: []GutterSegment{
+						LineNumberSegment(ctx),
+						{Text: ">", StyleKey: "marker"},
+					},
+					ClickCol: 0,
+				}
+			},
+		},
+	})
+	m = m.Blur()
+	m = m.SetSize(8, 2)
+
+	if got := stripANSI(m.renderContent()); got != "1 >ab\n2 >cd" {
+		t.Fatalf("custom gutter composition render: got %q, want %q", got, "1 >ab\n2 >cd")
+	}
+}
+
 func TestRender_VirtualOverlayStyleKey_UsesCallbackAndFallback(t *testing.T) {
 	st := Style{
 		Text:   lipgloss.NewStyle(),
