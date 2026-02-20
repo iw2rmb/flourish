@@ -221,3 +221,83 @@ func TestUpdate_GhostAccept_EmptyEditsFallbacks(t *testing.T) {
 		}
 	})
 }
+
+func TestRender_GhostSuppressedWhenCompletionVisible(t *testing.T) {
+	r := lipgloss.NewRenderer(io.Discard)
+	r.SetColorProfile(termenv.TrueColor)
+	r.SetHasDarkBackground(true)
+
+	st := Style{
+		Text:   r.NewStyle(),
+		Cursor: r.NewStyle().Reverse(true),
+		Ghost:  r.NewStyle().Faint(true),
+	}
+
+	m := New(Config{
+		Text:  "ab",
+		Style: st,
+		GhostProvider: func(ctx GhostContext) (Ghost, bool) {
+			return Ghost{
+				Text: "X",
+				Edits: []buffer.TextEdit{{
+					Range: buffer.Range{
+						Start: buffer.Pos{Row: 0, GraphemeCol: ctx.GraphemeCol},
+						End:   buffer.Pos{Row: 0, GraphemeCol: ctx.GraphemeCol},
+					},
+					Text: "X",
+				}},
+			}, true
+		},
+	})
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 1})
+	m = m.SetCompletionState(CompletionState{
+		Visible: true,
+		Items: []CompletionItem{
+			{ID: "0", InsertText: "x"},
+		},
+		VisibleIndices: []int{0},
+	})
+
+	got := m.renderContent()
+	want := st.Text.Render("a") + st.Cursor.Render("b")
+	if got != want {
+		t.Fatalf("ghost should be suppressed while completion popup is visible:\n got: %q\nwant: %q", got, want)
+	}
+}
+
+func TestUpdate_GhostAccept_RightSuppressedWhenCompletionVisible(t *testing.T) {
+	m := New(Config{
+		Text: "ab",
+		GhostProvider: func(ctx GhostContext) (Ghost, bool) {
+			return Ghost{
+				Text: "X",
+				Edits: []buffer.TextEdit{{
+					Range: buffer.Range{
+						Start: buffer.Pos{Row: 0, GraphemeCol: ctx.GraphemeCol},
+						End:   buffer.Pos{Row: 0, GraphemeCol: ctx.GraphemeCol},
+					},
+					Text: "X",
+				}},
+			}, true
+		},
+	})
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 1})
+	m = m.SetCompletionState(CompletionState{
+		Visible: true,
+		Items: []CompletionItem{
+			{ID: "0", InsertText: "y"},
+		},
+		VisibleIndices: []int{0},
+	})
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	if got, want := m.buf.Text(), "ab"; got != want {
+		t.Fatalf("right key should not accept ghost while completion visible: got %q, want %q", got, want)
+	}
+	if got, want := m.buf.Cursor(), (buffer.Pos{Row: 0, GraphemeCol: 2}); got != want {
+		t.Fatalf("right key should fall through to cursor movement: got %v, want %v", got, want)
+	}
+	if !m.CompletionState().Visible {
+		t.Fatalf("completion popup should remain visible")
+	}
+}

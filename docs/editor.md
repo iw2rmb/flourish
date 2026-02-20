@@ -94,6 +94,30 @@ Completion state model:
 - `CompletionState` returns a cloned state snapshot (no shared mutable slices).
 - `ClearCompletion` resets completion to zero value state.
 
+Minimal host flow (`SetCompletionState` + `CompletionFilter`):
+
+```go
+cfg := editor.Config{
+    CompletionFilter: func(ctx editor.CompletionFilterContext) editor.CompletionFilterResult {
+        indices := make([]int, len(ctx.Items))
+        for i := range ctx.Items {
+            indices[i] = i
+        }
+        return editor.CompletionFilterResult{VisibleIndices: indices, SelectedIndex: 0}
+    },
+}
+
+// Host opens popup and provides item list.
+m = m.SetCompletionState(editor.CompletionState{
+    Visible: true,
+    Anchor:  m.Buffer().Cursor(),
+    Items: []editor.CompletionItem{
+        {ID: "println", InsertText: "println()"},
+        {ID: "print", InsertText: "print()"},
+    },
+})
+```
+
 Completion input and acceptance (Phase 2):
 - completion key handling runs before regular editor key handling when popup is visible.
 - `CompletionKeyMap.Trigger` opens completion at the current cursor anchor and resets query to `""`.
@@ -107,6 +131,7 @@ Completion input and acceptance (Phase 2):
 - `CompletionInputMutateDocument`: typing/backspace follows normal document mutation and keeps popup visible.
 - mutate-document query recompute uses buffer text in range `[Anchor, Cursor)` only when cursor stays on `Anchor.Row` and `Cursor.GraphemeCol >= Anchor.GraphemeCol`; otherwise query resets to `""`.
 - `ReadOnly=true` suppresses local document mutation; mutate-document input behaves as query-only.
+- while completion is visible, ghost suggestions are suppressed for both rendering and ghost-accept key paths.
 
 Completion filtering and item styling (Phase 3):
 - `CompletionFilter` executes synchronously when completion query/items/context change.
@@ -125,6 +150,7 @@ Completion popup rendering and placement (Phase 4):
 - when anchor is offscreen (`DocToScreen` not visible), popup render is suppressed while completion state remains intact.
 - popup width is measured from rendered completion rows, then clamped by `CompletionMaxWidth` and viewport bounds.
 - popup row count is clamped by `CompletionMaxVisibleRows`, available vertical space, and visible completion count.
+- runnable host integration example: `examples/completion-popup/main.go`.
 
 Completion intents and host control (Phase 5):
 - `OnCompletionIntent` emits completion semantic batches for trigger/navigate/accept/dismiss/query actions.

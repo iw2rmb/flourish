@@ -129,3 +129,38 @@ func TestGhostProvider_ContextIncludesDocID_AndCacheKeysByIt(t *testing.T) {
 		t.Fatalf("provider calls after doc switch: got %d, want %d", calls, 2)
 	}
 }
+
+func TestGhostProvider_SuppressedWhileCompletionVisible(t *testing.T) {
+	calls := 0
+	m := New(Config{
+		Text: "ab",
+		GhostProvider: func(ctx GhostContext) (Ghost, bool) {
+			calls++
+			return Ghost{Text: "X"}, true
+		},
+	})
+	calls = 0
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 1})
+
+	m = m.SetCompletionState(CompletionState{
+		Visible: true,
+		Items: []CompletionItem{
+			{ID: "0", InsertText: "X"},
+		},
+		VisibleIndices: []int{0},
+	})
+	if _, ok := m.ghostForCursor(); ok {
+		t.Fatalf("ghost should be suppressed while completion popup is visible")
+	}
+	if got, want := calls, 0; got != want {
+		t.Fatalf("provider calls while completion visible: got %d, want %d", got, want)
+	}
+
+	m = m.ClearCompletion()
+	if _, ok := m.ghostForCursor(); !ok {
+		t.Fatalf("ghost should return after completion is cleared")
+	}
+	if got, want := calls, 1; got != want {
+		t.Fatalf("provider calls after completion cleared: got %d, want %d", got, want)
+	}
+}

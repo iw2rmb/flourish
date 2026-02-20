@@ -69,6 +69,9 @@ func (m *Model) ghostFor(row, col int, lineText string, rawLen int) (Ghost, bool
 	if m.buf == nil || m.cfg.GhostProvider == nil || !m.focused {
 		return Ghost{}, false
 	}
+	if m.completionState.Visible {
+		return Ghost{}, false
+	}
 
 	col = clampInt(col, 0, maxInt(rawLen, 0))
 
