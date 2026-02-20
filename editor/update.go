@@ -54,6 +54,10 @@ func (m *Model) buildIntentsFromKey(msg tea.KeyMsg) (IntentBatch, []localMutatio
 		batch.Intents = append(batch.Intents, Intent{Kind: kind, Before: before, Payload: payload})
 	}
 
+	if completionBatch, completionMutations, handled := m.buildCompletionIntentsFromKey(msg, before); handled {
+		return completionBatch, completionMutations
+	}
+
 	// Paste events should always insert literal text and never trigger shortcuts.
 	if msg.Type == tea.KeyRunes && msg.Paste && len(msg.Runes) > 0 {
 		if !m.cfg.ReadOnly {
@@ -308,4 +312,233 @@ func textInRange(text string, r buffer.Range) string {
 		sb.WriteString(grapheme.Join(rr[startCol:endCol]))
 	}
 	return sb.String()
+}
+
+func (m *Model) buildCompletionIntentsFromKey(msg tea.KeyMsg, before EditorState) (IntentBatch, []localMutationOp, bool) {
+	ckm := m.cfg.CompletionKeyMap
+	km := m.cfg.KeyMap
+	batch := IntentBatch{}
+	mutations := make([]localMutationOp, 0, 2)
+	appendIntent := func(kind IntentKind, payload any) {
+		batch.Intents = append(batch.Intents, Intent{Kind: kind, Before: before, Payload: payload})
+	}
+
+	if key.Matches(msg, ckm.Trigger) {
+		mutations = append(mutations, func(mm *Model) {
+			mm.openCompletionAtCursor()
+		})
+		return batch, mutations, true
+	}
+
+	if !m.completionState.Visible {
+		return batch, mutations, false
+	}
+
+	switch {
+	case key.Matches(msg, ckm.Dismiss):
+		mutations = append(mutations, func(mm *Model) {
+			*mm = mm.ClearCompletion()
+		})
+		return batch, mutations, true
+	case key.Matches(msg, ckm.Next):
+		mutations = append(mutations, func(mm *Model) {
+			mm.moveCompletionSelection(1)
+		})
+		return batch, mutations, true
+	case key.Matches(msg, ckm.Prev):
+		mutations = append(mutations, func(mm *Model) {
+			mm.moveCompletionSelection(-1)
+		})
+		return batch, mutations, true
+	case key.Matches(msg, ckm.PageNext):
+		step := m.cfg.CompletionMaxVisibleRows
+		if step <= 0 {
+			step = defaultCompletionMaxVisibleRows
+		}
+		mutations = append(mutations, func(mm *Model) {
+			mm.moveCompletionSelection(step)
+		})
+		return batch, mutations, true
+	case key.Matches(msg, ckm.PagePrev):
+		step := m.cfg.CompletionMaxVisibleRows
+		if step <= 0 {
+			step = defaultCompletionMaxVisibleRows
+		}
+		mutations = append(mutations, func(mm *Model) {
+			mm.moveCompletionSelection(-step)
+		})
+		return batch, mutations, true
+	}
+
+	if key.Matches(msg, ckm.Accept) || (msg.Type == tea.KeyTab && ckm.AcceptTab) {
+		insertText, edits, ok := m.acceptCompletionEdits()
+		if !ok {
+			return batch, mutations, true
+		}
+		if !m.cfg.ReadOnly {
+			appendIntent(IntentInsert, InsertIntentPayload{Text: insertText, Edits: cloneTextEdits(edits)})
+			mutations = append(mutations, func(mm *Model) {
+				mm.buf.Apply(edits...)
+				*mm = mm.ClearCompletion()
+			})
+		}
+		return batch, mutations, true
+	}
+
+	mode := normalizeCompletionInputMode(m.cfg.CompletionInputMode)
+	if m.cfg.ReadOnly {
+		mode = CompletionInputQueryOnly
+	}
+
+	if mode == CompletionInputQueryOnly {
+		if query, ok := m.nextCompletionQueryFromKey(msg); ok {
+			mutations = append(mutations, func(mm *Model) {
+				mm.setCompletionQuery(query)
+			})
+			return batch, mutations, true
+		}
+		return batch, mutations, false
+	}
+
+	if key.Matches(msg, km.Backspace) {
+		dir := DeleteBackward
+		if _, ok := m.buf.Selection(); ok {
+			dir = DeleteSelection
+		}
+		appendIntent(IntentDelete, DeleteIntentPayload{Direction: dir})
+		mutations = append(mutations, func(mm *Model) {
+			mm.buf.DeleteBackward()
+			mm.recomputeCompletionQueryFromAnchor()
+		})
+		return batch, mutations, true
+	}
+	if msg.Type == tea.KeySpace && !msg.Alt {
+		appendIntent(IntentInsert, InsertIntentPayload{Text: " "})
+		mutations = append(mutations, func(mm *Model) {
+			mm.buf.InsertGrapheme(" ")
+			mm.recomputeCompletionQueryFromAnchor()
+		})
+		return batch, mutations, true
+	}
+	if msg.Type == tea.KeyRunes && len(msg.Runes) > 0 && !msg.Alt && !msg.Paste {
+		text := string(msg.Runes)
+		appendIntent(IntentInsert, InsertIntentPayload{Text: text})
+		mutations = append(mutations, func(mm *Model) {
+			mm.buf.InsertText(text)
+			mm.recomputeCompletionQueryFromAnchor()
+		})
+		return batch, mutations, true
+	}
+
+	return batch, mutations, false
+}
+
+func (m *Model) openCompletionAtCursor() {
+	state := m.completionState
+	state.Visible = true
+	state.Query = ""
+	state.Selected = 0
+	if m.buf != nil {
+		state.Anchor = m.buf.Cursor()
+	}
+	m.normalizeCompletionRuntimeState(&state)
+	m.completionState = state
+}
+
+func (m *Model) moveCompletionSelection(delta int) {
+	state := m.completionState
+	m.normalizeCompletionRuntimeState(&state)
+	if len(state.VisibleIndices) == 0 {
+		m.completionState = state
+		return
+	}
+	state.Selected = clampInt(state.Selected+delta, 0, len(state.VisibleIndices)-1)
+	m.completionState = state
+}
+
+func (m *Model) acceptCompletionEdits() (string, []buffer.TextEdit, bool) {
+	state := m.completionState
+	m.normalizeCompletionRuntimeState(&state)
+	if len(state.VisibleIndices) == 0 || len(state.Items) == 0 {
+		return "", nil, false
+	}
+
+	selected := clampInt(state.Selected, 0, len(state.VisibleIndices)-1)
+	itemIdx := state.VisibleIndices[selected]
+	if itemIdx < 0 || itemIdx >= len(state.Items) {
+		return "", nil, false
+	}
+
+	item := state.Items[itemIdx]
+	edits := cloneTextEdits(item.Edits)
+	if len(edits) == 0 {
+		edits = []buffer.TextEdit{{
+			Range: buffer.Range{
+				Start: state.Anchor,
+				End:   state.Anchor,
+			},
+			Text: item.InsertText,
+		}}
+	}
+
+	return item.InsertText, edits, true
+}
+
+func (m *Model) nextCompletionQueryFromKey(msg tea.KeyMsg) (string, bool) {
+	if key.Matches(msg, m.cfg.KeyMap.Backspace) {
+		parts := grapheme.Split(m.completionState.Query)
+		if len(parts) == 0 {
+			return "", true
+		}
+		return grapheme.Join(parts[:len(parts)-1]), true
+	}
+	if msg.Type == tea.KeySpace && !msg.Alt {
+		return m.completionState.Query + " ", true
+	}
+	if msg.Type == tea.KeyRunes && len(msg.Runes) > 0 && !msg.Alt {
+		return m.completionState.Query + string(msg.Runes), true
+	}
+	return "", false
+}
+
+func (m *Model) recomputeCompletionQueryFromAnchor() {
+	if m.buf == nil {
+		return
+	}
+
+	state := m.completionState
+	if !state.Visible {
+		return
+	}
+
+	cursor := m.buf.Cursor()
+	query := ""
+	if cursor.Row == state.Anchor.Row && cursor.GraphemeCol >= state.Anchor.GraphemeCol {
+		query = textInRange(m.buf.Text(), buffer.Range{
+			Start: state.Anchor,
+			End:   cursor,
+		})
+	}
+	state.Query = query
+	m.normalizeCompletionRuntimeState(&state)
+	m.completionState = state
+}
+
+func (m *Model) setCompletionQuery(query string) {
+	state := m.completionState
+	state.Query = query
+	m.normalizeCompletionRuntimeState(&state)
+	m.completionState = state
+}
+
+func (m *Model) normalizeCompletionRuntimeState(state *CompletionState) {
+	if state == nil {
+		return
+	}
+	state.VisibleIndices = sanitizeCompletionVisibleIndices(state.VisibleIndices, len(state.Items))
+	if len(state.VisibleIndices) == 0 {
+		state.Selected = 0
+		return
+	}
+	state.Selected = clampInt(state.Selected, 0, len(state.VisibleIndices)-1)
 }

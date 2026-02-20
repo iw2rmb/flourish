@@ -93,7 +93,21 @@ Completion state model:
 - `SetCompletionState` stores host-provided completion state with index sanitization/clamping.
 - `CompletionState` returns a cloned state snapshot (no shared mutable slices).
 - `ClearCompletion` resets completion to zero value state.
-- this Phase 1 surface is API/state-only; popup interaction and rendering behavior are introduced in later phases.
+
+Completion input and acceptance (Phase 2):
+- completion key handling runs before regular editor key handling when popup is visible.
+- `CompletionKeyMap.Trigger` opens completion at the current cursor anchor and resets query to `""`.
+- when popup is visible, `Next`/`Prev`/`PageNext`/`PagePrev` move completion selection and do not move the cursor.
+- `Dismiss` closes popup without document mutation.
+- `Accept` applies selected completion deterministically:
+  use `CompletionItem.Edits` when non-empty, otherwise insert `CompletionItem.InsertText` at `CompletionState.Anchor`.
+- after successful local accept apply, popup is cleared.
+- `CompletionKeyMap.AcceptTab=false` keeps `Tab` out of completion accept path and falls through to normal tab handling.
+- `CompletionInputQueryOnly`: typing/backspace updates `CompletionState.Query` only and does not mutate document text.
+- `CompletionInputMutateDocument`: typing/backspace follows normal document mutation and keeps popup visible.
+- mutate-document query recompute uses buffer text in range `[Anchor, Cursor)` only when cursor stays on `Anchor.Row` and `Cursor.GraphemeCol >= Anchor.GraphemeCol`; otherwise query resets to `""`.
+- `ReadOnly=true` suppresses local document mutation; mutate-document input behaves as query-only.
+- Phase 2 does not run default filtering yet; query updates sanitize/clamp existing `VisibleIndices` and `Selected`.
 
 Virtual text rules:
 - deletions hide grapheme ranges from view.
