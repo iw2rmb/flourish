@@ -108,6 +108,30 @@ type CompletionIntentBatch struct {
 	Intents []CompletionIntent
 }
 
+type CompletionTriggerIntentPayload struct {
+	Anchor buffer.Pos
+}
+
+type CompletionNavigateIntentPayload struct {
+	Delta     int
+	Selected  int
+	ItemIndex int
+}
+
+type CompletionAcceptIntentPayload struct {
+	ItemID       string
+	ItemIndex    int
+	VisibleIndex int
+	InsertText   string
+	Edits        []buffer.TextEdit
+}
+
+type CompletionDismissIntentPayload struct{}
+
+type CompletionQueryIntentPayload struct {
+	Query string
+}
+
 func normalizeCompletionInputMode(mode CompletionInputMode) CompletionInputMode {
 	switch mode {
 	case CompletionInputQueryOnly, CompletionInputMutateDocument:

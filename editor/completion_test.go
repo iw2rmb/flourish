@@ -18,6 +18,11 @@ func TestCompletionAPI_ExportedTypesCompile(t *testing.T) {
 	var _ CompletionKeyMap
 	var _ CompletionIntent
 	var _ CompletionIntentBatch
+	var _ CompletionTriggerIntentPayload
+	var _ CompletionNavigateIntentPayload
+	var _ CompletionAcceptIntentPayload
+	var _ CompletionDismissIntentPayload
+	var _ CompletionQueryIntentPayload
 	var _ CompletionFilter = func(CompletionFilterContext) CompletionFilterResult {
 		return CompletionFilterResult{}
 	}

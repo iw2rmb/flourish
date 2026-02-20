@@ -126,6 +126,52 @@ Completion popup rendering and placement (Phase 4):
 - popup width is measured from rendered completion rows, then clamped by `CompletionMaxWidth` and viewport bounds.
 - popup row count is clamped by `CompletionMaxVisibleRows`, available vertical space, and visible completion count.
 
+Completion intents and host control (Phase 5):
+- `OnCompletionIntent` emits completion semantic batches for trigger/navigate/accept/dismiss/query actions.
+- completion intent payloads are typed:
+- `CompletionTriggerIntentPayload{Anchor}`
+- `CompletionNavigateIntentPayload{Delta, Selected, ItemIndex}`
+- `CompletionAcceptIntentPayload{ItemID, ItemIndex, VisibleIndex, InsertText, Edits}`
+- `CompletionDismissIntentPayload{}`
+- `CompletionQueryIntentPayload{Query}`
+- callback order for mutate-document completion keys is deterministic: `OnCompletionIntent` first, then `OnIntent`.
+- `MutationMode` gates only local document mutation, not completion callback emission.
+- in `EmitIntentsOnly`, completion UI state still updates for non-document actions (trigger/navigate/dismiss/query-only input).
+- in `CompletionInputMutateDocument`, typing/backspace emits both completion query intent and document insert/delete intent.
+- in `EmitIntentsOnly`, completion-driven document edits are emitted via `OnIntent` and skipped locally.
+- in `EmitIntentsAndMutate`, completion-driven document edits are emitted and then locally applied only when `IntentDecision.ApplyLocally=true`.
+- when local completion accept apply runs, popup is cleared; if local apply is skipped, popup remains host-controlled via `SetCompletionState`.
+
+Emit-only host flow example:
+
+```go
+cfg := editor.Config{
+    MutationMode: editor.EmitIntentsOnly,
+    OnCompletionIntent: func(batch editor.CompletionIntentBatch) {
+        sendCompletionToRemote(batch)
+    },
+    OnIntent: func(batch editor.IntentBatch) editor.IntentDecision {
+        sendDocumentToRemote(batch)
+        return editor.IntentDecision{ApplyLocally: false}
+    },
+}
+```
+
+Emit-and-mutate host flow example:
+
+```go
+cfg := editor.Config{
+    MutationMode: editor.EmitIntentsAndMutate,
+    OnCompletionIntent: func(batch editor.CompletionIntentBatch) {
+        auditCompletion(batch)
+    },
+    OnIntent: func(batch editor.IntentBatch) editor.IntentDecision {
+        ack := replicate(batch)
+        return editor.IntentDecision{ApplyLocally: ack}
+    },
+}
+```
+
 Virtual text rules:
 - deletions hide grapheme ranges from view.
 - insertions are view-only and anchored to document grapheme columns.
