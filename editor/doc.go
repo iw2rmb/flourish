@@ -3,5 +3,5 @@
 //
 // The package is responsible for input handling, viewport behavior,
 // grapheme-aware rendering, and host integration hooks (custom gutter, virtual
-// text, highlighting, ghost suggestions, and change events).
+// text, highlighting, ghost suggestions, completion APIs, and change events).
 package editor

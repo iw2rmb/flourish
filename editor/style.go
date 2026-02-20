@@ -12,6 +12,9 @@ type Style struct {
 	Selection lipgloss.Style
 	Cursor    lipgloss.Style
 
+	CompletionItem     lipgloss.Style
+	CompletionSelected lipgloss.Style
+
 	Ghost          lipgloss.Style
 	VirtualOverlay lipgloss.Style
 }
@@ -19,11 +22,14 @@ type Style struct {
 func DefaultStyle() Style {
 	gutter := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	return Style{
-		Gutter:    gutter,
-		Text:      lipgloss.NewStyle(),
-		Selection: lipgloss.NewStyle().Background(lipgloss.Color("237")),
-		Cursor:    lipgloss.NewStyle().Reverse(true),
-		Ghost:     lipgloss.NewStyle().Foreground(lipgloss.Color("242")).Faint(true),
+		Gutter:         gutter,
+		Text:           lipgloss.NewStyle(),
+		Selection:      lipgloss.NewStyle().Background(lipgloss.Color("237")),
+		Cursor:         lipgloss.NewStyle().Reverse(true),
+		CompletionItem: lipgloss.NewStyle(),
+		CompletionSelected: lipgloss.NewStyle().
+			Background(lipgloss.Color("238")),
+		Ghost: lipgloss.NewStyle().Foreground(lipgloss.Color("242")).Faint(true),
 		VirtualOverlay: lipgloss.NewStyle().
 			Foreground(lipgloss.Color("245")).
 			Faint(true),

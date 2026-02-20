@@ -20,6 +20,8 @@ type Model struct {
 
 	focused bool
 
+	completionState CompletionState
+
 	viewport viewport.Model
 	// xOffset is the horizontal scroll offset in terminal cells. It is used only
 	// when WrapMode==WrapNone.
@@ -46,6 +48,10 @@ func New(cfg Config) Model {
 	if reflect.DeepEqual(cfg.KeyMap, KeyMap{}) {
 		cfg.KeyMap = DefaultKeyMap()
 	}
+	cfg.CompletionKeyMap = normalizeCompletionKeyMap(cfg.CompletionKeyMap)
+	cfg.CompletionInputMode = normalizeCompletionInputMode(cfg.CompletionInputMode)
+	cfg.CompletionMaxVisibleRows = normalizeCompletionMaxVisibleRows(cfg.CompletionMaxVisibleRows)
+	cfg.CompletionMaxWidth = normalizeCompletionMaxWidth(cfg.CompletionMaxWidth)
 	if cfg.TabWidth <= 0 {
 		cfg.TabWidth = 4
 	}

@@ -14,6 +14,9 @@ Primary API:
 - `Focus()`, `Blur()`, `Focused()`
 - `InvalidateGutter()`
 - `InvalidateGutterRows(rows ...int)`
+- `CompletionState()`
+- `SetCompletionState(state)`
+- `ClearCompletion()`
 - `Update(msg tea.Msg)`
 - `View()`
 - `Buffer()`
@@ -76,6 +79,21 @@ Viewport integration:
 - `GhostStyleForKey` to resolve keyed ghost insertion styles (fallback: `Style.Ghost`).
 - `OnChange` for post-mutation change events.
 - `OnIntent` for key-derived semantic intent batches (when intent mode is enabled).
+- `CompletionFilter` for host-defined completion item filtering and ordering.
+- `CompletionStyleForKey` for keyed completion row/segment style overrides.
+- `OnCompletionIntent` for completion semantic intent batches.
+
+Completion foundation config:
+- `CompletionKeyMap` controls completion-specific key bindings.
+- `CompletionInputMode` default is `CompletionInputQueryOnly`.
+- `CompletionMaxVisibleRows` default is `8` when `<=0`.
+- `CompletionMaxWidth` default is `60` when `<=0`.
+
+Completion state model:
+- `SetCompletionState` stores host-provided completion state with index sanitization/clamping.
+- `CompletionState` returns a cloned state snapshot (no shared mutable slices).
+- `ClearCompletion` resets completion to zero value state.
+- this Phase 1 surface is API/state-only; popup interaction and rendering behavior are introduced in later phases.
 
 Virtual text rules:
 - deletions hide grapheme ranges from view.
@@ -192,5 +210,6 @@ Examples:
 
 Cross references:
 - `docs/buffer.md`
+- `design/completion.md`
 - `design/collab-editing-best-practices.md`
 - `research/collab.md`

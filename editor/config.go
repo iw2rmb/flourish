@@ -79,4 +79,26 @@ type Config struct {
 	// OnIntent, if set, receives key-derived semantic intents in intent modes.
 	// In EmitIntentsAndMutate mode, the return value decides local apply.
 	OnIntent func(IntentBatch) IntentDecision
+
+	// CompletionFilter customizes filtering/ranking of completion items.
+	// When nil, editor-side default filtering is used in later completion phases.
+	CompletionFilter CompletionFilter
+	// CompletionStyleForKey resolves completion row/segment style overrides by key.
+	// When nil or key is unresolved, completion row defaults are used.
+	CompletionStyleForKey func(key string) (lipgloss.Style, bool)
+	// CompletionKeyMap controls completion-specific key bindings.
+	// Zero value uses DefaultCompletionKeyMap().
+	CompletionKeyMap CompletionKeyMap
+	// CompletionInputMode controls typing/backspace behavior while completion is visible.
+	// Zero value is CompletionInputQueryOnly.
+	CompletionInputMode CompletionInputMode
+	// CompletionMaxVisibleRows caps completion popup rows.
+	// Values <= 0 default to 8.
+	CompletionMaxVisibleRows int
+	// CompletionMaxWidth caps completion popup width in terminal cells.
+	// Values <= 0 default to 60.
+	CompletionMaxWidth int
+	// OnCompletionIntent receives completion semantic intents.
+	// This is separate from document intents emitted by OnIntent.
+	OnCompletionIntent func(CompletionIntentBatch)
 }
