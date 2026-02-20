@@ -109,6 +109,9 @@ func (m *model) syncCompletionItems() {
 	if !state.Visible {
 		return
 	}
+	if len(state.Items) > 0 {
+		return
+	}
 	state.Items = append([]editor.CompletionItem(nil), m.items...)
 	m.editor = m.editor.SetCompletionState(state)
 }
