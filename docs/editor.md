@@ -121,6 +121,7 @@ m = m.SetCompletionState(editor.CompletionState{
 Completion input and acceptance (Phase 2):
 - completion key handling runs before regular editor key handling when popup is visible.
 - `CompletionKeyMap.Trigger` opens completion at the current cursor anchor and resets query to `""`.
+- default `CompletionKeyMap.Trigger` binds both `ctrl+space` and `ctrl+@` (NUL alias used by some terminals/runtime key decoders).
 - when popup is visible, `Next`/`Prev`/`PageNext`/`PagePrev` move completion selection and do not move the cursor.
 - `Dismiss` closes popup without document mutation.
 - `Accept` applies selected completion deterministically:

@@ -59,6 +59,19 @@ func TestCompletionInput_TriggerOpensAtCursor(t *testing.T) {
 	}
 }
 
+func TestCompletionInput_DefaultTriggerMatchesCtrlSpaceAlias(t *testing.T) {
+	m := New(Config{Text: "ab"})
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlAt})
+
+	state := m.CompletionState()
+	if !state.Visible {
+		t.Fatalf("completion popup should open on ctrl+space alias ctrl+@")
+	}
+	if got, want := state.Anchor, (buffer.Pos{Row: 0, GraphemeCol: 0}); got != want {
+		t.Fatalf("completion anchor: got %v, want %v", got, want)
+	}
+}
+
 func TestCompletionAccept_AppliesItemEditsAndClearsPopup(t *testing.T) {
 	m := New(Config{Text: "hello"})
 	m = m.SetCompletionState(CompletionState{

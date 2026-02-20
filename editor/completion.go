@@ -77,7 +77,10 @@ type CompletionKeyMap struct {
 
 func DefaultCompletionKeyMap() CompletionKeyMap {
 	return CompletionKeyMap{
-		Trigger:   key.NewBinding(key.WithKeys("ctrl+space"), key.WithHelp("ctrl+space", "trigger completion")),
+		Trigger: key.NewBinding(
+			key.WithKeys("ctrl+space", "ctrl+@"),
+			key.WithHelp("ctrl+space", "trigger completion"),
+		),
 		Accept:    key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "accept completion")),
 		AcceptTab: true,
 		Dismiss:   key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "dismiss completion")),
