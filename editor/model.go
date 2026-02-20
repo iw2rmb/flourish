@@ -201,7 +201,13 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 }
 
-func (m Model) View() string { return m.viewport.View() }
+func (m Model) View() string {
+	base := m.viewport.View()
+	if popup, ok := m.completionPopupRender(base); ok {
+		return popup.View
+	}
+	return base
+}
 
 func (m *Model) syncFromBuffer() (cursorChanged bool, versionChanged bool) {
 	if m.buf == nil {

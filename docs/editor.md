@@ -117,6 +117,15 @@ Completion filtering and item styling (Phase 3):
 - completion row style precedence is implemented as `segment StyleKey -> item StyleKey -> Style.CompletionItem`, with selected rows based on `Style.CompletionSelected`.
 - completion segment truncation helpers preserve segment order and allow partial tail segment rendering with terminal-cell-safe clipping.
 
+Completion popup rendering and placement (Phase 4):
+- `Model.View()` renders completion popup rows as an editor-owned overlay on top of the viewport output.
+- overlay composition uses `github.com/rmhubbert/bubbletea-overlay` `Composite(...)` directly (no overlay model ownership).
+- popup anchor uses `CompletionState.Anchor` projected through `DocToScreen`.
+- vertical placement prefers below the anchor row, then flips above when below-space is insufficient.
+- when anchor is offscreen (`DocToScreen` not visible), popup render is suppressed while completion state remains intact.
+- popup width is measured from rendered completion rows, then clamped by `CompletionMaxWidth` and viewport bounds.
+- popup row count is clamped by `CompletionMaxVisibleRows`, available vertical space, and visible completion count.
+
 Virtual text rules:
 - deletions hide grapheme ranges from view.
 - insertions are view-only and anchored to document grapheme columns.
