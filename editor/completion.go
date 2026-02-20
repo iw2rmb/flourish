@@ -147,7 +147,7 @@ func normalizeCompletionState(state CompletionState) CompletionState {
 		return state
 	}
 
-	state.Selected = clampInt(state.Selected, 0, len(state.VisibleIndices)-1)
+	state.Selected = clampCompletionSelected(state.Selected, len(state.VisibleIndices))
 	return state
 }
 
@@ -205,4 +205,11 @@ func sanitizeCompletionVisibleIndices(indices []int, itemCount int) []int {
 		return nil
 	}
 	return out
+}
+
+func clampCompletionSelected(selected, visibleCount int) int {
+	if visibleCount <= 0 {
+		return 0
+	}
+	return clampInt(selected, 0, visibleCount-1)
 }

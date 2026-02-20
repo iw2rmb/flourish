@@ -216,6 +216,9 @@ func (m *Model) syncFromBuffer() (cursorChanged bool, versionChanged bool) {
 	versionChanged = ver != m.lastBufVersion
 	m.lastBufVersion = ver
 	m.lastCursor = cur
+	if m.completionState.Visible && (cursorChanged || versionChanged) {
+		m.recomputeCompletionFilter(&m.completionState)
+	}
 	m.rebuildContent()
 	return cursorChanged, versionChanged
 }

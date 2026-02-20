@@ -77,7 +77,14 @@ func TestCompletionConfig_PreservesExplicitValues(t *testing.T) {
 }
 
 func TestModelCompletionState_SetGetClearAndClamping(t *testing.T) {
-	m := New(Config{})
+	m := New(Config{
+		CompletionFilter: func(CompletionFilterContext) CompletionFilterResult {
+			return CompletionFilterResult{
+				VisibleIndices: []int{-1, 1, 1, 2, 0},
+				SelectedIndex:  99,
+			}
+		},
+	})
 
 	state := CompletionState{
 		Visible: true,

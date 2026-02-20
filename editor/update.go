@@ -437,11 +437,10 @@ func (m *Model) openCompletionAtCursor() {
 	state := m.completionState
 	state.Visible = true
 	state.Query = ""
-	state.Selected = 0
 	if m.buf != nil {
 		state.Anchor = m.buf.Cursor()
 	}
-	m.normalizeCompletionRuntimeState(&state)
+	m.recomputeCompletionFilter(&state)
 	m.completionState = state
 }
 
@@ -520,14 +519,14 @@ func (m *Model) recomputeCompletionQueryFromAnchor() {
 		})
 	}
 	state.Query = query
-	m.normalizeCompletionRuntimeState(&state)
+	m.recomputeCompletionFilter(&state)
 	m.completionState = state
 }
 
 func (m *Model) setCompletionQuery(query string) {
 	state := m.completionState
 	state.Query = query
-	m.normalizeCompletionRuntimeState(&state)
+	m.recomputeCompletionFilter(&state)
 	m.completionState = state
 }
 
@@ -540,5 +539,5 @@ func (m *Model) normalizeCompletionRuntimeState(state *CompletionState) {
 		state.Selected = 0
 		return
 	}
-	state.Selected = clampInt(state.Selected, 0, len(state.VisibleIndices)-1)
+	state.Selected = clampCompletionSelected(state.Selected, len(state.VisibleIndices))
 }

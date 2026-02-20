@@ -5,7 +5,8 @@ func (m Model) CompletionState() CompletionState {
 }
 
 func (m Model) SetCompletionState(state CompletionState) Model {
-	m.completionState = normalizeCompletionState(state)
+	m.completionState = cloneCompletionState(state)
+	m.recomputeCompletionFilter(&m.completionState)
 	return m
 }
 

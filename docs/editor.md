@@ -90,7 +90,7 @@ Completion foundation config:
 - `CompletionMaxWidth` default is `60` when `<=0`.
 
 Completion state model:
-- `SetCompletionState` stores host-provided completion state with index sanitization/clamping.
+- `SetCompletionState` stores a cloned completion state and recomputes filtered visibility/selection.
 - `CompletionState` returns a cloned state snapshot (no shared mutable slices).
 - `ClearCompletion` resets completion to zero value state.
 
@@ -107,7 +107,15 @@ Completion input and acceptance (Phase 2):
 - `CompletionInputMutateDocument`: typing/backspace follows normal document mutation and keeps popup visible.
 - mutate-document query recompute uses buffer text in range `[Anchor, Cursor)` only when cursor stays on `Anchor.Row` and `Cursor.GraphemeCol >= Anchor.GraphemeCol`; otherwise query resets to `""`.
 - `ReadOnly=true` suppresses local document mutation; mutate-document input behaves as query-only.
-- Phase 2 does not run default filtering yet; query updates sanitize/clamp existing `VisibleIndices` and `Selected`.
+
+Completion filtering and item styling (Phase 3):
+- `CompletionFilter` executes synchronously when completion query/items/context change.
+- filter context includes `Query`, `Items`, `Cursor`, `DocID`, and current buffer version.
+- callback results sanitize invalid/duplicate indices and clamp `SelectedIndex` into visible range.
+- default filter (nil callback): case-insensitive `contains` over flattened `Prefix+Label+Detail` text with stable source ordering.
+- completion filter is also recomputed while popup is visible when cursor/doc version context changes.
+- completion row style precedence is implemented as `segment StyleKey -> item StyleKey -> Style.CompletionItem`, with selected rows based on `Style.CompletionSelected`.
+- completion segment truncation helpers preserve segment order and allow partial tail segment rendering with terminal-cell-safe clipping.
 
 Virtual text rules:
 - deletions hide grapheme ranges from view.
