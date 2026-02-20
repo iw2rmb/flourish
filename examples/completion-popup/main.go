@@ -3,14 +3,18 @@ package main
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"sort"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/iw2rmb/flourish/buffer"
 	"github.com/iw2rmb/flourish/editor"
+	"github.com/iw2rmb/flourish/internal/grapheme"
 )
 
 type hostState struct {
@@ -109,10 +113,11 @@ func (m *model) syncCompletionItems() {
 	if !state.Visible {
 		return
 	}
-	if len(state.Items) > 0 {
+	items := completionItemsWithAnchorEdits(m.items, m.editor.Buffer(), state.Anchor)
+	if reflect.DeepEqual(state.Items, items) {
 		return
 	}
-	state.Items = append([]editor.CompletionItem(nil), m.items...)
+	state.Items = items
 	m.editor = m.editor.SetCompletionState(state)
 }
 
@@ -159,6 +164,80 @@ func completionItems() []editor.CompletionItem {
 			StyleKey:   "item.default",
 		},
 	}
+}
+
+func completionItemsWithAnchorEdits(
+	base []editor.CompletionItem,
+	buf *buffer.Buffer,
+	anchor buffer.Pos,
+) []editor.CompletionItem {
+	items := append([]editor.CompletionItem(nil), base...)
+	replaceRange := completionReplaceRange(buf, anchor)
+	for i := range items {
+		items[i].Edits = []buffer.TextEdit{{
+			Range: replaceRange,
+			Text:  items[i].InsertText,
+		}}
+	}
+	return items
+}
+
+func completionReplaceRange(buf *buffer.Buffer, anchor buffer.Pos) buffer.Range {
+	anchorPos := anchor
+	cursorPos := anchor
+	if buf == nil {
+		return buffer.Range{Start: anchorPos, End: cursorPos}
+	}
+
+	lines := strings.Split(buf.Text(), "\n")
+	if anchor.Row < 0 || anchor.Row >= len(lines) {
+		return buffer.Range{Start: anchorPos, End: cursorPos}
+	}
+
+	rowClusters := grapheme.Split(lines[anchor.Row])
+	anchorCol := clampInt(anchor.GraphemeCol, 0, len(rowClusters))
+	startCol := anchorCol
+	for startCol > 0 && isIdentifierGrapheme(rowClusters[startCol-1]) {
+		startCol--
+	}
+
+	endCol := anchorCol
+	cursor := buf.Cursor()
+	if cursor.Row == anchor.Row && cursor.GraphemeCol >= anchorCol {
+		endCol = clampInt(cursor.GraphemeCol, anchorCol, len(rowClusters))
+	}
+	anchorInsideIdentifier := anchorCol > 0 && isIdentifierGrapheme(rowClusters[anchorCol-1])
+	if anchorInsideIdentifier {
+		for endCol < len(rowClusters) && isIdentifierGrapheme(rowClusters[endCol]) {
+			endCol++
+		}
+	}
+
+	return buffer.Range{
+		Start: buffer.Pos{Row: anchor.Row, GraphemeCol: startCol},
+		End:   buffer.Pos{Row: anchor.Row, GraphemeCol: endCol},
+	}
+}
+
+func isIdentifierGrapheme(g string) bool {
+	if utf8.RuneCountInString(g) != 1 {
+		return false
+	}
+	r, _ := utf8.DecodeRuneInString(g)
+	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
+}
+
+func clampInt(v, min, max int) int {
+	if max < min {
+		return min
+	}
+	if v < min {
+		return min
+	}
+	if v > max {
+		return max
+	}
+	return v
 }
 
 func completionStyleForKey(key string) (lipgloss.Style, bool) {

@@ -154,8 +154,8 @@ func TestCompletionAccept_AcceptTabGate(t *testing.T) {
 		if got, want := m.buf.Text(), "\tab"; got != want {
 			t.Fatalf("tab should fall through when AcceptTab=false: got %q, want %q", got, want)
 		}
-		if !m.CompletionState().Visible {
-			t.Fatalf("popup should remain visible when tab is not an accept key")
+		if m.CompletionState().Visible {
+			t.Fatalf("popup should close when tab moves cursor outside anchor token")
 		}
 	})
 }
@@ -285,5 +285,53 @@ func TestCompletionAccept_ReadOnlySuppressesLocalMutation(t *testing.T) {
 	}
 	if !m.CompletionState().Visible {
 		t.Fatalf("read-only accept should not clear popup without local apply")
+	}
+}
+
+func TestCompletionCursorMoveWithinAnchorTokenKeepsPopupVisible(t *testing.T) {
+	m := New(Config{Text: "pro x"})
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 3})
+	m = m.SetCompletionState(CompletionState{
+		Visible:        true,
+		Anchor:         buffer.Pos{Row: 0, GraphemeCol: 3},
+		Items:          []CompletionItem{{ID: "item-0"}},
+		VisibleIndices: []int{0},
+	})
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	if !m.CompletionState().Visible {
+		t.Fatalf("popup should stay visible while cursor remains within anchor token")
+	}
+}
+
+func TestCompletionCursorMoveOutsideAnchorTokenClosesPopup(t *testing.T) {
+	m := New(Config{Text: "pro x"})
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 3})
+	m = m.SetCompletionState(CompletionState{
+		Visible:        true,
+		Anchor:         buffer.Pos{Row: 0, GraphemeCol: 3},
+		Items:          []CompletionItem{{ID: "item-0"}},
+		VisibleIndices: []int{0},
+	})
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	if m.CompletionState().Visible {
+		t.Fatalf("popup should close when cursor leaves anchor token on same row")
+	}
+}
+
+func TestCompletionCursorMoveToDifferentRowClosesPopup(t *testing.T) {
+	m := New(Config{Text: "pro\nx"})
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 3})
+	m = m.SetCompletionState(CompletionState{
+		Visible:        true,
+		Anchor:         buffer.Pos{Row: 0, GraphemeCol: 3},
+		Items:          []CompletionItem{{ID: "item-0"}},
+		VisibleIndices: []int{0},
+	})
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	if m.CompletionState().Visible {
+		t.Fatalf("popup should close when cursor leaves anchor row")
 	}
 }

@@ -223,10 +223,35 @@ func (m *Model) syncFromBuffer() (cursorChanged bool, versionChanged bool) {
 	m.lastBufVersion = ver
 	m.lastCursor = cur
 	if m.completionState.Visible && (cursorChanged || versionChanged) {
-		m.recomputeCompletionFilter(&m.completionState)
+		if m.cursorOutsideCompletionAnchorToken() {
+			m.completionState = CompletionState{}
+		} else {
+			m.recomputeCompletionFilter(&m.completionState)
+		}
 	}
 	m.rebuildContent()
 	return cursorChanged, versionChanged
+}
+
+func (m *Model) cursorOutsideCompletionAnchorToken() bool {
+	if m.buf == nil || !m.completionState.Visible {
+		return false
+	}
+
+	state := m.completionState
+	cursor := m.buf.Cursor()
+	if cursor.Row != state.Anchor.Row {
+		return true
+	}
+
+	lines := strings.Split(m.buf.Text(), "\n")
+	if state.Anchor.Row < 0 || state.Anchor.Row >= len(lines) {
+		return true
+	}
+
+	rowClusters := graphemeutil.Split(lines[state.Anchor.Row])
+	startCol, endCol := completionAnchorTokenBounds(rowClusters, state.Anchor.GraphemeCol)
+	return cursor.GraphemeCol < startCol || cursor.GraphemeCol > endCol
 }
 
 func (m *Model) rebuildContent() {

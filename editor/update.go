@@ -2,6 +2,8 @@ package editor
 
 import (
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -655,4 +657,26 @@ func (m *Model) normalizeCompletionRuntimeState(state *CompletionState) {
 		return
 	}
 	state.Selected = clampCompletionSelected(state.Selected, len(state.VisibleIndices))
+}
+
+func completionAnchorTokenBounds(rowClusters []string, anchorCol int) (startCol int, endCol int) {
+	anchorCol = clampInt(anchorCol, 0, len(rowClusters))
+	startCol = anchorCol
+	for startCol > 0 && isCompletionTokenGrapheme(rowClusters[startCol-1]) {
+		startCol--
+	}
+
+	endCol = anchorCol
+	for endCol < len(rowClusters) && isCompletionTokenGrapheme(rowClusters[endCol]) {
+		endCol++
+	}
+	return startCol, endCol
+}
+
+func isCompletionTokenGrapheme(g string) bool {
+	if utf8.RuneCountInString(g) != 1 {
+		return false
+	}
+	r, _ := utf8.DecodeRuneInString(g)
+	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
