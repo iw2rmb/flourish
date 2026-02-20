@@ -403,3 +403,36 @@ func TestUpdate_SoftWrap_ViewportFollowsCursorByVisualRow(t *testing.T) {
 		t.Fatalf("yOffset after returning to first visual row: got %d, want %d", got, 0)
 	}
 }
+
+func TestUpdate_WrapWord_InsertAtPunctuationBoundary_AdvancesVisualCursor(t *testing.T) {
+	m := New(Config{
+		Text:     "abc,def,ghi",
+		WrapMode: WrapWord,
+	})
+	m = m.SetSize(3, 6)
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 3})
+
+	beforeX, beforeY, beforeOK := m.DocToScreen(m.buf.Cursor())
+	if !beforeOK {
+		t.Fatalf("before insert cursor must be visible")
+	}
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}})
+	afterX, afterY, afterOK := m.DocToScreen(m.buf.Cursor())
+	if !afterOK {
+		t.Fatalf("after insert cursor must be visible")
+	}
+
+	if m.buf.Cursor() != (buffer.Pos{Row: 0, GraphemeCol: 4}) {
+		t.Fatalf("cursor after insert: got %v, want %v", m.buf.Cursor(), buffer.Pos{Row: 0, GraphemeCol: 4})
+	}
+	if afterY < beforeY || (afterY == beforeY && afterX <= beforeX) {
+		t.Fatalf(
+			"visual cursor must advance after insert at wrap punctuation boundary: before=(%d,%d) after=(%d,%d)",
+			beforeX,
+			beforeY,
+			afterX,
+			afterY,
+		)
+	}
+}

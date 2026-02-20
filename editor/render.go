@@ -133,6 +133,16 @@ func (m *Model) renderLayoutRow(
 		if seg.Cells == 0 {
 			right = left + 1
 		}
+		// Keep EOL cursor one cell past the last glyph on non-full wrapped rows.
+		// When the segment already fills content width, fallback rendering in
+		// renderVisualLine keeps the cursor visible on the last visible glyph.
+		if row == cursor.Row && cursor.GraphemeCol == line.visual.RawGraphemeLen {
+			eolCell := cursorCellForVisualLine(line.visual, cursor.GraphemeCol)
+			contentWidth := m.contentWidth(lineCount)
+			if eolCell == right && seg.Cells < contentWidth {
+				right++
+			}
+		}
 	}
 	sb.WriteString(renderVisualLine(
 		m.cfg.Style,

@@ -38,10 +38,11 @@ Primary API:
 - optional custom gutter via `Config.Gutter` callbacks.
 - wrap modes:
 - `WrapNone`: no soft wrap; horizontal scroll (`xOffset`) keeps cursor visible.
-- `WrapWord`: wraps at word boundaries with fallback behavior.
+- `WrapWord`: wraps at word boundaries; when no boundary fits, it falls back to width-based breaks.
 - `WrapGrapheme`: wraps at grapheme boundaries.
 - layout mapping preserves doc<->visual conversions, including wide glyphs.
 - cursor rendering keeps visibility at soft-wrap boundaries:
+- on non-full wrapped rows, EOL cursor is rendered one cell after the last glyph.
 - EOL cursor remains visible when a wrapped row exactly fills content width.
 - trailing whitespace cursor cells are rendered with non-breaking spaces to avoid terminal elision.
 

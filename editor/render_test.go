@@ -343,6 +343,28 @@ func TestRender_SoftWrapWord_CursorAtEOLOnFullRow_Visible(t *testing.T) {
 	}
 }
 
+func TestRender_SoftWrap_CursorAtEOLOnNonFullRow_UsesTrailingCell(t *testing.T) {
+	modes := []WrapMode{WrapWord, WrapGrapheme}
+	for _, mode := range modes {
+		m := New(Config{
+			Text:     "abc\ndef",
+			WrapMode: mode,
+			Style: Style{
+				Text:   lipgloss.NewStyle(),
+				Cursor: lipgloss.NewStyle(),
+			},
+		})
+		m = m.SetSize(4, 2)
+		m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 3})
+
+		got := m.renderContent()
+		want := "abc \ndef"
+		if got != want {
+			t.Fatalf("mode %v trailing EOL cursor cell: got %q, want %q", mode, got, want)
+		}
+	}
+}
+
 func TestRender_GutterStyleKey_UsesCallbackAndFallback(t *testing.T) {
 	withKey := New(Config{
 		Text: "ab",

@@ -19,7 +19,6 @@ type wrapUnit struct {
 	width     int
 
 	isWhitespace bool
-	isPunct      bool
 }
 
 func wrapSegmentsForVisualLine(vl VisualLine, mode WrapMode, width int) []wrappedSegment {
@@ -66,8 +65,6 @@ func wrapSegmentsForVisualLine(vl VisualLine, mode WrapMode, width int) []wrappe
 		if mode == WrapWord && overflow < len(units) {
 			if br, ok := findWordWrapBreak(units, start, overflow); ok {
 				end = br
-			} else {
-				end = adjustBreakForLeadingPunctuation(units, start, overflow)
 			}
 		}
 		if end <= start {
@@ -102,19 +99,17 @@ func wrapUnitsFromVisualLine(vl VisualLine) []wrapUnit {
 					endCell:      startCell + 1,
 					width:        1,
 					isWhitespace: true,
-					isPunct:      false,
 				})
 			}
 			continue
 		}
 
-		isWhitespace, isPunct := tokenClass(tok.Text)
+		isWhitespace := tokenIsWhitespace(tok.Text)
 		units = append(units, wrapUnit{
 			startCell:    tok.StartCell,
 			endCell:      tok.StartCell + tok.CellWidth,
 			width:        tok.CellWidth,
 			isWhitespace: isWhitespace,
-			isPunct:      isPunct,
 		})
 	}
 
@@ -136,24 +131,16 @@ func tokenIsSplittableSpaces(tok VisualToken) bool {
 	return true
 }
 
-func tokenClass(text string) (isWhitespace bool, isPunct bool) {
+func tokenIsWhitespace(text string) bool {
 	if text == "" {
-		return false, false
+		return false
 	}
-	isWhitespace = true
-	isPunct = true
 	for _, gr := range graphemeutil.Split(text) {
 		if !graphemeutil.IsSpace(gr) {
-			isWhitespace = false
-		}
-		if !graphemeutil.IsPunct(gr) {
-			isPunct = false
+			return false
 		}
 	}
-	if isWhitespace {
-		isPunct = false
-	}
-	return isWhitespace, isPunct
+	return true
 }
 
 func segmentFromUnitRange(vl VisualLine, units []wrapUnit, start, end int) wrappedSegment {

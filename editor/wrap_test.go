@@ -53,19 +53,24 @@ func TestWrapSegments_Word_WhitespaceAndLongTokenFallback(t *testing.T) {
 	}
 }
 
-func TestWrapSegments_Word_PunctuationHeuristic(t *testing.T) {
+func TestWrapSegments_Word_PunctuationFallsBackToWidthBreak(t *testing.T) {
 	vl := BuildVisualLine("abc,def", VirtualText{}, 4)
 	segs := wrapSegmentsForVisualLine(vl, WrapWord, 3)
 	if len(segs) < 2 {
 		t.Fatalf("segment count: got %d, want >=2", len(segs))
 	}
 
-	lineRunes := []rune("abc,def")
-	for i := 1; i < len(segs); i++ {
-		start := segs[i].StartGraphemeCol
-		if start >= 0 && start < len(lineRunes) && lineRunes[start] == ',' {
-			t.Fatalf("segment %d starts with punctuation at col %d", i, start)
-		}
+	if got, want := segs[0].StartGraphemeCol, 0; got != want {
+		t.Fatalf("segment[0] start: got %d, want %d", got, want)
+	}
+	if got, want := segs[0].EndGraphemeCol, 3; got != want {
+		t.Fatalf("segment[0] end: got %d, want %d", got, want)
+	}
+	if got, want := segs[1].StartGraphemeCol, 3; got != want {
+		t.Fatalf("segment[1] start: got %d, want %d", got, want)
+	}
+	if got, want := segs[1].EndGraphemeCol, 6; got != want {
+		t.Fatalf("segment[1] end: got %d, want %d", got, want)
 	}
 }
 
