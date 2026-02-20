@@ -4,12 +4,16 @@ import "testing"
 
 func TestBuffer_ConversionAPIs_ExportedAndCallable(t *testing.T) {
 	var (
-		_ func(*Buffer, int, ConvertPolicy) (Pos, bool) = (*Buffer).PosFromByteOffset
-		_ func(*Buffer, Pos, ConvertPolicy) (int, bool) = (*Buffer).ByteOffsetFromPos
-		_ func(*Buffer, int, ConvertPolicy) (Pos, bool) = (*Buffer).PosFromRuneOffset
-		_ func(*Buffer, Pos, ConvertPolicy) (int, bool) = (*Buffer).RuneOffsetFromPos
-		_ func(*Buffer, Pos, GapBias) (Gap, bool)       = (*Buffer).GapFromPos
-		_ func(*Buffer, Gap, ConvertPolicy) (Pos, bool) = (*Buffer).PosFromGap
+		_ func(*Buffer, int, ConvertPolicy) (Pos, bool)  = (*Buffer).PosFromByteOffset
+		_ func(*Buffer, Pos, ConvertPolicy) (int, bool)  = (*Buffer).ByteOffsetFromPos
+		_ func(*Buffer, int, ConvertPolicy) (Pos, bool)  = (*Buffer).PosFromRuneOffset
+		_ func(*Buffer, Pos, ConvertPolicy) (int, bool)  = (*Buffer).RuneOffsetFromPos
+		_ func(*Buffer, int, ConvertPolicy) (Pos, bool)  = (*Buffer).PosFromUTF16Offset
+		_ func(*Buffer, Pos, ConvertPolicy) (int, bool)  = (*Buffer).UTF16OffsetFromPos
+		_ func(*Buffer, Pos, GapBias) (Gap, bool)        = (*Buffer).GapFromPos
+		_ func(*Buffer, Gap, ConvertPolicy) (Pos, bool)  = (*Buffer).PosFromGap
+		_ func(string, int, OffsetClampMode) (int, bool) = GraphemeColFromRuneOffsetInLine
+		_ func(string, int, OffsetClampMode) (int, bool) = RuneOffsetFromGraphemeColInLine
 	)
 
 	b := New("ab\ncd", Options{})
@@ -26,11 +30,23 @@ func TestBuffer_ConversionAPIs_ExportedAndCallable(t *testing.T) {
 	if _, ok := b.RuneOffsetFromPos(Pos{Row: 0, GraphemeCol: 0}, policy); !ok {
 		t.Fatalf("RuneOffsetFromPos should be callable")
 	}
+	if _, ok := b.PosFromUTF16Offset(0, policy); !ok {
+		t.Fatalf("PosFromUTF16Offset should be callable")
+	}
+	if _, ok := b.UTF16OffsetFromPos(Pos{Row: 0, GraphemeCol: 0}, policy); !ok {
+		t.Fatalf("UTF16OffsetFromPos should be callable")
+	}
 	if _, ok := b.GapFromPos(Pos{Row: 0, GraphemeCol: 0}, GapBiasLeft); !ok {
 		t.Fatalf("GapFromPos should be callable")
 	}
 	if _, ok := b.PosFromGap(Gap{RuneOffset: 0, Bias: GapBiasLeft}, policy); !ok {
 		t.Fatalf("PosFromGap should be callable")
+	}
+	if _, ok := GraphemeColFromRuneOffsetInLine("a", 0, OffsetError); !ok {
+		t.Fatalf("GraphemeColFromRuneOffsetInLine should be callable")
+	}
+	if _, ok := RuneOffsetFromGraphemeColInLine("a", 0, OffsetError); !ok {
+		t.Fatalf("RuneOffsetFromGraphemeColInLine should be callable")
 	}
 }
 
@@ -124,6 +140,51 @@ func TestBuffer_PosFromRuneOffset_RejectsInteriorClusterRunes(t *testing.T) {
 	}
 }
 
+func TestBuffer_PosFromUTF16Offset(t *testing.T) {
+	b := New("ab\n😀", Options{})
+
+	clamp := ConvertPolicy{ClampMode: OffsetClamp, NewlineMode: NewlineAsSingleRune}
+	errMode := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
+
+	cases := []struct {
+		name string
+		off  int
+		p    ConvertPolicy
+		want Pos
+		ok   bool
+	}{
+		{name: "bof", off: 0, p: errMode, want: Pos{Row: 0, GraphemeCol: 0}, ok: true},
+		{name: "line-0-middle", off: 1, p: errMode, want: Pos{Row: 0, GraphemeCol: 1}, ok: true},
+		{name: "line-0-end", off: 2, p: errMode, want: Pos{Row: 0, GraphemeCol: 2}, ok: true},
+		{name: "newline-after", off: 3, p: errMode, want: Pos{Row: 1, GraphemeCol: 0}, ok: true},
+		{name: "eof", off: 5, p: errMode, want: Pos{Row: 1, GraphemeCol: 1}, ok: true},
+		{name: "below-range-error", off: -1, p: errMode, ok: false},
+		{name: "above-range-error", off: 6, p: errMode, ok: false},
+		{name: "below-range-clamp", off: -1, p: clamp, want: Pos{Row: 0, GraphemeCol: 0}, ok: true},
+		{name: "above-range-clamp", off: 6, p: clamp, want: Pos{Row: 1, GraphemeCol: 1}, ok: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := b.PosFromUTF16Offset(tc.off, tc.p)
+			if ok != tc.ok {
+				t.Fatalf("ok=%v, want %v", ok, tc.ok)
+			}
+			if ok && got != tc.want {
+				t.Fatalf("pos=%v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestBuffer_PosFromUTF16Offset_RejectsInteriorClusterUnits(t *testing.T) {
+	b := New("😀x", Options{})
+	p := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
+	if _, ok := b.PosFromUTF16Offset(1, p); ok {
+		t.Fatalf("expected utf16 offset inside grapheme cluster to fail")
+	}
+}
+
 func TestBuffer_OffsetFromPos(t *testing.T) {
 	b := New("ab\né", Options{})
 	errMode := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
@@ -138,12 +199,19 @@ func TestBuffer_OffsetFromPos(t *testing.T) {
 	if !ok || gotRune != 4 {
 		t.Fatalf("RuneOffsetFromPos=(%d,%v), want (4,true)", gotRune, ok)
 	}
+	gotUTF16, ok := b.UTF16OffsetFromPos(Pos{Row: 1, GraphemeCol: 1}, errMode)
+	if !ok || gotUTF16 != 4 {
+		t.Fatalf("UTF16OffsetFromPos=(%d,%v), want (4,true)", gotUTF16, ok)
+	}
 
 	if _, ok := b.ByteOffsetFromPos(Pos{Row: 99, GraphemeCol: 99}, errMode); ok {
 		t.Fatalf("expected invalid pos in error mode to fail for byte conversion")
 	}
 	if _, ok := b.RuneOffsetFromPos(Pos{Row: 99, GraphemeCol: 99}, errMode); ok {
 		t.Fatalf("expected invalid pos in error mode to fail for rune conversion")
+	}
+	if _, ok := b.UTF16OffsetFromPos(Pos{Row: 99, GraphemeCol: 99}, errMode); ok {
+		t.Fatalf("expected invalid pos in error mode to fail for utf16 conversion")
 	}
 
 	gotByte, ok = b.ByteOffsetFromPos(Pos{Row: 99, GraphemeCol: 99}, clamp)
@@ -153,6 +221,10 @@ func TestBuffer_OffsetFromPos(t *testing.T) {
 	gotRune, ok = b.RuneOffsetFromPos(Pos{Row: 99, GraphemeCol: 99}, clamp)
 	if !ok || gotRune != 4 {
 		t.Fatalf("RuneOffsetFromPos clamp=(%d,%v), want (4,true)", gotRune, ok)
+	}
+	gotUTF16, ok = b.UTF16OffsetFromPos(Pos{Row: 99, GraphemeCol: 99}, clamp)
+	if !ok || gotUTF16 != 4 {
+		t.Fatalf("UTF16OffsetFromPos clamp=(%d,%v), want (4,true)", gotUTF16, ok)
 	}
 }
 
@@ -212,6 +284,9 @@ func TestBuffer_OffsetConversions_DeterministicAcrossCalls(t *testing.T) {
 	assertDeterministic(-1, b.docLen(offsetUnitRune)+1, func(off int) (Pos, bool) {
 		return b.PosFromRuneOffset(off, p)
 	})
+	assertDeterministic(-1, b.docLen(offsetUnitUTF16)+1, func(off int) (Pos, bool) {
+		return b.PosFromUTF16Offset(off, p)
+	})
 }
 
 func TestBuffer_OffsetConversions_RoundTripAtBoundaries(t *testing.T) {
@@ -244,6 +319,15 @@ func TestBuffer_OffsetConversions_RoundTripAtBoundaries(t *testing.T) {
 		gotPos, ok = b.PosFromRuneOffset(runeOff, p)
 		if !ok || gotPos != pos {
 			t.Fatalf("rune round-trip pos=%v got=(%v,%v)", pos, gotPos, ok)
+		}
+
+		utf16Off, ok := b.UTF16OffsetFromPos(pos, p)
+		if !ok {
+			t.Fatalf("UTF16OffsetFromPos(%v) failed", pos)
+		}
+		gotPos, ok = b.PosFromUTF16Offset(utf16Off, p)
+		if !ok || gotPos != pos {
+			t.Fatalf("utf16 round-trip pos=%v got=(%v,%v)", pos, gotPos, ok)
 		}
 	}
 }
@@ -297,5 +381,90 @@ func TestBuffer_ConversionAPIs_InvalidNewlineMode(t *testing.T) {
 	}
 	if _, ok := b.RuneOffsetFromPos(Pos{Row: 0, GraphemeCol: 0}, p); ok {
 		t.Fatalf("expected invalid newline mode to fail")
+	}
+	if _, ok := b.PosFromUTF16Offset(0, p); ok {
+		t.Fatalf("expected invalid newline mode to fail")
+	}
+	if _, ok := b.UTF16OffsetFromPos(Pos{Row: 0, GraphemeCol: 0}, p); ok {
+		t.Fatalf("expected invalid newline mode to fail")
+	}
+}
+
+func TestLineConversionHelpers_RuneOffsetToGraphemeCol(t *testing.T) {
+	line := "aée\u0301👨‍👩‍👧‍👦"
+
+	cases := []struct {
+		name string
+		off  int
+		mode OffsetClampMode
+		want int
+		ok   bool
+	}{
+		{name: "start", off: 0, mode: OffsetError, want: 0, ok: true},
+		{name: "after-ascii", off: 1, mode: OffsetError, want: 1, ok: true},
+		{name: "after-acute", off: 2, mode: OffsetError, want: 2, ok: true},
+		{name: "after-combining-cluster", off: 4, mode: OffsetError, want: 3, ok: true},
+		{name: "end", off: 11, mode: OffsetError, want: 4, ok: true},
+		{name: "interior-combining", off: 3, mode: OffsetError, ok: false},
+		{name: "interior-zwj", off: 6, mode: OffsetError, ok: false},
+		{name: "below-range-error", off: -1, mode: OffsetError, ok: false},
+		{name: "above-range-error", off: 12, mode: OffsetError, ok: false},
+		{name: "below-range-clamp", off: -1, mode: OffsetClamp, want: 0, ok: true},
+		{name: "above-range-clamp", off: 12, mode: OffsetClamp, want: 4, ok: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := GraphemeColFromRuneOffsetInLine(line, tc.off, tc.mode)
+			if ok != tc.ok {
+				t.Fatalf("ok=%v, want %v", ok, tc.ok)
+			}
+			if ok && got != tc.want {
+				t.Fatalf("col=%d, want %d", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestLineConversionHelpers_GraphemeColToRuneOffset(t *testing.T) {
+	line := "aée\u0301👨‍👩‍👧‍👦"
+
+	cases := []struct {
+		name string
+		col  int
+		mode OffsetClampMode
+		want int
+		ok   bool
+	}{
+		{name: "start", col: 0, mode: OffsetError, want: 0, ok: true},
+		{name: "after-ascii", col: 1, mode: OffsetError, want: 1, ok: true},
+		{name: "after-acute", col: 2, mode: OffsetError, want: 2, ok: true},
+		{name: "after-combining-cluster", col: 3, mode: OffsetError, want: 4, ok: true},
+		{name: "end", col: 4, mode: OffsetError, want: 11, ok: true},
+		{name: "below-range-error", col: -1, mode: OffsetError, ok: false},
+		{name: "above-range-error", col: 5, mode: OffsetError, ok: false},
+		{name: "below-range-clamp", col: -1, mode: OffsetClamp, want: 0, ok: true},
+		{name: "above-range-clamp", col: 5, mode: OffsetClamp, want: 11, ok: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := RuneOffsetFromGraphemeColInLine(line, tc.col, tc.mode)
+			if ok != tc.ok {
+				t.Fatalf("ok=%v, want %v", ok, tc.ok)
+			}
+			if ok && got != tc.want {
+				t.Fatalf("off=%d, want %d", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestLineConversionHelpers_InvalidClampMode(t *testing.T) {
+	if _, ok := GraphemeColFromRuneOffsetInLine("a", 0, OffsetClampMode(99)); ok {
+		t.Fatalf("expected invalid clamp mode to fail")
+	}
+	if _, ok := RuneOffsetFromGraphemeColInLine("a", 0, OffsetClampMode(99)); ok {
+		t.Fatalf("expected invalid clamp mode to fail")
 	}
 }

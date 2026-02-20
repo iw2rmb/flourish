@@ -1,6 +1,11 @@
 package buffer
 
-import "unicode/utf8"
+import (
+	"unicode/utf16"
+	"unicode/utf8"
+
+	"github.com/iw2rmb/flourish/internal/grapheme"
+)
 
 type OffsetClampMode uint8
 
@@ -37,6 +42,7 @@ type offsetUnit uint8
 const (
 	offsetUnitByte offsetUnit = iota
 	offsetUnitRune
+	offsetUnitUTF16
 )
 
 func (b *Buffer) PosFromByteOffset(off int, p ConvertPolicy) (Pos, bool) {
@@ -85,6 +91,30 @@ func (b *Buffer) RuneOffsetFromPos(pos Pos, p ConvertPolicy) (int, bool) {
 		return 0, false
 	}
 	return b.offsetFromPos(pos, offsetUnitRune), true
+}
+
+func (b *Buffer) PosFromUTF16Offset(off int, p ConvertPolicy) (Pos, bool) {
+	if !validNewlineMode(p.NewlineMode) {
+		return Pos{}, false
+	}
+
+	off, ok := clampOffset(off, b.docLen(offsetUnitUTF16), p.ClampMode)
+	if !ok {
+		return Pos{}, false
+	}
+	return b.posFromOffset(off, offsetUnitUTF16)
+}
+
+func (b *Buffer) UTF16OffsetFromPos(pos Pos, p ConvertPolicy) (int, bool) {
+	if !validNewlineMode(p.NewlineMode) {
+		return 0, false
+	}
+
+	pos, ok := b.normalizePosForMode(pos, p.ClampMode)
+	if !ok {
+		return 0, false
+	}
+	return b.offsetFromPos(pos, offsetUnitUTF16), true
 }
 
 func (b *Buffer) GapFromPos(pos Pos, bias GapBias) (Gap, bool) {
@@ -155,6 +185,17 @@ func unitWidth(cluster string, unit offsetUnit) int {
 	if unit == offsetUnitRune {
 		return utf8.RuneCountInString(cluster)
 	}
+	if unit == offsetUnitUTF16 {
+		width := 0
+		for _, r := range cluster {
+			n := utf16.RuneLen(r)
+			if n < 0 {
+				n = 1
+			}
+			width += n
+		}
+		return width
+	}
 	return len(cluster)
 }
 
@@ -218,4 +259,49 @@ func (b *Buffer) offsetFromPos(pos Pos, unit offsetUnit) int {
 	}
 
 	return off
+}
+
+func GraphemeColFromRuneOffsetInLine(line string, runeOff int, clamp OffsetClampMode) (int, bool) {
+	clusters := grapheme.Split(line)
+	totalRunes := 0
+	for _, cluster := range clusters {
+		totalRunes += utf8.RuneCountInString(cluster)
+	}
+
+	off, ok := clampOffset(runeOff, totalRunes, clamp)
+	if !ok {
+		return 0, false
+	}
+
+	cur := 0
+	for col, cluster := range clusters {
+		if off == cur {
+			return col, true
+		}
+		next := cur + utf8.RuneCountInString(cluster)
+		if off > cur && off < next {
+			return 0, false
+		}
+		cur = next
+	}
+
+	if off == cur {
+		return len(clusters), true
+	}
+	return 0, false
+}
+
+func RuneOffsetFromGraphemeColInLine(line string, graphemeCol int, clamp OffsetClampMode) (int, bool) {
+	clusters := grapheme.Split(line)
+
+	col, ok := clampOffset(graphemeCol, len(clusters), clamp)
+	if !ok {
+		return 0, false
+	}
+
+	off := 0
+	for i := 0; i < col; i++ {
+		off += utf8.RuneCountInString(clusters[i])
+	}
+	return off, true
 }

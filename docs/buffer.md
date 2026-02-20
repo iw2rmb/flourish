@@ -28,7 +28,7 @@ Helpers:
 - `ClampPos(p, rowCount, lineLen)`
 - `ClampRange(r, rowCount, lineLen)`
 
-## Conversion APIs (Baseline)
+## Conversion APIs
 
 `buffer` now exposes canonical coordinate conversions with explicit policy.
 
@@ -44,22 +44,29 @@ Methods:
 - `ByteOffsetFromPos(pos, policy) (int, bool)`
 - `PosFromRuneOffset(off, policy) (Pos, bool)`
 - `RuneOffsetFromPos(pos, policy) (int, bool)`
+- `PosFromUTF16Offset(off, policy) (Pos, bool)`
+- `UTF16OffsetFromPos(pos, policy) (int, bool)`
 - `GapFromPos(pos, bias) (Gap, bool)`
 - `PosFromGap(gap, policy) (Pos, bool)`
+- `GraphemeColFromRuneOffsetInLine(line, runeOff, clamp) (int, bool)`
+- `RuneOffsetFromGraphemeColInLine(line, graphemeCol, clamp) (int, bool)`
 
 Behavior:
 - Offsets are document-global over `Text()`.
-- Newline separators between lines count as one byte and one rune (`\n`).
+- Newline separators between lines count as one byte, one rune, and one UTF-16 code unit (`\n`).
 - `OffsetError` rejects out-of-range offsets and invalid positions.
 - `OffsetClamp` clamps out-of-range offsets/positions to valid document bounds.
-- In-range byte/rune offsets that are not at grapheme boundaries are rejected.
+- In-range byte/rune/UTF-16 offsets that are not at grapheme boundaries are rejected.
 - `PosFromGap` maps through gap rune offset conversion with the supplied policy.
+- `UTF16Offset*` counts UTF-16 code units (supplementary runes count as `2`).
+- Line-scoped rune/grapheme helpers apply the same clamp contract with no newline handling.
 - Unicode fixture examples now covered by tests:
 - `"a"`: offset `1` maps to `(Row:0, GraphemeCol:1)`.
 - `"é"`: byte offset `1` is inside one grapheme and is rejected.
 - `"e\u0301"`: rune offset `1` is inside one grapheme and is rejected.
 - `"👨‍👩‍👧‍👦"`: interior byte/rune offsets are rejected; only start/end map.
 - `"a\nb"`: newline boundary maps from offset `2` to `(Row:1, GraphemeCol:0)`.
+- `"😀"`: UTF-16 offsets are `0` at BOF and `2` at EOF.
 
 ## Editing Semantics
 

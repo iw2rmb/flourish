@@ -6,6 +6,7 @@ type conversionBoundary struct {
 	pos      Pos
 	byteOff  int
 	runeOff  int
+	utf16Off int
 }
 
 type conversionFixture struct {
@@ -14,6 +15,7 @@ type conversionFixture struct {
 	boundaries       []conversionBoundary
 	invalidByteOffs  []int
 	invalidRuneOffs  []int
+	invalidUTF16Offs []int
 }
 
 func unicodeConversionFixtures() []conversionFixture {
@@ -22,16 +24,16 @@ func unicodeConversionFixtures() []conversionFixture {
 			name: "ascii-single",
 			text: "a",
 			boundaries: []conversionBoundary{
-				{pos: Pos{Row: 0, GraphemeCol: 0}, byteOff: 0, runeOff: 0},
-				{pos: Pos{Row: 0, GraphemeCol: 1}, byteOff: 1, runeOff: 1},
+				{pos: Pos{Row: 0, GraphemeCol: 0}, byteOff: 0, runeOff: 0, utf16Off: 0},
+				{pos: Pos{Row: 0, GraphemeCol: 1}, byteOff: 1, runeOff: 1, utf16Off: 1},
 			},
 		},
 		{
 			name: "multibyte-utf8",
 			text: "é",
 			boundaries: []conversionBoundary{
-				{pos: Pos{Row: 0, GraphemeCol: 0}, byteOff: 0, runeOff: 0},
-				{pos: Pos{Row: 0, GraphemeCol: 1}, byteOff: 2, runeOff: 1},
+				{pos: Pos{Row: 0, GraphemeCol: 0}, byteOff: 0, runeOff: 0, utf16Off: 0},
+				{pos: Pos{Row: 0, GraphemeCol: 1}, byteOff: 2, runeOff: 1, utf16Off: 1},
 			},
 			invalidByteOffs: []int{1},
 		},
@@ -39,30 +41,32 @@ func unicodeConversionFixtures() []conversionFixture {
 			name: "combining-mark",
 			text: "e\u0301",
 			boundaries: []conversionBoundary{
-				{pos: Pos{Row: 0, GraphemeCol: 0}, byteOff: 0, runeOff: 0},
-				{pos: Pos{Row: 0, GraphemeCol: 1}, byteOff: 3, runeOff: 2},
+				{pos: Pos{Row: 0, GraphemeCol: 0}, byteOff: 0, runeOff: 0, utf16Off: 0},
+				{pos: Pos{Row: 0, GraphemeCol: 1}, byteOff: 3, runeOff: 2, utf16Off: 2},
 			},
-			invalidByteOffs: []int{1, 2},
-			invalidRuneOffs: []int{1},
+			invalidByteOffs:  []int{1, 2},
+			invalidRuneOffs:  []int{1},
+			invalidUTF16Offs: []int{1},
 		},
 		{
 			name: "zwj-emoji",
 			text: "👨‍👩‍👧‍👦",
 			boundaries: []conversionBoundary{
-				{pos: Pos{Row: 0, GraphemeCol: 0}, byteOff: 0, runeOff: 0},
-				{pos: Pos{Row: 0, GraphemeCol: 1}, byteOff: 25, runeOff: 7},
+				{pos: Pos{Row: 0, GraphemeCol: 0}, byteOff: 0, runeOff: 0, utf16Off: 0},
+				{pos: Pos{Row: 0, GraphemeCol: 1}, byteOff: 25, runeOff: 7, utf16Off: 11},
 			},
-			invalidByteOffs: []int{1, 4, 10, 24},
-			invalidRuneOffs: []int{1, 3, 6},
+			invalidByteOffs:  []int{1, 4, 10, 24},
+			invalidRuneOffs:  []int{1, 3, 6},
+			invalidUTF16Offs: []int{1, 5, 10},
 		},
 		{
 			name: "multiline-boundaries",
 			text: "a\nb",
 			boundaries: []conversionBoundary{
-				{pos: Pos{Row: 0, GraphemeCol: 0}, byteOff: 0, runeOff: 0},
-				{pos: Pos{Row: 0, GraphemeCol: 1}, byteOff: 1, runeOff: 1},
-				{pos: Pos{Row: 1, GraphemeCol: 0}, byteOff: 2, runeOff: 2},
-				{pos: Pos{Row: 1, GraphemeCol: 1}, byteOff: 3, runeOff: 3},
+				{pos: Pos{Row: 0, GraphemeCol: 0}, byteOff: 0, runeOff: 0, utf16Off: 0},
+				{pos: Pos{Row: 0, GraphemeCol: 1}, byteOff: 1, runeOff: 1, utf16Off: 1},
+				{pos: Pos{Row: 1, GraphemeCol: 0}, byteOff: 2, runeOff: 2, utf16Off: 2},
+				{pos: Pos{Row: 1, GraphemeCol: 1}, byteOff: 3, runeOff: 3, utf16Off: 3},
 			},
 		},
 	}
@@ -93,6 +97,10 @@ func TestBuffer_UnicodeFixtures_BoundaryRoundTrip(t *testing.T) {
 				if !ok || gotPos != boundary.pos {
 					t.Fatalf("PosFromRuneOffset(%d)=(%v,%v), want (%v,true)", boundary.runeOff, gotPos, ok, boundary.pos)
 				}
+				gotPos, ok = b.PosFromUTF16Offset(boundary.utf16Off, p)
+				if !ok || gotPos != boundary.pos {
+					t.Fatalf("PosFromUTF16Offset(%d)=(%v,%v), want (%v,true)", boundary.utf16Off, gotPos, ok, boundary.pos)
+				}
 
 				gotByte, ok := b.ByteOffsetFromPos(boundary.pos, p)
 				if !ok || gotByte != boundary.byteOff {
@@ -102,6 +110,10 @@ func TestBuffer_UnicodeFixtures_BoundaryRoundTrip(t *testing.T) {
 				gotRune, ok := b.RuneOffsetFromPos(boundary.pos, p)
 				if !ok || gotRune != boundary.runeOff {
 					t.Fatalf("RuneOffsetFromPos(%v)=(%d,%v), want (%d,true)", boundary.pos, gotRune, ok, boundary.runeOff)
+				}
+				gotUTF16, ok := b.UTF16OffsetFromPos(boundary.pos, p)
+				if !ok || gotUTF16 != boundary.utf16Off {
+					t.Fatalf("UTF16OffsetFromPos(%v)=(%d,%v), want (%d,true)", boundary.pos, gotUTF16, ok, boundary.utf16Off)
 				}
 			}
 		})
@@ -125,6 +137,11 @@ func TestBuffer_UnicodeFixtures_RejectInteriorOffsets(t *testing.T) {
 					t.Fatalf("PosFromRuneOffset(%d) should fail for interior rune offset", off)
 				}
 			}
+			for _, off := range fx.invalidUTF16Offs {
+				if _, ok := b.PosFromUTF16Offset(off, p); ok {
+					t.Fatalf("PosFromUTF16Offset(%d) should fail for interior utf16 offset", off)
+				}
+			}
 		})
 	}
 }
@@ -140,6 +157,7 @@ func TestBuffer_UnicodeFixtures_BoundsPolicies(t *testing.T) {
 			end := fx.boundaries[len(fx.boundaries)-1].pos
 			maxByte := fx.boundaries[len(fx.boundaries)-1].byteOff
 			maxRune := fx.boundaries[len(fx.boundaries)-1].runeOff
+			maxUTF16 := fx.boundaries[len(fx.boundaries)-1].utf16Off
 
 			if _, ok := b.PosFromByteOffset(-1, strict); ok {
 				t.Fatalf("PosFromByteOffset(-1) should fail in error mode")
@@ -153,6 +171,12 @@ func TestBuffer_UnicodeFixtures_BoundsPolicies(t *testing.T) {
 			if _, ok := b.PosFromRuneOffset(maxRune+1, strict); ok {
 				t.Fatalf("PosFromRuneOffset(max+1) should fail in error mode")
 			}
+			if _, ok := b.PosFromUTF16Offset(-1, strict); ok {
+				t.Fatalf("PosFromUTF16Offset(-1) should fail in error mode")
+			}
+			if _, ok := b.PosFromUTF16Offset(maxUTF16+1, strict); ok {
+				t.Fatalf("PosFromUTF16Offset(max+1) should fail in error mode")
+			}
 
 			if got, ok := b.PosFromByteOffset(-1, clamp); !ok || got != start {
 				t.Fatalf("PosFromByteOffset(-1)=(%v,%v), want (%v,true)", got, ok, start)
@@ -165,6 +189,12 @@ func TestBuffer_UnicodeFixtures_BoundsPolicies(t *testing.T) {
 			}
 			if got, ok := b.PosFromRuneOffset(maxRune+1, clamp); !ok || got != end {
 				t.Fatalf("PosFromRuneOffset(max+1)=(%v,%v), want (%v,true)", got, ok, end)
+			}
+			if got, ok := b.PosFromUTF16Offset(-1, clamp); !ok || got != start {
+				t.Fatalf("PosFromUTF16Offset(-1)=(%v,%v), want (%v,true)", got, ok, start)
+			}
+			if got, ok := b.PosFromUTF16Offset(maxUTF16+1, clamp); !ok || got != end {
+				t.Fatalf("PosFromUTF16Offset(max+1)=(%v,%v), want (%v,true)", got, ok, end)
 			}
 		})
 	}
