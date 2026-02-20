@@ -17,12 +17,15 @@ It provides a pure document buffer package and an editor component package.
 - mouse hit-testing and drag selection in terminal cell coordinates.
 - optional clipboard integration.
 - optional virtual text, highlighting, ghost suggestions, and change events.
+- semver-enabled runtime version API via `flourish.Version()`.
+- semver release flow with `vMAJOR.MINOR.PATCH` git tags.
 
 ## Documentation
 
-- package docs index: `docs/index.md`
+- package docs index: `docs/README.md`
 - buffer package docs: `docs/buffer.md`
 - editor package docs: `docs/editor.md`
+- versioning docs: `docs/versioning.md`
 
 ## Examples
 
@@ -32,3 +35,9 @@ It provides a pure document buffer package and an editor component package.
 - `go run ./examples/virtual-text`
 - `go run ./examples/highlighter`
 - `go run ./examples/on-change`
+
+## Versioning
+
+- current version source of truth: `VERSION`
+- runtime version API: `flourish.Version()`, `flourish.VersionTag()`
+- local semver tooling: `scripts/semver.sh`

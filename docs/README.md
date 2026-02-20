@@ -3,6 +3,7 @@
 Packages:
 - `docs/buffer.md` — `buffer` package behavior and contracts.
 - `docs/editor.md` — `editor` package behavior and integration contracts.
+- `docs/versioning.md` — semver policy, runtime version API, and release flow.
 
 Examples:
 - `examples/simple/main.go` — baseline editor setup.
