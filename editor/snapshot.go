@@ -161,6 +161,8 @@ func hashSnapshotSignature(sig snapshotSignature) SnapshotToken {
 }
 
 func (m *Model) buildRenderSnapshot(token SnapshotToken) RenderSnapshot {
+	m.syncFromBuffer()
+
 	s := RenderSnapshot{
 		Token:    token,
 		Viewport: m.ViewportState(),

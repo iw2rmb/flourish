@@ -3,11 +3,7 @@ package editor
 import "github.com/iw2rmb/flourish/buffer"
 
 type wrapLayoutCacheKey struct {
-	bufVersion uint64
-	cursor     buffer.Pos
-
-	sel   buffer.Range
-	selOK bool
+	textVersion uint64
 
 	wrapMode     WrapMode
 	tabWidth     int
@@ -52,9 +48,7 @@ func (m *Model) layoutKey(lines []string) wrapLayoutCacheKey {
 		return key
 	}
 
-	key.bufVersion = m.buf.Version()
-	key.cursor = m.buf.Cursor()
-	key.sel, key.selOK = m.buf.Selection()
+	key.textVersion = m.buf.TextVersion()
 	return key
 }
 
@@ -72,29 +66,11 @@ func (m *Model) ensureLayoutCache(lines []string) wrapLayoutCache {
 	}
 
 	for row, rawLine := range lines {
-		vt := m.virtualTextForRow(row, rawLine)
-		vt = m.virtualTextWithGhost(row, rawLine, vt)
-		visual := BuildVisualLine(rawLine, vt, m.cfg.TabWidth)
-		segments := wrapSegmentsForVisualLine(visual, m.cfg.WrapMode, key.contentWidth)
-		if len(segments) == 0 {
-			segments = []wrappedSegment{{
-				StartGraphemeCol: 0,
-				EndGraphemeCol:   visual.RawGraphemeLen,
-				Cells:            visual.VisualLen(),
-				startCell:        0,
-				endCell:          visual.VisualLen(),
-			}}
-		}
-
+		line := m.buildLayoutLine(row, rawLine, key.contentWidth)
 		firstVisualRow := len(cache.rows)
-		cache.lines = append(cache.lines, wrapLayoutLine{
-			rawLine:        rawLine,
-			vt:             vt,
-			visual:         visual,
-			segments:       segments,
-			firstVisualRow: firstVisualRow,
-		})
-		for segIdx := range segments {
+		line.firstVisualRow = firstVisualRow
+		cache.lines = append(cache.lines, line)
+		for segIdx := range line.segments {
 			cache.rows = append(cache.rows, wrapLayoutRow{
 				logicalRow:   row,
 				segmentIndex: segIdx,
@@ -118,6 +94,56 @@ func (m *Model) ensureLayoutCache(lines []string) wrapLayoutCache {
 
 	m.layout = cache
 	return cache
+}
+
+func (m *Model) buildLayoutLine(row int, rawLine string, contentWidth int) wrapLayoutLine {
+	vt := m.virtualTextForRow(row, rawLine)
+	vt = m.virtualTextWithGhost(row, rawLine, vt)
+	visual := BuildVisualLine(rawLine, vt, m.cfg.TabWidth)
+	segments := wrapSegmentsForVisualLine(visual, m.cfg.WrapMode, contentWidth)
+	if len(segments) == 0 {
+		segments = []wrappedSegment{{
+			StartGraphemeCol: 0,
+			EndGraphemeCol:   visual.RawGraphemeLen,
+			Cells:            visual.VisualLen(),
+			startCell:        0,
+			endCell:          visual.VisualLen(),
+		}}
+	}
+
+	return wrapLayoutLine{
+		rawLine:  rawLine,
+		vt:       vt,
+		visual:   visual,
+		segments: segments,
+	}
+}
+
+// refreshLayoutRows rebuilds cached layout lines for dirty logical rows.
+// It returns false when row-to-visual mapping shape changes and cached visual-row
+// reuse would become unsafe.
+func (m *Model) refreshLayoutRows(lines []string, dirtyRows map[int]struct{}) bool {
+	if len(dirtyRows) == 0 {
+		return true
+	}
+	if !m.layout.valid || len(lines) != len(m.layout.lines) {
+		return false
+	}
+
+	contentWidth := m.layout.key.contentWidth
+	for row := range dirtyRows {
+		if row < 0 || row >= len(lines) {
+			continue
+		}
+		prev := m.layout.lines[row]
+		next := m.buildLayoutLine(row, lines[row], contentWidth)
+		next.firstVisualRow = prev.firstVisualRow
+		if len(prev.segments) != len(next.segments) {
+			return false
+		}
+		m.layout.lines[row] = next
+	}
+	return true
 }
 
 func (c wrapLayoutCache) clampVisualRow(row int) int {

@@ -12,6 +12,7 @@ func (m *Model) renderContent() string {
 	if m.buf == nil {
 		return ""
 	}
+	m.syncFromBuffer()
 
 	lines := rawLinesFromBufferText(m.buf.Text())
 	layout := m.ensureLayoutCache(lines)

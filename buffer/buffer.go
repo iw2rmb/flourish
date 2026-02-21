@@ -20,6 +20,8 @@ type selectionState struct {
 type Buffer struct {
 	lines   [][]string
 	version uint64
+	// textVersion advances only when document text changes.
+	textVersion uint64
 
 	cursor Pos
 	sel    selectionState
@@ -60,6 +62,11 @@ func (b *Buffer) Text() string {
 }
 
 func (b *Buffer) Version() uint64 { return b.version }
+
+// TextVersion increments only on effective text mutations.
+//
+// Cursor/selection-only changes do not change TextVersion.
+func (b *Buffer) TextVersion() uint64 { return b.textVersion }
 
 func (b *Buffer) Cursor() Pos { return b.cursor }
 

@@ -89,6 +89,9 @@ func (b *Buffer) commitChange(cb changeBuilder) {
 	if b.version == cb.versionBefore {
 		return
 	}
+	if len(cb.appliedEdits) > 0 {
+		b.textVersion++
+	}
 	b.lastChange = Change{
 		Source:          cb.source,
 		VersionBefore:   cb.versionBefore,

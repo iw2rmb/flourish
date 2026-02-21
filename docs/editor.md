@@ -208,6 +208,8 @@ Virtual text rules:
 - ghost insertions are single-line and non-interactive.
 - ghost suggestions can provide `StyleKey` for callback-based style resolution.
 - cursor/selection remain document-based.
+- cursor/selection-only editor updates rerender only dirty logical rows (old/new cursor rows plus old/new selection coverage).
+- `VirtualTextProvider` is treated as row-local for cursor/selection movement: non-dirty rows are expected to remain unchanged.
 
 Gutter rules:
 - gutter is disabled when `Gutter.Width` is nil (or resolves to `<=0`).

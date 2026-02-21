@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/iw2rmb/flourish/buffer"
@@ -172,5 +173,36 @@ func TestModel_InvalidateGutterRows_RerendersOnlyTargetRows(t *testing.T) {
 	}
 	if got := callsByRow[2]; got != 0 {
 		t.Fatalf("row 2 gutter rerender calls: got %d, want %d", got, 0)
+	}
+}
+
+func TestUpdate_CursorMove_RecomputesVirtualTextOnlyForDirtyRows(t *testing.T) {
+	const lineCount = 200
+	line := "abcdef"
+	text := strings.Repeat(line+"\n", lineCount-1) + line
+
+	callsByRow := map[int]int{}
+	m := New(Config{
+		Text: text,
+		VirtualTextProvider: func(ctx VirtualTextContext) VirtualText {
+			callsByRow[ctx.Row]++
+			return VirtualText{}
+		},
+	})
+	m = m.SetSize(80, 10)
+
+	callsByRow = map[int]int{}
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+
+	if len(callsByRow) == 0 {
+		t.Fatalf("expected virtual text provider call on cursor move")
+	}
+	if len(callsByRow) > 2 {
+		t.Fatalf("cursor move should not rerender all rows: got calls on %d rows, want <=2", len(callsByRow))
+	}
+	for row := range callsByRow {
+		if row != 0 {
+			t.Fatalf("unexpected rerendered row %d for single-row cursor move", row)
+		}
 	}
 }

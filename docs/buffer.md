@@ -15,6 +15,7 @@ Core state:
 - selection
 - undo/redo history
 - version counter
+- text-version counter
 
 ## Coordinates
 
@@ -168,6 +169,12 @@ Example:
 - successful undo/redo
 
 No-op operations do not increment version.
+
+`TextVersion()` increments only on effective text mutations:
+- `Insert*`, `Delete*`, `Apply`, `ApplyRemote`
+- undo/redo when the restored text differs
+
+`TextVersion()` does not change for cursor-only and selection-only mutations.
 
 ## Undo/Redo
 

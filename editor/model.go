@@ -27,8 +27,11 @@ type Model struct {
 	// when WrapMode==WrapNone.
 	xOffset int
 
-	lastBufVersion uint64
-	lastCursor     buffer.Pos
+	lastBufVersion  uint64
+	lastTextVersion uint64
+	lastCursor      buffer.Pos
+	lastSelection   buffer.Range
+	lastSelectionOK bool
 
 	ghostCache ghostCache
 
@@ -63,7 +66,9 @@ func New(cfg Config) Model {
 		viewport: viewport.New(0, 0),
 	}
 	m.lastBufVersion = m.buf.Version()
+	m.lastTextVersion = m.buf.TextVersion()
 	m.lastCursor = m.buf.Cursor()
+	m.lastSelection, m.lastSelectionOK = m.buf.Selection()
 	m.rebuildContent()
 	return m
 }
@@ -213,15 +218,35 @@ func (m *Model) syncFromBuffer() (cursorChanged bool, versionChanged bool) {
 	if m.buf == nil {
 		return false, false
 	}
+
+	prevCursor := m.lastCursor
+	prevSelection := m.lastSelection
+	prevSelectionOK := m.lastSelectionOK
+	prevTextVersion := m.lastTextVersion
+
 	ver := m.buf.Version()
+	textVer := m.buf.TextVersion()
 	cur := m.buf.Cursor()
-	if ver == m.lastBufVersion && cur == m.lastCursor {
+	sel, selOK := m.buf.Selection()
+	if ver == m.lastBufVersion &&
+		textVer == m.lastTextVersion &&
+		cur == m.lastCursor &&
+		selOK == m.lastSelectionOK &&
+		(!selOK || sel == m.lastSelection) {
 		return false, false
 	}
-	cursorChanged = cur != m.lastCursor
+
+	cursorChanged = cur != prevCursor
 	versionChanged = ver != m.lastBufVersion
+	selectionChanged := selOK != prevSelectionOK || (selOK && sel != prevSelection)
+	textChanged := textVer != prevTextVersion
+
 	m.lastBufVersion = ver
+	m.lastTextVersion = textVer
 	m.lastCursor = cur
+	m.lastSelection = sel
+	m.lastSelectionOK = selOK
+
 	if m.completionState.Visible && (cursorChanged || versionChanged) {
 		if m.cursorOutsideCompletionAnchorToken() {
 			m.completionState = CompletionState{}
@@ -229,8 +254,121 @@ func (m *Model) syncFromBuffer() (cursorChanged bool, versionChanged bool) {
 			m.recomputeCompletionFilter(&m.completionState)
 		}
 	}
-	m.rebuildContent()
+
+	if textChanged {
+		m.rebuildContent()
+		return cursorChanged, versionChanged
+	}
+
+	if cursorChanged || selectionChanged {
+		if !m.rebuildCursorSelectionDirtyRows(
+			prevCursor,
+			cur,
+			prevSelection,
+			prevSelectionOK,
+			sel,
+			selOK,
+		) {
+			m.rebuildContent()
+		}
+		return cursorChanged, versionChanged
+	}
+
+	// Unknown non-text version mutation: preserve correctness with full rebuild.
+	if versionChanged {
+		m.rebuildContent()
+	}
 	return cursorChanged, versionChanged
+}
+
+func (m *Model) rebuildCursorSelectionDirtyRows(
+	prevCursor buffer.Pos,
+	nextCursor buffer.Pos,
+	prevSel buffer.Range,
+	prevSelOK bool,
+	nextSel buffer.Range,
+	nextSelOK bool,
+) bool {
+	if m.buf == nil {
+		return false
+	}
+
+	lines := rawLinesFromBufferText(m.buf.Text())
+	layout := m.ensureLayoutCache(lines)
+	if len(layout.rows) == 0 || len(m.renderedRows) != len(layout.rows) {
+		return false
+	}
+
+	dirty := cursorSelectionDirtyRows(
+		len(lines),
+		prevCursor,
+		nextCursor,
+		prevSel,
+		prevSelOK,
+		nextSel,
+		nextSelOK,
+	)
+	if len(dirty) == 0 {
+		return true
+	}
+
+	if !m.refreshLayoutRows(lines, dirty) {
+		return false
+	}
+
+	layout = m.layout
+	if len(m.renderedRows) != len(layout.rows) {
+		return false
+	}
+
+	rendered := m.renderRows(lines, layout, dirty, true)
+	if len(rendered) != len(layout.rows) {
+		return false
+	}
+	m.setRenderedRows(rendered)
+	return true
+}
+
+func cursorSelectionDirtyRows(
+	lineCount int,
+	prevCursor buffer.Pos,
+	nextCursor buffer.Pos,
+	prevSel buffer.Range,
+	prevSelOK bool,
+	nextSel buffer.Range,
+	nextSelOK bool,
+) map[int]struct{} {
+	if lineCount <= 0 {
+		return nil
+	}
+
+	dirty := make(map[int]struct{}, 4)
+	addDirtyRow(dirty, lineCount, prevCursor.Row)
+	addDirtyRow(dirty, lineCount, nextCursor.Row)
+	addDirtyRangeRows(dirty, lineCount, prevSel, prevSelOK)
+	addDirtyRangeRows(dirty, lineCount, nextSel, nextSelOK)
+	return dirty
+}
+
+func addDirtyRow(dirty map[int]struct{}, lineCount, row int) {
+	if row < 0 || row >= lineCount {
+		return
+	}
+	dirty[row] = struct{}{}
+}
+
+func addDirtyRangeRows(dirty map[int]struct{}, lineCount int, r buffer.Range, ok bool) {
+	if !ok || lineCount <= 0 {
+		return
+	}
+	start := clampInt(r.Start.Row, 0, lineCount-1)
+	end := clampInt(r.End.Row, 0, lineCount-1)
+	if end < start {
+		start, end = end, start
+	}
+	for row := start; row <= end; row++ {
+		dirty[row] = struct{}{}
+	}
 }
 
 func (m *Model) cursorOutsideCompletionAnchorToken() bool {
