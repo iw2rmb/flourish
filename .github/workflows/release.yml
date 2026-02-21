@@ -40,6 +40,53 @@ jobs:
       - name: Test
         run: go test ./...
 
+      - name: Verify module availability via proxy and sumdb
+        run: |
+          set -euo pipefail
+
+          MODULE="$(awk '/^module / {print $2; exit}' go.mod)"
+          TAG="${GITHUB_REF_NAME}"
+          TMP_DIR="$(mktemp -d)"
+          ATTEMPTS=40
+          SLEEP_SECONDS=15
+
+          cleanup() {
+            chmod -R u+w "$TMP_DIR" 2>/dev/null || true
+            rm -rf "$TMP_DIR"
+          }
+          trap cleanup EXIT
+
+          cat > "$TMP_DIR/go.mod" <<'EOF'
+          module flourish-release-probe
+
+          go 1.25.7
+          EOF
+
+          for ((i=1; i<=ATTEMPTS; i++)); do
+            echo "[$i/$ATTEMPTS] checking $MODULE@$TAG via proxy+sumdb"
+            if (
+              cd "$TMP_DIR"
+              GOMODCACHE="$TMP_DIR/modcache" \
+              GOCACHE="$TMP_DIR/gocache" \
+              GOPROXY="https://proxy.golang.org,direct" \
+              GOPRIVATE="" \
+              GONOPROXY="" \
+              GONOSUMDB="" \
+              GOSUMDB="sum.golang.org" \
+              go mod download "$MODULE@$TAG"
+            ); then
+              echo "module is available via proxy+sumdb"
+              exit 0
+            fi
+
+            if (( i == ATTEMPTS )); then
+              echo "module is not available via proxy+sumdb: $MODULE@$TAG" >&2
+              exit 1
+            fi
+
+            sleep "$SLEEP_SECONDS"
+          done
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:

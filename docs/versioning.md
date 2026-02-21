@@ -29,6 +29,7 @@ Available helpers:
   - semver tag format
   - `VERSION`/tag consistency
   - full `go test ./...` pass before release
+  - module resolution through `proxy.golang.org` and `sum.golang.org` for the exact tag before creating a GitHub release
 
 ## Local Commands
 
