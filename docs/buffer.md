@@ -35,8 +35,7 @@ Helpers:
 
 Types:
 - `OffsetClampMode`: `OffsetError`, `OffsetClamp`
-- `NewlineMode`: `NewlineAsSingleRune`
-- `ConvertPolicy`: `{ ClampMode, NewlineMode }`
+- `ConvertPolicy`: `{ ClampMode }`
 - `GapBias`: `GapBiasLeft`, `GapBiasRight`
 - `Gap`: `{ RuneOffset, Bias }`
 
