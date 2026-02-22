@@ -1,7 +1,13 @@
 package buffer
 
+import (
+	"strings"
+
+	"github.com/iw2rmb/flourish/internal/grapheme"
+)
+
 type bufferSnapshot struct {
-	text   string
+	lines  [][]string
 	cursor Pos
 	sel    selectionState
 }
@@ -12,15 +18,23 @@ type historyState struct {
 }
 
 func (b *Buffer) snapshot() bufferSnapshot {
+	lines := make([][]string, len(b.lines))
+	for i, line := range b.lines {
+		lines[i] = append([]string(nil), line...)
+	}
 	return bufferSnapshot{
-		text:   b.Text(),
+		lines:  lines,
 		cursor: b.cursor,
 		sel:    b.sel,
 	}
 }
 
 func (b *Buffer) restore(s bufferSnapshot) {
-	b.lines = splitLines(s.text)
+	lines := make([][]string, len(s.lines))
+	for i, line := range s.lines {
+		lines[i] = append([]string(nil), line...)
+	}
+	b.lines = lines
 	b.cursor = ClampPos(s.cursor, len(b.lines), b.lineLen)
 
 	if !s.sel.active {
@@ -35,6 +49,20 @@ func (b *Buffer) restore(s bufferSnapshot) {
 		return
 	}
 	b.sel = selectionState{active: true, anchor: anchor, end: end}
+}
+
+func snapshotText(s bufferSnapshot) string {
+	if len(s.lines) == 0 {
+		return ""
+	}
+	var sb strings.Builder
+	for i, line := range s.lines {
+		if i > 0 {
+			sb.WriteByte('\n')
+		}
+		sb.WriteString(grapheme.Join(line))
+	}
+	return sb.String()
 }
 
 func (b *Buffer) recordUndo(prev bufferSnapshot) {
@@ -69,7 +97,7 @@ func (b *Buffer) Undo() bool {
 
 	b.restore(prev)
 	b.version++
-	if applied, ok := replacementAppliedEdit(cur.text, prev.text); ok {
+	if applied, ok := replacementAppliedEdit(snapshotText(cur), snapshotText(prev)); ok {
 		change.addAppliedEdit(applied)
 	}
 	b.commitChange(change)
@@ -98,7 +126,7 @@ func (b *Buffer) Redo() bool {
 
 	b.restore(next)
 	b.version++
-	if applied, ok := replacementAppliedEdit(cur.text, next.text); ok {
+	if applied, ok := replacementAppliedEdit(snapshotText(cur), snapshotText(next)); ok {
 		change.addAppliedEdit(applied)
 	}
 	b.commitChange(change)
