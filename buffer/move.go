@@ -122,13 +122,13 @@ func (b *Buffer) moveGrapheme(p Pos, dir MoveDir) Pos {
 			return p
 		}
 		nr := row - 1
-		return Pos{Row: nr, GraphemeCol: minInt(col, len(b.lines[nr]))}
+		return Pos{Row: nr, GraphemeCol: min(col, len(b.lines[nr]))}
 	case DirDown:
 		if row == lastRow {
 			return p
 		}
 		nr := row + 1
-		return Pos{Row: nr, GraphemeCol: minInt(col, len(b.lines[nr]))}
+		return Pos{Row: nr, GraphemeCol: min(col, len(b.lines[nr]))}
 	case DirHome:
 		return Pos{Row: row, GraphemeCol: 0}
 	case DirEnd:
@@ -170,13 +170,13 @@ func (b *Buffer) moveLine(p Pos, dir MoveDir) Pos {
 			return p
 		}
 		nr := row - 1
-		return Pos{Row: nr, GraphemeCol: minInt(col, len(b.lines[nr]))}
+		return Pos{Row: nr, GraphemeCol: min(col, len(b.lines[nr]))}
 	case DirDown:
 		if row == lastRow {
 			return p
 		}
 		nr := row + 1
-		return Pos{Row: nr, GraphemeCol: minInt(col, len(b.lines[nr]))}
+		return Pos{Row: nr, GraphemeCol: min(col, len(b.lines[nr]))}
 	default:
 		return p
 	}
@@ -233,9 +233,3 @@ func nextWordBoundary(line []string, col int) int {
 	return i
 }
 
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

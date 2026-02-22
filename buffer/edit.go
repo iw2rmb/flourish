@@ -171,10 +171,6 @@ func (b *Buffer) replaceRange(r Range, text string) (nextCursor Pos, applied App
 		return b.cursor, AppliedEdit{}, false
 	}
 
-	if r.Start.Row == r.End.Row && r.Start.GraphemeCol == r.End.GraphemeCol && text == "" {
-		return b.cursor, AppliedEdit{}, false
-	}
-
 	startRow, startCol := r.Start.Row, r.Start.GraphemeCol
 	endRow, endCol := r.End.Row, r.End.GraphemeCol
 	deletedText := textForLinesRange(b.lines, r)

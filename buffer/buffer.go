@@ -120,7 +120,7 @@ func (b *Buffer) SetSelection(r Range) {
 	prevRange, prevOK := b.Selection()
 	nextRange, nextOK := Range{}, false
 	if next.active {
-		nextRange, nextOK = NormalizeRange(Range{Start: next.anchor, End: next.end}), true
+		nextRange, nextOK = norm, true
 		if nextRange.IsEmpty() {
 			nextRange, nextOK = Range{}, false
 		}
@@ -163,15 +163,9 @@ func (b *Buffer) clampPos(p Pos) Pos {
 
 func splitLines(text string) [][]string {
 	parts := strings.Split(text, "\n")
-	if len(parts) == 0 {
-		parts = []string{""}
-	}
 	lines := make([][]string, 0, len(parts))
 	for _, s := range parts {
 		lines = append(lines, grapheme.Split(s))
-	}
-	if len(lines) == 0 {
-		lines = append(lines, nil)
 	}
 	return lines
 }
