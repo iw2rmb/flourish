@@ -109,6 +109,9 @@ func (m Model) SetSize(width, height int) Model {
 	if height < 0 {
 		height = 0
 	}
+	if m.viewport.Width == width && m.viewport.Height == height {
+		return m
+	}
 	m.viewport.Width = width
 	m.viewport.Height = height
 
