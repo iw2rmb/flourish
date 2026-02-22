@@ -6,7 +6,6 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/iw2rmb/flourish/buffer"
-	graphemeutil "github.com/iw2rmb/flourish/internal/grapheme"
 )
 
 // LinkSpan is a hyperlink span over one raw document line.
@@ -171,31 +170,27 @@ func renderHyperlink(target, text string) string {
 	return "\x1b]8;;" + target + st + text + "\x1b]8;;" + st
 }
 
-func (m *Model) linksForLine(row int, rawLine string, vt VirtualText, cursor buffer.Pos) []resolvedLinkSpan {
+func (m *Model) linksForLine(row int, rawLine string, vi visibleLineInfo, cursor buffer.Pos) []resolvedLinkSpan {
 	if m.cfg.LinkProvider == nil || m.buf == nil {
 		return nil
 	}
-
-	visible, rawToVisible := visibleTextAfterDeletions(rawLine, vt)
-	rawLen := graphemeutil.Count(rawLine)
-	visLen := graphemeutil.Count(visible)
 
 	hasCursor := cursor.Row == row
 	cursorCol := -1
 	rawCursorCol := -1
 	if hasCursor {
-		rawCursorCol = clampInt(cursor.GraphemeCol, 0, rawLen)
-		if rawCursorCol >= 0 && rawCursorCol < len(rawToVisible) {
-			cursorCol = clampInt(rawToVisible[rawCursorCol], 0, visLen)
+		rawCursorCol = clampInt(cursor.GraphemeCol, 0, vi.rawLen)
+		if rawCursorCol >= 0 && rawCursorCol < len(vi.rawToVisible) {
+			cursorCol = clampInt(vi.rawToVisible[rawCursorCol], 0, vi.visLen)
 		} else {
-			cursorCol = visLen
+			cursorCol = vi.visLen
 		}
 	}
 
 	spans, err := m.cfg.LinkProvider(LinkContext{
 		Row:                  row,
 		RawText:              rawLine,
-		Text:                 visible,
+		Text:                 vi.visible,
 		CursorGraphemeCol:    cursorCol,
 		RawCursorGraphemeCol: rawCursorCol,
 		HasCursor:            hasCursor,
@@ -206,7 +201,7 @@ func (m *Model) linksForLine(row int, rawLine string, vt VirtualText, cursor buf
 		return nil
 	}
 
-	return normalizeLinkSpans(spans, rawLen, visLen, rawToVisible, m.cfg.Style.Link)
+	return normalizeLinkSpans(spans, vi.rawLen, vi.visLen, vi.rawToVisible, m.cfg.Style.Link)
 }
 
 func (m *Model) linkAtDocPos(pos buffer.Pos) (LinkHit, bool) {
@@ -221,11 +216,14 @@ func (m *Model) linkAtDocPos(pos buffer.Pos) (LinkHit, bool) {
 		return LinkHit{}, false
 	}
 
-	line := layout.lines[pos.Row]
+	line := &m.layout.lines[pos.Row]
 	if !line.linksResolved {
-		line.links = m.linksForLine(pos.Row, line.rawLine, line.vt, m.buf.Cursor())
+		if !line.visibleInfoComputed {
+			line.visibleInfo = computeVisibleLineInfo(line.rawLine, line.vt)
+			line.visibleInfoComputed = true
+		}
+		line.links = m.linksForLine(pos.Row, line.rawLine, line.visibleInfo, m.buf.Cursor())
 		line.linksResolved = true
-		m.layout.lines[pos.Row] = line
 	}
 	col := clampInt(pos.GraphemeCol, 0, line.visual.RawGraphemeLen)
 	for _, link := range line.links {

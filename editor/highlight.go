@@ -34,6 +34,26 @@ type Highlighter interface {
 	HighlightLine(ctx LineContext) ([]HighlightSpan, error)
 }
 
+// visibleLineInfo holds the precomputed visible text and raw→visible column
+// mapping for a single logical line. It is computed once and shared by both
+// highlightForLine and linksForLine to avoid redundant grapheme splitting.
+type visibleLineInfo struct {
+	visible      string
+	rawToVisible []int
+	rawLen       int
+	visLen       int
+}
+
+func computeVisibleLineInfo(rawLine string, vt VirtualText) visibleLineInfo {
+	visible, rawToVisible := visibleTextAfterDeletions(rawLine, vt)
+	return visibleLineInfo{
+		visible:      visible,
+		rawToVisible: rawToVisible,
+		rawLen:       graphemeutil.Count(rawLine),
+		visLen:       graphemeutil.Count(visible),
+	}
+}
+
 func visibleTextAfterDeletions(rawLine string, vt VirtualText) (visible string, rawToVisible []int) {
 	rawGraphemes := graphemeutil.Split(rawLine)
 	rawLen := len(rawGraphemes)

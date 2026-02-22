@@ -69,8 +69,12 @@ func (m *Model) renderRows(
 			}
 		}
 		if m.cfg.Highlighter != nil && row >= 0 && row < len(layout.lines) && highlightVisible[row] && !highlightsComputed[row] {
-			line := layout.lines[row]
-			highlightsByLine[row] = m.highlightForLine(row, line.rawLine, line.vt, cursor)
+			line := &layout.lines[row]
+			if !line.visibleInfoComputed {
+				line.visibleInfo = computeVisibleLineInfo(line.rawLine, line.vt)
+				line.visibleInfoComputed = true
+			}
+			highlightsByLine[row] = m.highlightForLine(row, line.rawLine, line.visibleInfo, cursor)
 			highlightsComputed[row] = true
 		}
 		highlights := []HighlightSpan(nil)
@@ -114,11 +118,14 @@ func (m *Model) renderLayoutRow(
 	if row < 0 || row >= len(layout.lines) {
 		return "", false
 	}
-	line := layout.lines[row]
+	line := &layout.lines[row]
 	if !line.linksResolved {
-		line.links = m.linksForLine(row, line.rawLine, line.vt, cursor)
+		if !line.visibleInfoComputed {
+			line.visibleInfo = computeVisibleLineInfo(line.rawLine, line.vt)
+			line.visibleInfoComputed = true
+		}
+		line.links = m.linksForLine(row, line.rawLine, line.visibleInfo, cursor)
 		line.linksResolved = true
-		layout.lines[row] = line
 	}
 	if ref.segmentIndex < 0 || ref.segmentIndex >= len(line.segments) {
 		return "", false
@@ -196,31 +203,27 @@ func (m *Model) rebuildGutterRows(rows []int) bool {
 	return true
 }
 
-func (m *Model) highlightForLine(row int, rawLine string, vt VirtualText, cursor buffer.Pos) []HighlightSpan {
+func (m *Model) highlightForLine(row int, rawLine string, vi visibleLineInfo, cursor buffer.Pos) []HighlightSpan {
 	if m.cfg.Highlighter == nil {
 		return nil
 	}
-
-	visible, rawToVisible := visibleTextAfterDeletions(rawLine, vt)
-	visLen := graphemeutil.Count(visible)
 
 	hasCursor := cursor.Row == row
 	cursorCol := -1
 	rawCursorCol := -1
 	if hasCursor {
-		rawLen := graphemeutil.Count(rawLine)
-		rawCursorCol = clampInt(cursor.GraphemeCol, 0, rawLen)
-		if rawCursorCol >= 0 && rawCursorCol < len(rawToVisible) {
-			cursorCol = clampInt(rawToVisible[rawCursorCol], 0, visLen)
+		rawCursorCol = clampInt(cursor.GraphemeCol, 0, vi.rawLen)
+		if rawCursorCol >= 0 && rawCursorCol < len(vi.rawToVisible) {
+			cursorCol = clampInt(vi.rawToVisible[rawCursorCol], 0, vi.visLen)
 		} else {
-			cursorCol = visLen
+			cursorCol = vi.visLen
 		}
 	}
 
 	spans, err := m.cfg.Highlighter.HighlightLine(LineContext{
 		Row:                  row,
 		RawText:              rawLine,
-		Text:                 visible,
+		Text:                 vi.visible,
 		CursorGraphemeCol:    cursorCol,
 		RawCursorGraphemeCol: rawCursorCol,
 		HasCursor:            hasCursor,
@@ -228,7 +231,7 @@ func (m *Model) highlightForLine(row int, rawLine string, vt VirtualText, cursor
 	if err != nil {
 		return nil
 	}
-	return normalizeHighlightSpans(spans, visLen)
+	return normalizeHighlightSpans(spans, vi.visLen)
 }
 
 func renderVisualLine(
@@ -312,16 +315,22 @@ func renderVisualLine(
 		right = left
 	}
 
-	isAllSpaces := func(s string) bool {
-		if s == "" {
-			return false
-		}
-		for _, g := range graphemeutil.Split(s) {
+	// Pre-compute per-token: whether text is all spaces, and grapheme count.
+	type tokenMeta struct {
+		allSpaces   bool
+		graphemeLen int
+	}
+	tokMeta := make([]tokenMeta, len(vl.Tokens))
+	for i, tok := range vl.Tokens {
+		clusters := graphemeutil.Split(tok.Text)
+		allSp := len(clusters) > 0
+		for _, g := range clusters {
 			if !graphemeutil.IsSpace(g) {
-				return false
+				allSp = false
+				break
 			}
 		}
-		return true
+		tokMeta[i] = tokenMeta{allSpaces: allSp, graphemeLen: len(clusters)}
 	}
 
 	renderSpan := func(styleFn func(...string) string, text string, tokWidth, spanStart, spanWidth int, splittable bool) string {
@@ -332,10 +341,10 @@ func renderVisualLine(
 			return styleFn(text)
 		}
 		if splittable {
-			return styleFn(strings.Repeat(" ", spanWidth))
+			return styleFn(spaceString(spanWidth))
 		}
 		// Partial wide grapheme: preserve alignment with blanks.
-		return st.Text.Render(strings.Repeat(" ", spanWidth))
+		return st.Text.Render(spaceString(spanWidth))
 	}
 
 	isTrailingWhitespaceFrom := func(tokIdx int) bool {
@@ -348,7 +357,7 @@ func renderVisualLine(
 			if spanL >= spanR {
 				continue
 			}
-			if !isAllSpaces(tok.Text) {
+			if !tokMeta[j].allSpaces {
 				return false
 			}
 		}
@@ -356,6 +365,7 @@ func renderVisualLine(
 	}
 
 	var sb strings.Builder
+	linkIdx := 0 // advancing pointer into sorted links slice
 	for i, tok := range vl.Tokens {
 		if renderEOLCursor && eolCursorCell == tok.StartCell {
 			// Cursor placeholder sits immediately before insertions anchored at EOL.
@@ -375,7 +385,7 @@ func renderVisualLine(
 		}
 		spanStart := spanL - segL
 		spanWidth := spanR - spanL
-		splittable := isAllSpaces(tok.Text) && tok.CellWidth == graphemeutil.Count(tok.Text)
+		splittable := tokMeta[i].allSpaces && tok.CellWidth == tokMeta[i].graphemeLen
 
 		write := func(s string) { sb.WriteString(s) }
 
@@ -400,15 +410,18 @@ func renderVisualLine(
 			}
 			write(renderSpan(style.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 		case VisualTokenDoc:
+			// Advance past links that end before this token starts.
+			for linkIdx < len(links) && links[linkIdx].EndVisibleGraphemeCol <= tok.VisibleStartGraphemeCol {
+				linkIdx++
+			}
 			linkTarget := ""
 			linkStyle := lipgloss.Style{}
-			for _, link := range links {
-				if tok.VisibleStartGraphemeCol >= link.EndVisibleGraphemeCol || tok.VisibleEndGraphemeCol <= link.StartVisibleGraphemeCol {
-					continue
+			if linkIdx < len(links) {
+				link := links[linkIdx]
+				if tok.VisibleEndGraphemeCol > link.StartVisibleGraphemeCol {
+					linkTarget = link.Target
+					linkStyle = link.Style
 				}
-				linkTarget = link.Target
-				linkStyle = link.Style
-				break
 			}
 
 			writeDoc := func(rendered string) {
@@ -421,7 +434,7 @@ func renderVisualLine(
 			selected := hasSel && tok.DocStartGraphemeCol < selEndCol && tok.DocEndGraphemeCol > selStartCol
 			if hasCursor && (i == cursorTokenIdx || i == eolBoundaryCursorTokenIdx) {
 				cursorStyle := st.Cursor.Render
-				if isAllSpaces(tok.Text) && isTrailingWhitespaceFrom(i) {
+				if tokMeta[i].allSpaces && isTrailingWhitespaceFrom(i) {
 					// Trailing ASCII spaces can be visually elided by terminals at line end.
 					// Render cursor whitespace as NBSP in that case so the cursor stays visible.
 					cursorStyle = func(parts ...string) string {

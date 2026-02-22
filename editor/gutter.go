@@ -92,7 +92,7 @@ func LineNumberSegment(ctx GutterCellContext) GutterSegment {
 
 	if ctx.SegmentIndex > 0 {
 		return GutterSegment{
-			Text:     strings.Repeat(" ", ctx.Width),
+			Text:     spaceString(ctx.Width),
 			StyleKey: "line_num",
 		}
 	}
@@ -194,7 +194,7 @@ func normalizeGutterSegments(in []GutterSegment, width int) []GutterSegment {
 			}
 			if used+w > width {
 				remaining := width - used
-				appendSegment(seg, strings.Repeat(" ", remaining))
+				appendSegment(seg, spaceString(remaining))
 				used = width
 				break
 			}
@@ -207,14 +207,13 @@ func normalizeGutterSegments(in []GutterSegment, width int) []GutterSegment {
 	}
 
 	if used < width {
-		out = append(out, GutterSegment{Text: strings.Repeat(" ", width-used)})
+		out = append(out, GutterSegment{Text: spaceString(width - used)})
 	}
 	if len(out) == 0 {
-		out = append(out, GutterSegment{Text: strings.Repeat(" ", width)})
+		out = append(out, GutterSegment{Text: spaceString(width)})
 	}
 	return out
 }
-
 
 func resolveGutterSegmentStyle(
 	base lipgloss.Style,

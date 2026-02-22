@@ -218,6 +218,7 @@ Virtual text rules:
 - cursor/selection-only editor updates rerender only dirty logical rows (old/new cursor rows plus old/new selection coverage).
 - text mutations attempt dirty-line incremental rebuild first, and fall back to full rebuild when wrap-row shape changes.
 - `VirtualTextProvider` is treated as row-local for cursor/selection movement: non-dirty rows are expected to remain unchanged.
+- per-line visible text/mapping derived from virtual deletions is computed once per layout line and reused by both `Highlighter` and `LinkProvider` in the same frame.
 
 Hyperlink rules:
 - `LinkProvider` receives both raw line text and visible text (after virtual deletions).

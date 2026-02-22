@@ -1,8 +1,6 @@
 package editor
 
 import (
-	"strings"
-
 	graphemeutil "github.com/iw2rmb/flourish/internal/grapheme"
 )
 
@@ -164,7 +162,7 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 		text := dg.text
 		if text == "\t" {
 			adv := tabAdvance(visualCol, tabWidth)
-			appendToken(VisualTokenDoc, strings.Repeat(" ", adv), adv, dg.visStart, dg.visEnd, dg.rawStart, dg.rawEnd, 0, "")
+			appendToken(VisualTokenDoc, spaceString(adv), adv, dg.visStart, dg.visEnd, dg.rawStart, dg.rawEnd, 0, "")
 			continue
 		}
 		width := graphemeCellWidth(text, visualCol, tabWidth)

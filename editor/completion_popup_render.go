@@ -11,7 +11,7 @@ type completionPopupRender struct {
 }
 
 func (m Model) completionPopupRender(base string) (completionPopupRender, bool) {
-	state := cloneCompletionState(m.completionState)
+	state := m.completionState // read-only; no clone needed for rendering
 	if !state.Visible || m.buf == nil {
 		return completionPopupRender{}, false
 	}
@@ -149,7 +149,7 @@ func (m Model) renderCompletionPopupRowFromSegments(item CompletionItem, precomp
 	}
 
 	if used < width {
-		sb.WriteString(base.Render(strings.Repeat(" ", width-used)))
+		sb.WriteString(base.Render(spaceString(width - used)))
 	}
 
 	return sb.String()

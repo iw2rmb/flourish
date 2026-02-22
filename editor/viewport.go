@@ -32,7 +32,9 @@ type wrapLayoutLine struct {
 	segments       []wrappedSegment
 	firstVisualRow int
 
-	linksResolved bool
+	linksResolved       bool
+	visibleInfo         visibleLineInfo
+	visibleInfoComputed bool
 }
 
 type wrapLayoutCache struct {
@@ -114,7 +116,11 @@ func (m *Model) ensureLayoutCache(lines []string) wrapLayoutCache {
 
 func (m *Model) buildLayoutLine(row int, rawLine string, contentWidth int) wrapLayoutLine {
 	line := m.buildLayoutLineNoLinks(row, rawLine, contentWidth)
-	line.links = m.linksForLine(row, rawLine, line.vt, m.buf.Cursor())
+	if !line.visibleInfoComputed {
+		line.visibleInfo = computeVisibleLineInfo(line.rawLine, line.vt)
+		line.visibleInfoComputed = true
+	}
+	line.links = m.linksForLine(row, rawLine, line.visibleInfo, m.buf.Cursor())
 	line.linksResolved = true
 	return line
 }
@@ -166,10 +172,13 @@ func (m *Model) resolveLinksForVisibleRows(cache *wrapLayoutCache) {
 			continue
 		}
 		seen[row] = true
-		line := cache.lines[row]
-		line.links = m.linksForLine(row, line.rawLine, line.vt, cursor)
+		line := &cache.lines[row]
+		if !line.visibleInfoComputed {
+			line.visibleInfo = computeVisibleLineInfo(line.rawLine, line.vt)
+			line.visibleInfoComputed = true
+		}
+		line.links = m.linksForLine(row, line.rawLine, line.visibleInfo, cursor)
 		line.linksResolved = true
-		cache.lines[row] = line
 	}
 }
 

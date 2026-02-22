@@ -144,3 +144,28 @@ func clampInt(v, lo, hi int) int {
 	}
 	return max(lo, min(v, hi))
 }
+
+// spaceString returns a string of n spaces. For small n (≤8) it uses a
+// pre-computed table to avoid allocation; larger values fall back to
+// strings.Repeat.
+func spaceString(n int) string {
+	if n <= 0 {
+		return ""
+	}
+	if n < len(spaces) {
+		return spaces[n]
+	}
+	return strings.Repeat(" ", n)
+}
+
+var spaces = [9]string{
+	"",
+	" ",
+	"  ",
+	"   ",
+	"    ",
+	"     ",
+	"      ",
+	"       ",
+	"        ",
+}
