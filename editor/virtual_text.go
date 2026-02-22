@@ -57,7 +57,7 @@ type VirtualTextContext struct {
 type VirtualTextProvider func(ctx VirtualTextContext) VirtualText
 
 func normalizeVirtualText(vt VirtualText, rawLineLen int) VirtualText {
-	rawLineLen = maxInt(rawLineLen, 0)
+	rawLineLen = max(rawLineLen, 0)
 
 	// Deletions: clamp, drop empty, sort, merge.
 	if len(vt.Deletions) > 0 {
@@ -87,7 +87,7 @@ func normalizeVirtualText(vt VirtualText, rawLineLen int) VirtualText {
 			}
 			last := &merged[len(merged)-1]
 			if d.StartGraphemeCol <= last.EndGraphemeCol {
-				last.EndGraphemeCol = maxInt(last.EndGraphemeCol, d.EndGraphemeCol)
+				last.EndGraphemeCol = max(last.EndGraphemeCol, d.EndGraphemeCol)
 				continue
 			}
 			merged = append(merged, d)
@@ -138,29 +138,9 @@ func sanitizeSingleLine(s string) string {
 	return s
 }
 
-func clampInt(v, min, max int) int {
-	if max < min {
-		return min
+func clampInt(v, lo, hi int) int {
+	if hi < lo {
+		return lo
 	}
-	if v < min {
-		return min
-	}
-	if v > max {
-		return max
-	}
-	return v
-}
-
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
+	return max(lo, min(v, hi))
 }

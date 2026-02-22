@@ -3,8 +3,6 @@ package editor
 import "github.com/charmbracelet/lipgloss"
 
 // Config configures the editor Model.
-//
-// Phase 6 adds key handling, selection rendering, and scroll-follow behavior.
 type Config struct {
 	// Initial text for the internal buffer.
 	Text string

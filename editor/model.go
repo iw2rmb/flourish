@@ -12,8 +12,6 @@ import (
 )
 
 // Model is a Bubble Tea component that renders and interacts with a buffer.
-//
-// Phase 5 includes sizing, focus, viewport, optional gutter, and cursor rendering.
 type Model struct {
 	cfg Config
 	buf *buffer.Buffer
@@ -591,9 +589,5 @@ func selectionColsForRow(sel buffer.Range, selOK bool, row int, lineLen int) (st
 }
 
 func rawLinesFromBufferText(text string) []string {
-	lines := strings.Split(text, "\n")
-	if len(lines) == 0 {
-		return []string{""}
-	}
-	return lines
+	return strings.Split(text, "\n")
 }

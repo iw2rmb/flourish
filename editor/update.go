@@ -121,74 +121,53 @@ func (m *Model) buildIntentsFromKey(msg tea.KeyMsg, before EditorState) (IntentB
 		}
 	}
 
+	appendMove := func(move buffer.Move) {
+		kind := IntentMove
+		var payload any = MoveIntentPayload{Move: move}
+		if move.Extend {
+			kind = IntentSelect
+			payload = SelectIntentPayload{Move: move}
+		}
+		appendIntent(kind, payload)
+		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+	}
+
 	switch {
 	case key.Matches(msg, km.Left):
-		move := buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirLeft}
-		appendIntent(IntentMove, MoveIntentPayload{Move: move})
-		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+		appendMove(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirLeft})
 	case key.Matches(msg, km.Right):
-		move := buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirRight}
-		appendIntent(IntentMove, MoveIntentPayload{Move: move})
-		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+		appendMove(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirRight})
 	case key.Matches(msg, km.Up):
-		move := buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirUp}
-		appendIntent(IntentMove, MoveIntentPayload{Move: move})
-		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+		appendMove(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirUp})
 	case key.Matches(msg, km.Down):
-		move := buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirDown}
-		appendIntent(IntentMove, MoveIntentPayload{Move: move})
-		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+		appendMove(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirDown})
 	case key.Matches(msg, km.PageUp):
-		move := buffer.Move{Unit: buffer.MoveLine, Dir: buffer.DirUp, Count: m.pageMoveCount()}
-		appendIntent(IntentMove, MoveIntentPayload{Move: move})
-		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+		appendMove(buffer.Move{Unit: buffer.MoveLine, Dir: buffer.DirUp, Count: m.pageMoveCount()})
 	case key.Matches(msg, km.PageDown):
-		move := buffer.Move{Unit: buffer.MoveLine, Dir: buffer.DirDown, Count: m.pageMoveCount()}
-		appendIntent(IntentMove, MoveIntentPayload{Move: move})
-		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+		appendMove(buffer.Move{Unit: buffer.MoveLine, Dir: buffer.DirDown, Count: m.pageMoveCount()})
 
 	case key.Matches(msg, km.ShiftLeft):
-		move := buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirLeft, Extend: true}
-		appendIntent(IntentSelect, SelectIntentPayload{Move: move})
-		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+		appendMove(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirLeft, Extend: true})
 	case key.Matches(msg, km.ShiftRight):
-		move := buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirRight, Extend: true}
-		appendIntent(IntentSelect, SelectIntentPayload{Move: move})
-		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+		appendMove(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirRight, Extend: true})
 	case key.Matches(msg, km.ShiftUp):
-		move := buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirUp, Extend: true}
-		appendIntent(IntentSelect, SelectIntentPayload{Move: move})
-		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+		appendMove(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirUp, Extend: true})
 	case key.Matches(msg, km.ShiftDown):
-		move := buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirDown, Extend: true}
-		appendIntent(IntentSelect, SelectIntentPayload{Move: move})
-		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+		appendMove(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirDown, Extend: true})
 
 	case key.Matches(msg, km.WordLeft):
-		move := buffer.Move{Unit: buffer.MoveWord, Dir: buffer.DirLeft}
-		appendIntent(IntentMove, MoveIntentPayload{Move: move})
-		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+		appendMove(buffer.Move{Unit: buffer.MoveWord, Dir: buffer.DirLeft})
 	case key.Matches(msg, km.WordRight):
-		move := buffer.Move{Unit: buffer.MoveWord, Dir: buffer.DirRight}
-		appendIntent(IntentMove, MoveIntentPayload{Move: move})
-		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+		appendMove(buffer.Move{Unit: buffer.MoveWord, Dir: buffer.DirRight})
 	case key.Matches(msg, km.WordShiftLeft):
-		move := buffer.Move{Unit: buffer.MoveWord, Dir: buffer.DirLeft, Extend: true}
-		appendIntent(IntentSelect, SelectIntentPayload{Move: move})
-		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+		appendMove(buffer.Move{Unit: buffer.MoveWord, Dir: buffer.DirLeft, Extend: true})
 	case key.Matches(msg, km.WordShiftRight):
-		move := buffer.Move{Unit: buffer.MoveWord, Dir: buffer.DirRight, Extend: true}
-		appendIntent(IntentSelect, SelectIntentPayload{Move: move})
-		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+		appendMove(buffer.Move{Unit: buffer.MoveWord, Dir: buffer.DirRight, Extend: true})
 
 	case key.Matches(msg, km.Home):
-		move := buffer.Move{Unit: buffer.MoveLine, Dir: buffer.DirHome}
-		appendIntent(IntentMove, MoveIntentPayload{Move: move})
-		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+		appendMove(buffer.Move{Unit: buffer.MoveLine, Dir: buffer.DirHome})
 	case key.Matches(msg, km.End):
-		move := buffer.Move{Unit: buffer.MoveLine, Dir: buffer.DirEnd}
-		appendIntent(IntentMove, MoveIntentPayload{Move: move})
-		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+		appendMove(buffer.Move{Unit: buffer.MoveLine, Dir: buffer.DirEnd})
 
 	case key.Matches(msg, km.Backspace):
 		if !m.cfg.ReadOnly {

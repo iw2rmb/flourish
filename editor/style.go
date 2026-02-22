@@ -3,8 +3,6 @@ package editor
 import "github.com/charmbracelet/lipgloss"
 
 // Style controls the editor's rendering.
-//
-// This is a minimal subset used in Phase 5.
 type Style struct {
 	Gutter lipgloss.Style
 

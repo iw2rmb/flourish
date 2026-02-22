@@ -36,10 +36,10 @@ func (m Model) completionPopupRender(base string) (completionPopupRender, bool) 
 	if maxRows <= 0 {
 		return completionPopupRender{}, false
 	}
-	targetRows := minInt(maxRows, len(visible))
+	targetRows := min(maxRows, len(visible))
 
-	belowAvail := maxInt(viewportHeight-(anchorY+1), 0)
-	aboveAvail := maxInt(anchorY, 0)
+	belowAvail := max(viewportHeight-(anchorY+1), 0)
+	aboveAvail := max(anchorY, 0)
 	showBelow := true
 	rowCount := targetRows
 	if rowCount > belowAvail {
@@ -61,7 +61,7 @@ func (m Model) completionPopupRender(base string) (completionPopupRender, bool) 
 		itemIndices = itemIndices[:rowCount]
 	}
 
-	widthCap := minInt(normalizeCompletionMaxWidth(m.cfg.CompletionMaxWidth), viewportWidth)
+	widthCap := min(normalizeCompletionMaxWidth(m.cfg.CompletionMaxWidth), viewportWidth)
 	if widthCap <= 0 {
 		return completionPopupRender{}, false
 	}
@@ -149,9 +149,9 @@ func (m Model) renderCompletionPopupRow(item CompletionItem, selected bool, widt
 }
 
 func completionItemSegments(item CompletionItem) []CompletionSegment {
-	prefix := cloneCompletionSegments(item.Prefix)
-	label := cloneCompletionSegments(item.Label)
-	detail := cloneCompletionSegments(item.Detail)
+	prefix := item.Prefix
+	label := item.Label
+	detail := item.Detail
 
 	out := make([]CompletionSegment, 0, len(prefix)+len(label)+len(detail)+2)
 	appendGroup := func(group []CompletionSegment) {

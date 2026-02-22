@@ -73,7 +73,7 @@ func (m *Model) ghostFor(row, col int, lineText string, rawLen int) (Ghost, bool
 		return Ghost{}, false
 	}
 
-	col = clampInt(col, 0, maxInt(rawLen, 0))
+	col = clampInt(col, 0, max(rawLen, 0))
 
 	key := ghostCacheKey{
 		docID:      m.cfg.DocID,

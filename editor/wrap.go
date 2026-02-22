@@ -44,12 +44,12 @@ func wrapSegmentsForVisualLine(vl VisualLine, mode WrapMode, width int) []wrappe
 		}}
 	}
 
-	segments := make([]wrappedSegment, 0, 1+visualLen/maxInt(width, 1))
+	segments := make([]wrappedSegment, 0, 1+visualLen/max(width, 1))
 	for start := 0; start < len(units); {
 		used := 0
 		overflow := start
 		for overflow < len(units) {
-			w := maxInt(units[overflow].width, 1)
+			w := max(units[overflow].width, 1)
 			if used > 0 && used+w > width {
 				break
 			}
@@ -58,7 +58,7 @@ func wrapSegmentsForVisualLine(vl VisualLine, mode WrapMode, width int) []wrappe
 		}
 
 		if overflow <= start {
-			overflow = minInt(start+1, len(units))
+			overflow = min(start+1, len(units))
 		}
 
 		end := overflow
@@ -68,7 +68,7 @@ func wrapSegmentsForVisualLine(vl VisualLine, mode WrapMode, width int) []wrappe
 			}
 		}
 		if end <= start {
-			end = minInt(start+1, len(units))
+			end = min(start+1, len(units))
 		}
 
 		seg := segmentFromUnitRange(vl, units, start, end)
@@ -171,4 +171,36 @@ func segmentFromUnitRange(vl VisualLine, units []wrapUnit, start, end int) wrapp
 		startCell:        startCell,
 		endCell:          endCell,
 	}
+}
+
+func findWordWrapBreak(units []wrapUnit, start, overflow int) (int, bool) {
+	if start < 0 {
+		start = 0
+	}
+	if overflow > len(units) {
+		overflow = len(units)
+	}
+	if start >= overflow {
+		return 0, false
+	}
+
+	lastBreak := -1
+	i := start
+	for i < overflow {
+		if !units[i].isWhitespace {
+			i++
+			continue
+		}
+		j := i + 1
+		for j < overflow && units[j].isWhitespace {
+			j++
+		}
+		lastBreak = j
+		i = j
+	}
+
+	if lastBreak <= start {
+		return 0, false
+	}
+	return lastBreak, true
 }

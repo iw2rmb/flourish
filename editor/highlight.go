@@ -83,7 +83,7 @@ func normalizeHighlightSpans(spans []HighlightSpan, lineLen int) []HighlightSpan
 	if len(spans) == 0 {
 		return nil
 	}
-	lineLen = maxInt(lineLen, 0)
+	lineLen = max(lineLen, 0)
 
 	out := make([]HighlightSpan, 0, len(spans))
 	for _, sp := range spans {

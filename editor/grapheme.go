@@ -45,7 +45,7 @@ func iterateGraphemeSteps(text string, tabWidth int, startCell int) []graphemeSt
 	}
 
 	out := make([]graphemeStep, 0, len(bounds))
-	visualCol := maxInt(startCell, 0)
+	visualCol := max(startCell, 0)
 	for _, b := range bounds {
 		w := graphemeCellWidth(b.Text, visualCol, tabWidth)
 		if w < 0 {

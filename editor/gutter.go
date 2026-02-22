@@ -167,7 +167,7 @@ func normalizeGutterSegments(in []GutterSegment, width int) []GutterSegment {
 	}
 
 	used := 0
-	out := make([]GutterSegment, 0, width)
+	out := make([]GutterSegment, 0, len(in)+1)
 	appendSegment := func(seg GutterSegment, text string) {
 		if text == "" {
 			return

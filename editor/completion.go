@@ -240,3 +240,18 @@ func clampCompletionSelected(selected, visibleCount int) int {
 	}
 	return clampInt(selected, 0, visibleCount-1)
 }
+
+func (m Model) CompletionState() CompletionState {
+	return cloneCompletionState(m.completionState)
+}
+
+func (m Model) SetCompletionState(state CompletionState) Model {
+	m.completionState = cloneCompletionState(state)
+	m.recomputeCompletionFilter(&m.completionState)
+	return m
+}
+
+func (m Model) ClearCompletion() Model {
+	m.completionState = CompletionState{}
+	return m
+}

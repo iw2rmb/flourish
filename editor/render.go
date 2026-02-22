@@ -54,7 +54,7 @@ func (m *Model) renderRows(
 	out := make([]string, 0, len(layout.rows))
 	maxIntVal := int(^uint(0) >> 1)
 	contentWidth := m.contentWidth(lineCount)
-	leftNoWrap := maxInt(m.xOffset, 0)
+	leftNoWrap := max(m.xOffset, 0)
 	rightNoWrap := maxIntVal
 	if m.cfg.WrapMode == WrapNone && contentWidth > 0 {
 		rightNoWrap = leftNoWrap + contentWidth
@@ -293,8 +293,8 @@ func renderVisualLine(
 			}
 			segL := tok.StartCell
 			segR := tok.StartCell + tok.CellWidth
-			spanL := maxInt(segL, left)
-			spanR := minInt(segR, right)
+			spanL := max(segL, left)
+			spanR := min(segR, right)
 			if spanL < spanR {
 				eolBoundaryCursorTokenIdx = i
 				break
@@ -302,7 +302,7 @@ func renderVisualLine(
 		}
 	}
 
-	left = maxInt(left, 0)
+	left = max(left, 0)
 	if right < left {
 		right = left
 	}
@@ -338,8 +338,8 @@ func renderVisualLine(
 			tok := vl.Tokens[j]
 			segL := tok.StartCell
 			segR := tok.StartCell + tok.CellWidth
-			spanL := maxInt(segL, left)
-			spanR := minInt(segR, right)
+			spanL := max(segL, left)
+			spanR := min(segR, right)
 			if spanL >= spanR {
 				continue
 			}
@@ -354,8 +354,8 @@ func renderVisualLine(
 	for i, tok := range vl.Tokens {
 		if renderEOLCursor && eolCursorCell == tok.StartCell {
 			// Cursor placeholder sits immediately before insertions anchored at EOL.
-			spanL := maxInt(eolCursorCell, left)
-			spanR := minInt(eolCursorCell+1, right)
+			spanL := max(eolCursorCell, left)
+			spanR := min(eolCursorCell+1, right)
 			if spanL < spanR {
 				sb.WriteString(st.Cursor.Render(" "))
 			}
@@ -363,8 +363,8 @@ func renderVisualLine(
 
 		segL := tok.StartCell
 		segR := tok.StartCell + tok.CellWidth
-		spanL := maxInt(segL, left)
-		spanR := minInt(segR, right)
+		spanL := max(segL, left)
+		spanR := min(segR, right)
 		if spanL >= spanR {
 			continue
 		}
@@ -447,8 +447,8 @@ func renderVisualLine(
 		}
 	}
 	if renderEOLCursor && eolCursorCell == vl.VisualLen() {
-		spanL := maxInt(eolCursorCell, left)
-		spanR := minInt(eolCursorCell+1, right)
+		spanL := max(eolCursorCell, left)
+		spanR := min(eolCursorCell+1, right)
 		if spanL < spanR {
 			sb.WriteString(st.Cursor.Render(" "))
 		}

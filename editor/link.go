@@ -1,7 +1,6 @@
 package editor
 
 import (
-	"reflect"
 	"sort"
 	"strings"
 
@@ -18,7 +17,7 @@ type LinkSpan struct {
 	StartGraphemeCol int
 	EndGraphemeCol   int
 	Target           string
-	Style            lipgloss.Style
+	Style            *lipgloss.Style
 }
 
 // LinkContext is passed to LinkProvider for one logical line.
@@ -79,8 +78,8 @@ func normalizeLinkSpans(
 		return nil
 	}
 
-	rawLineLen = maxInt(rawLineLen, 0)
-	visibleLineLen = maxInt(visibleLineLen, 0)
+	rawLineLen = max(rawLineLen, 0)
+	visibleLineLen = max(visibleLineLen, 0)
 
 	out := make([]resolvedLinkSpan, 0, len(spans))
 	for _, sp := range spans {
@@ -112,7 +111,7 @@ func normalizeLinkSpans(
 		}
 
 		style := defaultStyle
-		if !reflect.DeepEqual(sp.Style, lipgloss.Style{}) {
+		if sp.Style != nil {
 			style = sp.Style.Inherit(defaultStyle)
 		}
 
