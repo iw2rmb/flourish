@@ -12,8 +12,9 @@ const (
 )
 
 type CompletionSegment struct {
-	Text     string
-	StyleKey string
+	Text      string
+	StyleKey  string
+	cellWidth int // cached terminal cell width; -1 means not computed
 }
 
 type CompletionItem struct {

@@ -5,7 +5,6 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/iw2rmb/flourish/buffer"
-	graphemeutil "github.com/iw2rmb/flourish/internal/grapheme"
 )
 
 func (m *Model) renderContent() string {
@@ -176,7 +175,8 @@ func (m *Model) renderLayoutRow(
 			}
 		}
 	}
-	sb.WriteString(renderVisualLine(
+	renderVisualLine(
+		&sb,
 		m.cfg.Style,
 		m.cfg.GhostStyleForKey,
 		m.cfg.VirtualOverlayStyleForKey,
@@ -190,7 +190,7 @@ func (m *Model) renderLayoutRow(
 		highlights,
 		left,
 		right,
-	))
+	)
 	return sb.String(), true
 }
 
@@ -254,6 +254,7 @@ func (m *Model) highlightForLine(row int, rawLine string, vi visibleLineInfo, cu
 }
 
 func renderVisualLine(
+	sb *strings.Builder,
 	st Style,
 	ghostStyleForKey func(string) (lipgloss.Style, bool),
 	overlayStyleForKey func(string) (lipgloss.Style, bool),
@@ -266,7 +267,7 @@ func renderVisualLine(
 	selOK bool,
 	highlights []HighlightSpan,
 	left, right int,
-) string {
+) {
 	rawLen := vl.RawGraphemeLen
 
 	cursorCol := cursor.GraphemeCol
@@ -334,24 +335,6 @@ func renderVisualLine(
 		right = left
 	}
 
-	// Pre-compute per-token: whether text is all spaces, and grapheme count.
-	type tokenMeta struct {
-		allSpaces   bool
-		graphemeLen int
-	}
-	tokMeta := make([]tokenMeta, len(vl.Tokens))
-	for i, tok := range vl.Tokens {
-		clusters := graphemeutil.Split(tok.Text)
-		allSp := len(clusters) > 0
-		for _, g := range clusters {
-			if !graphemeutil.IsSpace(g) {
-				allSp = false
-				break
-			}
-		}
-		tokMeta[i] = tokenMeta{allSpaces: allSp, graphemeLen: len(clusters)}
-	}
-
 	renderSpan := func(styleFn func(...string) string, text string, tokWidth, spanStart, spanWidth int, splittable bool) string {
 		if spanWidth <= 0 {
 			return ""
@@ -376,14 +359,13 @@ func renderVisualLine(
 			if spanL >= spanR {
 				continue
 			}
-			if !tokMeta[j].allSpaces {
+			if !tok.AllSpaces {
 				return false
 			}
 		}
 		return true
 	}
 
-	var sb strings.Builder
 	linkIdx := 0 // advancing pointer into sorted links slice
 	for i, tok := range vl.Tokens {
 		if renderEOLCursor && eolCursorCell == tok.StartCell {
@@ -404,7 +386,7 @@ func renderVisualLine(
 		}
 		spanStart := spanL - segL
 		spanWidth := spanR - spanL
-		splittable := tokMeta[i].allSpaces && tok.CellWidth == tokMeta[i].graphemeLen
+		splittable := tok.AllSpaces && tok.CellWidth == tok.GraphemeLen
 
 		write := func(s string) { sb.WriteString(s) }
 
@@ -453,7 +435,7 @@ func renderVisualLine(
 			selected := hasSel && tok.DocStartGraphemeCol < selEndCol && tok.DocEndGraphemeCol > selStartCol
 			if hasCursor && (i == cursorTokenIdx || i == eolBoundaryCursorTokenIdx) {
 				cursorStyle := st.Cursor.Render
-				if tokMeta[i].allSpaces && isTrailingWhitespaceFrom(i) {
+				if tok.AllSpaces && isTrailingWhitespaceFrom(i) {
 					// Trailing ASCII spaces can be visually elided by terminals at line end.
 					// Render cursor whitespace as NBSP in that case so the cursor stays visible.
 					cursorStyle = func(parts ...string) string {
@@ -490,5 +472,4 @@ func renderVisualLine(
 			sb.WriteString(st.Cursor.Render(" "))
 		}
 	}
-	return sb.String()
 }

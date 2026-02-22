@@ -33,6 +33,11 @@ type VisualToken struct {
 	DocStartGraphemeCol int
 	DocEndGraphemeCol   int
 
+	// GraphemeLen is the number of grapheme clusters in Text.
+	GraphemeLen int
+	// AllSpaces is true when every grapheme in Text is whitespace.
+	AllSpaces bool
+
 	// Role is meaningful only for virtual tokens.
 	Role VirtualRole
 	// StyleKey is meaningful only for virtual tokens.
@@ -126,11 +131,21 @@ func BuildVisualLine(rawLine string, vt VirtualText, tabWidth int) VisualLine {
 		for i := 0; i < cellWidth; i++ {
 			visualCellToDoc = append(visualCellToDoc, mapCol)
 		}
+		clusters := graphemeutil.Split(text)
+		allSp := len(clusters) > 0
+		for _, g := range clusters {
+			if !graphemeutil.IsSpace(g) {
+				allSp = false
+				break
+			}
+		}
 		tokens = append(tokens, VisualToken{
 			Kind:                    kind,
 			Text:                    text,
 			StartCell:               startCell,
 			CellWidth:               cellWidth,
+			GraphemeLen:             len(clusters),
+			AllSpaces:               allSp,
 			VisibleStartGraphemeCol: visibleStart,
 			VisibleEndGraphemeCol:   visibleEnd,
 			DocStartGraphemeCol:     docStart,

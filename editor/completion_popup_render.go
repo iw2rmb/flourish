@@ -145,7 +145,11 @@ func (m Model) renderCompletionPopupRowFromSegments(item CompletionItem, precomp
 		}
 		segStyle := resolveCompletionSegmentStyle(base, m.cfg.CompletionStyleForKey, item, seg)
 		sb.WriteString(segStyle.Render(text))
-		used += completionSegmentCellWidth(text, used)
+		if seg.cellWidth >= 0 {
+			used += seg.cellWidth
+		} else {
+			used += computeSegmentCellWidth(text, used)
+		}
 	}
 
 	if used < width {
@@ -167,31 +171,43 @@ func completionItemSegments(item CompletionItem) []CompletionSegment {
 			if text == "" {
 				continue
 			}
-			out = append(out, CompletionSegment{Text: text, StyleKey: seg.StyleKey})
+			out = append(out, CompletionSegment{Text: text, StyleKey: seg.StyleKey, cellWidth: -1})
 		}
 	}
 
 	appendGroup(prefix)
 	if len(out) > 0 && len(label) > 0 {
-		out = append(out, CompletionSegment{Text: " "})
+		out = append(out, CompletionSegment{Text: " ", cellWidth: -1})
 	}
 	appendGroup(label)
 	if len(out) > 0 && len(detail) > 0 {
-		out = append(out, CompletionSegment{Text: " "})
+		out = append(out, CompletionSegment{Text: " ", cellWidth: -1})
 	}
 	appendGroup(detail)
+
+	// Precompute cell widths so rendering doesn't have to re-split graphemes.
+	pos := 0
+	for i := range out {
+		w := computeSegmentCellWidth(out[i].Text, pos)
+		out[i].cellWidth = w
+		pos += w
+	}
 	return out
 }
 
 func completionSegmentsCellWidth(segments []CompletionSegment) int {
 	width := 0
 	for _, seg := range segments {
-		width += completionSegmentCellWidth(seg.Text, width)
+		if seg.cellWidth >= 0 {
+			width += seg.cellWidth
+		} else {
+			width += computeSegmentCellWidth(seg.Text, width)
+		}
 	}
 	return width
 }
 
-func completionSegmentCellWidth(text string, start int) int {
+func computeSegmentCellWidth(text string, start int) int {
 	used := start
 	begin := used
 	for _, gr := range splitGraphemeBoundaries(sanitizeSegmentText(text)) {

@@ -43,6 +43,7 @@ Primary API:
 - `WrapWord`: wraps at word boundaries; when no boundary fits, it falls back to width-based breaks.
 - `WrapGrapheme`: wraps at grapheme boundaries.
 - layout mapping preserves doc<->visual conversions, including wide glyphs.
+- visual-token whitespace/grapheme metadata is computed during `BuildVisualLine` and reused by row rendering.
 - cursor rendering keeps visibility at soft-wrap boundaries:
 - on non-full wrapped rows, EOL cursor is rendered one cell after the last glyph.
 - EOL cursor remains visible when a wrapped row exactly fills content width.
@@ -159,6 +160,7 @@ Completion popup rendering and placement (Phase 4):
 - vertical placement prefers below the anchor row, then flips above when below-space is insufficient.
 - when anchor is offscreen (`DocToScreen` not visible), popup render is suppressed while completion state remains intact.
 - popup width is measured from rendered completion rows, then clamped by `CompletionMaxWidth` and viewport bounds.
+- completion popup segment cell widths are precomputed per item and reused for width measurement.
 - popup row count is clamped by `CompletionMaxVisibleRows`, available vertical space, and visible completion count.
 - runnable host integration example: `examples/completion-popup/main.go`.
 

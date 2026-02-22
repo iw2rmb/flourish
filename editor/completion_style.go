@@ -48,7 +48,7 @@ func truncateCompletionSegments(segments []CompletionSegment, width int) []Compl
 			out[len(out)-1].Text += text
 			return
 		}
-		out = append(out, CompletionSegment{Text: text, StyleKey: styleKey})
+		out = append(out, CompletionSegment{Text: text, StyleKey: styleKey, cellWidth: -1})
 	}
 
 	for _, seg := range segments {

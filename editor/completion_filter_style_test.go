@@ -146,8 +146,8 @@ func TestCompletionStyle_TruncateSegments_OrderAndTailHandling(t *testing.T) {
 		{Text: "cd", StyleKey: "b"},
 	}
 	if got, want := truncateCompletionSegments(segments, 3), []CompletionSegment{
-		{Text: "ab", StyleKey: "a"},
-		{Text: "c", StyleKey: "b"},
+		{Text: "ab", StyleKey: "a", cellWidth: -1},
+		{Text: "c", StyleKey: "b", cellWidth: -1},
 	}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("ascii truncation: got %v, want %v", got, want)
 	}
@@ -157,7 +157,7 @@ func TestCompletionStyle_TruncateSegments_OrderAndTailHandling(t *testing.T) {
 		{Text: "x", StyleKey: "x"},
 	}
 	if got, want := truncateCompletionSegments(wide, 1), []CompletionSegment{
-		{Text: " ", StyleKey: "w"},
+		{Text: " ", StyleKey: "w", cellWidth: -1},
 	}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("wide tail truncation should keep style key and width: got %v, want %v", got, want)
 	}

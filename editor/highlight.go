@@ -45,18 +45,18 @@ type visibleLineInfo struct {
 }
 
 func computeVisibleLineInfo(rawLine string, vt VirtualText) visibleLineInfo {
-	visible, rawToVisible := visibleTextAfterDeletions(rawLine, vt)
+	visible, rawToVisible, rawLen, visLen := visibleTextAfterDeletions(rawLine, vt)
 	return visibleLineInfo{
 		visible:      visible,
 		rawToVisible: rawToVisible,
-		rawLen:       graphemeutil.Count(rawLine),
-		visLen:       graphemeutil.Count(visible),
+		rawLen:       rawLen,
+		visLen:       visLen,
 	}
 }
 
-func visibleTextAfterDeletions(rawLine string, vt VirtualText) (visible string, rawToVisible []int) {
+func visibleTextAfterDeletions(rawLine string, vt VirtualText) (visible string, rawToVisible []int, rawLen int, visLen int) {
 	rawGraphemes := graphemeutil.Split(rawLine)
-	rawLen := len(rawGraphemes)
+	rawLen = len(rawGraphemes)
 	deleted := make([]bool, rawLen)
 	for _, d := range vt.Deletions {
 		start := clampInt(d.StartGraphemeCol, 0, rawLen)
@@ -79,7 +79,7 @@ func visibleTextAfterDeletions(rawLine string, vt VirtualText) (visible string, 
 		visibleRawCols = append(visibleRawCols, i)
 	}
 
-	visLen := len(visibleGraphemes)
+	visLen = len(visibleGraphemes)
 	rawToVisible = make([]int, rawLen+1)
 	for i := range rawToVisible {
 		rawToVisible[i] = visLen
@@ -96,7 +96,7 @@ func visibleTextAfterDeletions(rawLine string, vt VirtualText) (visible string, 
 		}
 	}
 
-	return graphemeutil.Join(visibleGraphemes), rawToVisible
+	return graphemeutil.Join(visibleGraphemes), rawToVisible, rawLen, visLen
 }
 
 func normalizeHighlightSpans(spans []HighlightSpan, lineLen int) []HighlightSpan {
@@ -104,6 +104,26 @@ func normalizeHighlightSpans(spans []HighlightSpan, lineLen int) []HighlightSpan
 		return nil
 	}
 	lineLen = max(lineLen, 0)
+
+	// Fast path: check if spans are already clamped, sorted, non-overlapping, and non-empty.
+	normalized := true
+	for i, sp := range spans {
+		if sp.StartGraphemeCol < 0 || sp.EndGraphemeCol > lineLen || sp.StartGraphemeCol >= sp.EndGraphemeCol {
+			normalized = false
+			break
+		}
+		if i > 0 {
+			prev := spans[i-1]
+			if sp.StartGraphemeCol < prev.EndGraphemeCol ||
+				(sp.StartGraphemeCol == prev.StartGraphemeCol && sp.EndGraphemeCol < prev.EndGraphemeCol) {
+				normalized = false
+				break
+			}
+		}
+	}
+	if normalized {
+		return spans
+	}
 
 	out := make([]HighlightSpan, 0, len(spans))
 	for _, sp := range spans {
