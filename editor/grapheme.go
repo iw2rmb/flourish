@@ -1,6 +1,8 @@
 package editor
 
 import (
+	"strings"
+
 	"github.com/mattn/go-runewidth"
 
 	graphemeutil "github.com/iw2rmb/flourish/internal/grapheme"
@@ -59,6 +61,22 @@ func iterateGraphemeSteps(text string, tabWidth int, startCell int) []graphemeSt
 		visualCol += w
 	}
 	return out
+}
+
+func sanitizeSegmentText(s string) string {
+	s = sanitizeSingleLine(s)
+	if s == "" {
+		return ""
+	}
+	return strings.Map(func(r rune) rune {
+		if r == '\t' {
+			return r
+		}
+		if r < 0x20 || r == 0x7f {
+			return -1
+		}
+		return r
+	}, s)
 }
 
 func graphemeCellWidth(text string, visualCol, tabWidth int) int {

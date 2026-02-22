@@ -52,7 +52,7 @@ func truncateCompletionSegments(segments []CompletionSegment, width int) []Compl
 	}
 
 	for _, seg := range segments {
-		text := sanitizeCompletionSegmentText(seg.Text)
+		text := sanitizeSegmentText(seg.Text)
 		if text == "" {
 			continue
 		}
@@ -81,18 +81,3 @@ func truncateCompletionSegments(segments []CompletionSegment, width int) []Compl
 	return out
 }
 
-func sanitizeCompletionSegmentText(s string) string {
-	s = sanitizeSingleLine(s)
-	if s == "" {
-		return ""
-	}
-	return strings.Map(func(r rune) rune {
-		if r == '\t' {
-			return r
-		}
-		if r < 0x20 || r == 0x7f {
-			return -1
-		}
-		return r
-	}, s)
-}

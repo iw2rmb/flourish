@@ -88,6 +88,13 @@ func (m *Model) ghostForCursor() (Ghost, bool) {
 	return m.ghostFor(cur.Row, col, lineText, rawLen)
 }
 
+func (m Model) docVersion() uint64 {
+	if m.buf == nil {
+		return 0
+	}
+	return m.buf.Version()
+}
+
 func (m Model) Buffer() *buffer.Buffer { return m.buf }
 
 func (m Model) Init() tea.Cmd { return nil }

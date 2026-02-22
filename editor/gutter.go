@@ -180,7 +180,7 @@ func normalizeGutterSegments(in []GutterSegment, width int) []GutterSegment {
 	}
 
 	for _, seg := range in {
-		text := sanitizeGutterSegmentText(seg.Text)
+		text := sanitizeSegmentText(seg.Text)
 		if text == "" {
 			continue
 		}
@@ -215,21 +215,6 @@ func normalizeGutterSegments(in []GutterSegment, width int) []GutterSegment {
 	return out
 }
 
-func sanitizeGutterSegmentText(s string) string {
-	s = sanitizeSingleLine(s)
-	if s == "" {
-		return ""
-	}
-	return strings.Map(func(r rune) rune {
-		if r == '\t' {
-			return r
-		}
-		if r < 0x20 || r == 0x7f {
-			return -1
-		}
-		return r
-	}, s)
-}
 
 func resolveGutterSegmentStyle(
 	base lipgloss.Style,
@@ -264,11 +249,4 @@ func renderGutterCell(
 		sb.WriteString(style.Render(seg.Text))
 	}
 	return sb.String()
-}
-
-func (m Model) docVersion() uint64 {
-	if m.buf == nil {
-		return 0
-	}
-	return m.buf.Version()
 }

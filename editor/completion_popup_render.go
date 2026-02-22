@@ -132,7 +132,7 @@ func (m Model) renderCompletionPopupRow(item CompletionItem, selected bool, widt
 	var sb strings.Builder
 	used := 0
 	for _, seg := range segments {
-		text := sanitizeCompletionSegmentText(seg.Text)
+		text := sanitizeSegmentText(seg.Text)
 		if text == "" {
 			continue
 		}
@@ -156,7 +156,7 @@ func completionItemSegments(item CompletionItem) []CompletionSegment {
 	out := make([]CompletionSegment, 0, len(prefix)+len(label)+len(detail)+2)
 	appendGroup := func(group []CompletionSegment) {
 		for _, seg := range group {
-			text := sanitizeCompletionSegmentText(seg.Text)
+			text := sanitizeSegmentText(seg.Text)
 			if text == "" {
 				continue
 			}
@@ -187,7 +187,7 @@ func completionSegmentsCellWidth(segments []CompletionSegment) int {
 func completionSegmentCellWidth(text string, start int) int {
 	used := start
 	begin := used
-	for _, gr := range splitGraphemeBoundaries(sanitizeCompletionSegmentText(text)) {
+	for _, gr := range splitGraphemeBoundaries(sanitizeSegmentText(text)) {
 		w := graphemeCellWidth(gr.Text, used, 4)
 		if w < 1 {
 			w = 1
