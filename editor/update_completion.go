@@ -261,32 +261,60 @@ func (m *Model) nextCompletionQueryForMutateDocumentKey(msg tea.KeyMsg) (string,
 		return "", false
 	}
 
-	tmp := buffer.New(m.buf.Text(), buffer.Options{})
-	tmp.SetCursor(m.buf.Cursor())
-	if sel, ok := m.buf.Selection(); ok {
-		tmp.SetSelection(sel)
+	anchor := m.completionState.Anchor
+	cursor := m.buf.Cursor()
+	sel, hasSel := m.buf.Selection()
+
+	// predictInsert predicts the query after replacing the selection (or
+	// inserting at cursor when there is no selection) with text.
+	predictInsert := func(text string) (string, bool) {
+		insertAt := cursor
+		if hasSel {
+			insertAt = sel.Start
+		}
+		if insertAt.Row != anchor.Row || insertAt.GraphemeCol < anchor.GraphemeCol {
+			return "", true
+		}
+		prefix := m.buf.TextInRange(buffer.Range{Start: anchor, End: insertAt})
+		return prefix + text, true
 	}
 
 	switch {
 	case key.Matches(msg, m.cfg.KeyMap.Backspace):
-		tmp.DeleteBackward()
+		if hasSel {
+			// Selection delete: cursor lands at selection start.
+			insertAt := sel.Start
+			if insertAt.Row != anchor.Row || insertAt.GraphemeCol < anchor.GraphemeCol {
+				return "", true
+			}
+			return m.buf.TextInRange(buffer.Range{Start: anchor, End: insertAt}), true
+		}
+		// Simple backspace: one grapheme removed before cursor.
+		if cursor.Row != anchor.Row {
+			return "", true
+		}
+		if cursor.GraphemeCol <= 0 {
+			// At line start: backspace merges with previous line.
+			return "", true
+		}
+		newCol := cursor.GraphemeCol - 1
+		if newCol < anchor.GraphemeCol {
+			return "", true
+		}
+		return m.buf.TextInRange(buffer.Range{
+			Start: anchor,
+			End:   buffer.Pos{Row: cursor.Row, GraphemeCol: newCol},
+		}), true
+
 	case msg.Type == tea.KeySpace && !msg.Alt:
-		tmp.InsertGrapheme(" ")
+		return predictInsert(" ")
+
 	case msg.Type == tea.KeyRunes && len(msg.Runes) > 0 && !msg.Alt && !msg.Paste:
-		tmp.InsertText(string(msg.Runes))
+		return predictInsert(string(msg.Runes))
+
 	default:
 		return "", false
 	}
-
-	anchor := m.completionState.Anchor
-	cursor := tmp.Cursor()
-	if cursor.Row != anchor.Row || cursor.GraphemeCol < anchor.GraphemeCol {
-		return "", true
-	}
-	return textInRange(tmp.Text(), buffer.Range{
-		Start: anchor,
-		End:   cursor,
-	}), true
 }
 
 func (m *Model) recomputeCompletionQueryFromAnchor() {
@@ -302,7 +330,7 @@ func (m *Model) recomputeCompletionQueryFromAnchor() {
 	cursor := m.buf.Cursor()
 	query := ""
 	if cursor.Row == state.Anchor.Row && cursor.GraphemeCol >= state.Anchor.GraphemeCol {
-		query = textInRange(m.buf.Text(), buffer.Range{
+		query = m.buf.TextInRange(buffer.Range{
 			Start: state.Anchor,
 			End:   cursor,
 		})
@@ -310,6 +338,7 @@ func (m *Model) recomputeCompletionQueryFromAnchor() {
 	state.Query = query
 	m.recomputeCompletionFilter(&state)
 	m.completionState = state
+	m.completionFilterClean = true
 }
 
 func (m *Model) setCompletionQuery(query string) {

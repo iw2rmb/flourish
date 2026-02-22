@@ -7,7 +7,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/iw2rmb/flourish/buffer"
-	"github.com/iw2rmb/flourish/internal/grapheme"
 )
 
 type localMutationOp func(*Model)
@@ -258,7 +257,7 @@ func (m Model) copySelection() {
 	if !ok {
 		return
 	}
-	s := textInRange(m.buf.Text(), r)
+	s := m.buf.TextInRange(r)
 	if s == "" {
 		return
 	}
@@ -277,51 +276,6 @@ func (m Model) readClipboardText() (string, bool) {
 	s = strings.ReplaceAll(s, "\r\n", "\n")
 	s = strings.ReplaceAll(s, "\r", "\n")
 	return s, true
-}
-
-func textInRange(text string, r buffer.Range) string {
-	r = buffer.NormalizeRange(r)
-	if r.IsEmpty() {
-		return ""
-	}
-
-	lines := strings.Split(text, "\n")
-	if len(lines) == 0 {
-		return ""
-	}
-
-	if r.Start.Row < 0 || r.Start.Row >= len(lines) || r.End.Row < 0 || r.End.Row >= len(lines) {
-		return ""
-	}
-
-	if r.Start.Row == r.End.Row {
-		rr := grapheme.Split(lines[r.Start.Row])
-		if r.Start.GraphemeCol < 0 || r.End.GraphemeCol < 0 || r.Start.GraphemeCol > len(rr) || r.End.GraphemeCol > len(rr) {
-			return ""
-		}
-		return grapheme.Join(rr[r.Start.GraphemeCol:r.End.GraphemeCol])
-	}
-
-	var sb strings.Builder
-	for row := r.Start.Row; row <= r.End.Row; row++ {
-		if row > r.Start.Row {
-			sb.WriteByte('\n')
-		}
-		rr := grapheme.Split(lines[row])
-		startCol := 0
-		endCol := len(rr)
-		if row == r.Start.Row {
-			startCol = r.Start.GraphemeCol
-		}
-		if row == r.End.Row {
-			endCol = r.End.GraphemeCol
-		}
-		if startCol < 0 || endCol < 0 || startCol > len(rr) || endCol > len(rr) || startCol > endCol {
-			return ""
-		}
-		sb.WriteString(grapheme.Join(rr[startCol:endCol]))
-	}
-	return sb.String()
 }
 
 func (m *Model) pageMoveCount() int {

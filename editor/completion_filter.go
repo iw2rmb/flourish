@@ -13,7 +13,7 @@ func (m *Model) recomputeCompletionFilter(state *CompletionState) {
 
 	ctx := CompletionFilterContext{
 		Query:      state.Query,
-		Items:      cloneCompletionItems(state.Items),
+		Items:      state.Items,
 		Cursor:     m.completionFilterCursor(),
 		DocID:      m.cfg.DocID,
 		DocVersion: m.docVersion(),

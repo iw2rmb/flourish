@@ -163,45 +163,115 @@ func unitWidth(cluster string, unit offsetUnit) int {
 	return len(cluster)
 }
 
-func (b *Buffer) docLen(unit offsetUnit) int {
-	total := 0
-	for row, line := range b.lines {
+func (b *Buffer) ensureOffsetIndex() {
+	if b.offsetIdx.valid && b.offsetIdx.textVersion == b.textVersion {
+		return
+	}
+	n := len(b.lines)
+	if cap(b.offsetIdx.byteStarts) >= n {
+		b.offsetIdx.byteStarts = b.offsetIdx.byteStarts[:n]
+		b.offsetIdx.runeStarts = b.offsetIdx.runeStarts[:n]
+		b.offsetIdx.utf16Starts = b.offsetIdx.utf16Starts[:n]
+	} else {
+		b.offsetIdx.byteStarts = make([]int, n)
+		b.offsetIdx.runeStarts = make([]int, n)
+		b.offsetIdx.utf16Starts = make([]int, n)
+	}
+
+	byteOff, runeOff, utf16Off := 0, 0, 0
+	for i, line := range b.lines {
+		b.offsetIdx.byteStarts[i] = byteOff
+		b.offsetIdx.runeStarts[i] = runeOff
+		b.offsetIdx.utf16Starts[i] = utf16Off
 		for _, cluster := range line {
-			total += unitWidth(cluster, unit)
+			byteOff += len(cluster)
+			runeOff += utf8.RuneCountInString(cluster)
+			for _, r := range cluster {
+				n := utf16.RuneLen(r)
+				if n < 0 {
+					n = 1
+				}
+				utf16Off += n
+			}
 		}
-		if row < len(b.lines)-1 {
-			total++
+		if i < len(b.lines)-1 {
+			byteOff++
+			runeOff++
+			utf16Off++
 		}
 	}
-	return total
+	b.offsetIdx.textVersion = b.textVersion
+	b.offsetIdx.valid = true
+}
+
+func (b *Buffer) lineStarts(unit offsetUnit) []int {
+	b.ensureOffsetIndex()
+	switch unit {
+	case offsetUnitRune:
+		return b.offsetIdx.runeStarts
+	case offsetUnitUTF16:
+		return b.offsetIdx.utf16Starts
+	default:
+		return b.offsetIdx.byteStarts
+	}
+}
+
+func (b *Buffer) docLen(unit offsetUnit) int {
+	starts := b.lineStarts(unit)
+	n := len(b.lines)
+	if n == 0 {
+		return 0
+	}
+	// Total = start of last line + width of last line content.
+	lastStart := starts[n-1]
+	w := 0
+	for _, cluster := range b.lines[n-1] {
+		w += unitWidth(cluster, unit)
+	}
+	return lastStart + w
 }
 
 func (b *Buffer) posFromOffset(off int, unit offsetUnit) (Pos, bool) {
-	cur := 0
+	starts := b.lineStarts(unit)
+	n := len(b.lines)
+	if n == 0 {
+		return Pos{}, false
+	}
 
-	for row, line := range b.lines {
-		col := 0
+	// Binary search for the row.
+	lo, hi := 0, n-1
+	for lo < hi {
+		mid := (lo + hi + 1) / 2
+		if starts[mid] <= off {
+			lo = mid
+		} else {
+			hi = mid - 1
+		}
+	}
+	row := lo
+
+	// Linear scan within the line to find the column.
+	cur := starts[row]
+	if off == cur {
+		return Pos{Row: row, GraphemeCol: 0}, true
+	}
+
+	for col, cluster := range b.lines[row] {
+		next := cur + unitWidth(cluster, unit)
+		if off > cur && off < next {
+			return Pos{}, false
+		}
+		cur = next
 		if off == cur {
-			return Pos{Row: row, GraphemeCol: col}, true
+			return Pos{Row: row, GraphemeCol: col + 1}, true
 		}
+	}
 
-		for _, cluster := range line {
-			next := cur + unitWidth(cluster, unit)
-			if off > cur && off < next {
-				return Pos{}, false
-			}
-			cur = next
-			col++
-			if off == cur {
-				return Pos{Row: row, GraphemeCol: col}, true
-			}
-		}
-
-		if row < len(b.lines)-1 {
-			cur++
-			if off == cur {
-				return Pos{Row: row + 1, GraphemeCol: 0}, true
-			}
+	// Check if offset points to the newline between this row and the next.
+	if row < n-1 {
+		cur++ // newline
+		if off == cur {
+			return Pos{Row: row + 1, GraphemeCol: 0}, true
 		}
 	}
 
@@ -209,14 +279,8 @@ func (b *Buffer) posFromOffset(off int, unit offsetUnit) (Pos, bool) {
 }
 
 func (b *Buffer) offsetFromPos(pos Pos, unit offsetUnit) int {
-	off := 0
-
-	for row := 0; row < pos.Row; row++ {
-		for _, cluster := range b.lines[row] {
-			off += unitWidth(cluster, unit)
-		}
-		off++
-	}
+	starts := b.lineStarts(unit)
+	off := starts[pos.Row]
 
 	for col := 0; col < pos.GraphemeCol; col++ {
 		off += unitWidth(b.lines[pos.Row][col], unit)

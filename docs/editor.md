@@ -137,6 +137,7 @@ Completion input and acceptance (Phase 2):
 - `CompletionInputQueryOnly`: typing/backspace updates `CompletionState.Query` only and does not mutate document text.
 - `CompletionInputMutateDocument`: typing/backspace follows normal document mutation and keeps popup visible.
 - mutate-document query recompute uses buffer text in range `[Anchor, Cursor)` only when cursor stays on `Anchor.Row` and `Cursor.GraphemeCol >= Anchor.GraphemeCol`; otherwise query resets to `""`.
+- mutate-document query updates use `buffer.TextInRange` and avoid temporary full-buffer clones.
 - cursor movement keeps popup open only while cursor stays within the token span anchored at `CompletionState.Anchor`; leaving that span (or row) clears popup state.
 - `ReadOnly=true` suppresses local document mutation; mutate-document input behaves as query-only.
 - while completion is visible, ghost suggestions are suppressed for both rendering and ghost-accept key paths.
@@ -144,6 +145,7 @@ Completion input and acceptance (Phase 2):
 Completion filtering and item styling (Phase 3):
 - `CompletionFilter` executes synchronously when completion query/items/context change.
 - filter context includes `Query`, `Items`, `Cursor`, `DocID`, and current buffer version.
+- `CompletionFilterContext.Items` is passed directly from current completion state (no defensive deep copy); treat it as read-only.
 - callback results sanitize invalid/duplicate indices and clamp `SelectedIndex` into visible range.
 - default filter (nil callback): case-insensitive `contains` over flattened `Prefix+Label+Detail` text with stable source ordering.
 - completion filter is also recomputed while popup is visible when cursor/doc version context changes.
@@ -214,6 +216,7 @@ Virtual text rules:
 - ghost suggestions can provide `StyleKey` for callback-based style resolution.
 - cursor/selection remain document-based.
 - cursor/selection-only editor updates rerender only dirty logical rows (old/new cursor rows plus old/new selection coverage).
+- text mutations attempt dirty-line incremental rebuild first, and fall back to full rebuild when wrap-row shape changes.
 - `VirtualTextProvider` is treated as row-local for cursor/selection movement: non-dirty rows are expected to remain unchanged.
 
 Hyperlink rules:

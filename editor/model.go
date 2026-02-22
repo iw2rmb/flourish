@@ -18,7 +18,8 @@ type Model struct {
 
 	focused bool
 
-	completionState CompletionState
+	completionState       CompletionState
+	completionFilterClean bool // set by recomputeCompletionQueryFromAnchor to skip redundant filter in syncFromBuffer
 
 	viewport viewport.Model
 	// xOffset is the horizontal scroll offset in terminal cells. It is used only
@@ -261,13 +262,16 @@ func (m *Model) syncFromBuffer() (cursorChanged bool, versionChanged bool) {
 	if m.completionState.Visible && (cursorChanged || versionChanged) {
 		if m.cursorOutsideCompletionAnchorToken() {
 			m.completionState = CompletionState{}
-		} else {
+		} else if !m.completionFilterClean {
 			m.recomputeCompletionFilter(&m.completionState)
 		}
 	}
+	m.completionFilterClean = false
 
 	if textChanged {
-		m.rebuildContent()
+		if !m.tryIncrementalTextRebuild(prevCursor, cur, prevSelection, prevSelectionOK, sel, selOK) {
+			m.rebuildContent()
+		}
 		return cursorChanged, versionChanged
 	}
 
@@ -413,6 +417,74 @@ func (m *Model) rebuildContent() {
 	layout := m.ensureLayoutCache(lines)
 	rows := m.renderRows(lines, layout, nil, false)
 	m.setRenderedRows(rows)
+}
+
+// tryIncrementalTextRebuild attempts to rebuild only the lines that changed
+// after a text mutation. Returns false if a full rebuild is needed.
+func (m *Model) tryIncrementalTextRebuild(
+	prevCursor buffer.Pos,
+	nextCursor buffer.Pos,
+	prevSel buffer.Range,
+	prevSelOK bool,
+	nextSel buffer.Range,
+	nextSelOK bool,
+) bool {
+	if m.buf == nil || !m.layout.valid {
+		return false
+	}
+
+	lines := m.ensureLines()
+	if len(lines) != len(m.layout.lines) {
+		return false
+	}
+
+	// Check that layout config hasn't changed.
+	contentWidth := m.contentWidth(len(lines))
+	k := m.layout.key
+	if k.wrapMode != m.cfg.WrapMode ||
+		k.tabWidth != m.cfg.TabWidth ||
+		k.contentWidth != contentWidth ||
+		k.focused != m.focused ||
+		k.linkProvider != providerPtr(m.cfg.LinkProvider) ||
+		k.linkSet != (m.cfg.LinkProvider != nil) {
+		return false
+	}
+
+	// Collect text-dirty lines (rawLine changed).
+	dirty := make(map[int]struct{}, 4)
+	for i, rawLine := range lines {
+		if rawLine != m.layout.lines[i].rawLine {
+			dirty[i] = struct{}{}
+		}
+	}
+
+	// Also dirty cursor rows for virtual text / ghost / link updates.
+	addDirtyRow(dirty, len(lines), prevCursor.Row)
+	addDirtyRow(dirty, len(lines), nextCursor.Row)
+	addDirtyRangeRows(dirty, len(lines), prevSel, prevSelOK)
+	addDirtyRangeRows(dirty, len(lines), nextSel, nextSelOK)
+
+	if len(dirty) == 0 {
+		m.layout.key.textVersion = m.buf.TextVersion()
+		return true
+	}
+
+	if !m.refreshLayoutRows(lines, dirty) {
+		return false
+	}
+
+	m.layout.key.textVersion = m.buf.TextVersion()
+
+	if len(m.renderedRows) != len(m.layout.rows) {
+		return false
+	}
+
+	rendered := m.renderRows(lines, m.layout, dirty, true)
+	if len(rendered) != len(m.layout.rows) {
+		return false
+	}
+	m.setRenderedRows(rendered)
+	return true
 }
 
 func (m *Model) setRenderedRows(rows []string) {

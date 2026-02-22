@@ -31,6 +31,20 @@ type Buffer struct {
 
 	opt  Options
 	hist historyState
+
+	offsetIdx lineOffsetIndex
+}
+
+// lineOffsetIndex caches cumulative byte/rune/UTF-16 offsets per line so that
+// offset ↔ position conversions are O(log n + line length) instead of O(document).
+type lineOffsetIndex struct {
+	textVersion uint64
+	valid       bool
+	// lineStart[unit][i] = document offset at the start of line i.
+	// Length: len(lines).
+	byteStarts  []int
+	runeStarts  []int
+	utf16Starts []int
 }
 
 func New(text string, opt Options) *Buffer {
@@ -160,6 +174,53 @@ func (b *Buffer) lineLen(row int) int {
 func (b *Buffer) clampPos(p Pos) Pos {
 	return ClampPos(p, len(b.lines), b.lineLen)
 }
+
+// TextInRange returns the text contained in the given range, reading directly
+// from the internal grapheme-split line storage. This avoids the full document
+// serialization that Text() + strings.Split would require.
+func (b *Buffer) TextInRange(r Range) string {
+	r = NormalizeRange(r)
+	if r.IsEmpty() {
+		return ""
+	}
+	if r.Start.Row < 0 || r.Start.Row >= len(b.lines) || r.End.Row < 0 || r.End.Row >= len(b.lines) {
+		return ""
+	}
+
+	if r.Start.Row == r.End.Row {
+		line := b.lines[r.Start.Row]
+		startCol := r.Start.GraphemeCol
+		endCol := r.End.GraphemeCol
+		if startCol < 0 || endCol < 0 || startCol > len(line) || endCol > len(line) {
+			return ""
+		}
+		return grapheme.Join(line[startCol:endCol])
+	}
+
+	var sb strings.Builder
+	for row := r.Start.Row; row <= r.End.Row; row++ {
+		if row > r.Start.Row {
+			sb.WriteByte('\n')
+		}
+		line := b.lines[row]
+		startCol := 0
+		endCol := len(line)
+		if row == r.Start.Row {
+			startCol = r.Start.GraphemeCol
+		}
+		if row == r.End.Row {
+			endCol = r.End.GraphemeCol
+		}
+		if startCol < 0 || endCol < 0 || startCol > len(line) || endCol > len(line) || startCol > endCol {
+			return ""
+		}
+		sb.WriteString(grapheme.Join(line[startCol:endCol]))
+	}
+	return sb.String()
+}
+
+// LineCount returns the number of lines in the buffer.
+func (b *Buffer) LineCount() int { return len(b.lines) }
 
 func splitLines(text string) [][]string {
 	parts := strings.Split(text, "\n")

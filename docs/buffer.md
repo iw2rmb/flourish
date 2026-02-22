@@ -17,6 +17,11 @@ Core state:
 - version counter
 - text-version counter
 
+Core accessors:
+- `Text()` returns full buffer text.
+- `TextInRange(r)` returns text for normalized range `r` without full-document serialization.
+- `LineCount()` returns current logical line count.
+
 ## Coordinates
 
 - `Pos` is `(Row, GraphemeCol)`, both 0-based.
@@ -60,6 +65,7 @@ Behavior:
 - `PosFromGap` maps through gap rune offset conversion with the supplied policy.
 - `UTF16Offset*` counts UTF-16 code units (supplementary runes count as `2`).
 - Line-scoped rune/grapheme helpers apply the same clamp contract with no newline handling.
+- conversion lookups use a cached line-start index keyed by `TextVersion()`.
 - Unicode fixture examples now covered by tests:
 - `"a"`: offset `1` maps to `(Row:0, GraphemeCol:1)`.
 - `"é"`: byte offset `1` is inside one grapheme and is rejected.
