@@ -67,6 +67,10 @@ type Config struct {
 	// Highlighter optionally provides per-line highlight spans over the visible
 	// text after virtual deletions.
 	Highlighter Highlighter
+	// LinkProvider optionally provides per-line hyperlink spans over raw line
+	// text. Link spans are rendered with OSC8 hyperlinks and can be queried via
+	// LinkAt / LinkAtScreen.
+	LinkProvider LinkProvider
 
 	// OnChange, if set, fires after every effective buffer change triggered via
 	// Update. The payload is delta-first (`ChangeEvent.Change` backed by

@@ -159,6 +159,20 @@ func TestRenderSnapshot_TokenInvalidationMatrix(t *testing.T) {
 		}
 	})
 
+	t.Run("link provider change", func(t *testing.T) {
+		m := New(Config{Text: "ab"})
+		m = m.SetSize(3, 1)
+		t0 := m.RenderSnapshot().Token
+
+		m.cfg.LinkProvider = func(LinkContext) ([]LinkSpan, error) {
+			return nil, nil
+		}
+		t1 := m.RenderSnapshot().Token
+		if t1 == t0 {
+			t.Fatalf("token must change after link provider-affecting change")
+		}
+	})
+
 	t.Run("gutter callback change", func(t *testing.T) {
 		m := New(Config{
 			Text:   "ab",

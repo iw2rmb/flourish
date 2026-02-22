@@ -150,6 +150,7 @@ func (m *Model) renderLayoutRow(
 		m.cfg.GhostStyleForKey,
 		m.cfg.VirtualOverlayStyleForKey,
 		line.visual,
+		line.links,
 		row,
 		cursor,
 		m.focused,
@@ -230,6 +231,7 @@ func renderVisualLine(
 	ghostStyleForKey func(string) (lipgloss.Style, bool),
 	overlayStyleForKey func(string) (lipgloss.Style, bool),
 	vl VisualLine,
+	links []resolvedLinkSpan,
 	row int,
 	cursor buffer.Pos,
 	focused bool,
@@ -393,6 +395,24 @@ func renderVisualLine(
 			}
 			write(renderSpan(style.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 		case VisualTokenDoc:
+			linkTarget := ""
+			linkStyle := lipgloss.Style{}
+			for _, link := range links {
+				if tok.VisibleStartGraphemeCol >= link.EndVisibleGraphemeCol || tok.VisibleEndGraphemeCol <= link.StartVisibleGraphemeCol {
+					continue
+				}
+				linkTarget = link.Target
+				linkStyle = link.Style
+				break
+			}
+
+			writeDoc := func(rendered string) {
+				if linkTarget != "" {
+					rendered = renderHyperlink(linkTarget, rendered)
+				}
+				write(rendered)
+			}
+
 			selected := hasSel && tok.DocStartGraphemeCol < selEndCol && tok.DocEndGraphemeCol > selStartCol
 			if hasCursor && (i == cursorTokenIdx || i == eolBoundaryCursorTokenIdx) {
 				cursorStyle := st.Cursor.Render
@@ -407,18 +427,20 @@ func renderVisualLine(
 						return st.Cursor.Render(replaced...)
 					}
 				}
-				write(renderSpan(cursorStyle, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
+				writeDoc(renderSpan(cursorStyle, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 			} else if selected {
-				write(renderSpan(st.Selection.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
+				writeDoc(renderSpan(st.Selection.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 			} else {
 				style := st.Text
 				for _, sp := range highlights {
 					if tok.VisibleStartGraphemeCol < sp.EndGraphemeCol && tok.VisibleEndGraphemeCol > sp.StartGraphemeCol {
-						style = sp.Style.Inherit(st.Text)
-						break
+						style = sp.Style.Inherit(style)
 					}
 				}
-				write(renderSpan(style.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
+				if linkTarget != "" {
+					style = linkStyle.Inherit(style)
+				}
+				writeDoc(renderSpan(style.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 			}
 		default:
 			write(renderSpan(st.Text.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))

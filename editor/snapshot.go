@@ -52,9 +52,11 @@ type snapshotSignature struct {
 	virtualProvider uintptr
 	ghostProvider   uintptr
 	highlighter     uintptr
+	linkProvider    uintptr
 	virtualSet      bool
 	ghostSet        bool
 	highlighterSet  bool
+	linkSet         bool
 }
 
 func providerPtr(v any) uintptr {
@@ -90,9 +92,11 @@ func (m *Model) currentSnapshotSignature() snapshotSignature {
 		virtualProvider:           providerPtr(m.cfg.VirtualTextProvider),
 		ghostProvider:             providerPtr(m.cfg.GhostProvider),
 		highlighter:               providerPtr(m.cfg.Highlighter),
+		linkProvider:              providerPtr(m.cfg.LinkProvider),
 		virtualSet:                m.cfg.VirtualTextProvider != nil,
 		ghostSet:                  m.cfg.GhostProvider != nil,
 		highlighterSet:            m.cfg.Highlighter != nil,
+		linkSet:                   m.cfg.LinkProvider != nil,
 	}
 
 	if m.buf != nil {
@@ -149,9 +153,11 @@ func hashSnapshotSignature(sig snapshotSignature) SnapshotToken {
 	writeU64(uint64(sig.virtualProvider))
 	writeU64(uint64(sig.ghostProvider))
 	writeU64(uint64(sig.highlighter))
+	writeU64(uint64(sig.linkProvider))
 	writeB(sig.virtualSet)
 	writeB(sig.ghostSet)
 	writeB(sig.highlighterSet)
+	writeB(sig.linkSet)
 
 	tok := SnapshotToken(h.Sum64())
 	if tok == 0 {

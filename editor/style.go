@@ -11,6 +11,7 @@ type Style struct {
 	Text      lipgloss.Style
 	Selection lipgloss.Style
 	Cursor    lipgloss.Style
+	Link      lipgloss.Style
 
 	CompletionItem     lipgloss.Style
 	CompletionSelected lipgloss.Style
@@ -26,6 +27,7 @@ func DefaultStyle() Style {
 		Text:           lipgloss.NewStyle(),
 		Selection:      lipgloss.NewStyle().Background(lipgloss.Color("237")),
 		Cursor:         lipgloss.NewStyle().Reverse(true),
+		Link:           lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Underline(true),
 		CompletionItem: lipgloss.NewStyle(),
 		CompletionSelected: lipgloss.NewStyle().
 			Background(lipgloss.Color("238")),

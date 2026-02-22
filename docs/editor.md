@@ -23,6 +23,8 @@ Primary API:
 - `ViewportState()`
 - `ScreenToDoc(x, y)`
 - `DocToScreen(pos)`
+- `LinkAt(pos)`
+- `LinkAtScreen(x, y)`
 - `RenderSnapshot()`
 - `ScreenToDocWithSnapshot(snapshot, x, y)`
 - `DocToScreenWithSnapshot(snapshot, pos)`
@@ -65,6 +67,7 @@ Viewport integration:
 - `ViewportState()` exposes top visual row, visible row count, wrap mode, and no-wrap horizontal offset.
 - `ScreenToDoc` and `DocToScreen` provide stable host-side coordinate mapping.
 - snapshot-bound mapping APIs (`RenderSnapshot`, `ScreenToDocWithSnapshot`, `DocToScreenWithSnapshot`) provide frame-stable mapping with stale-token rejection.
+- `LinkAt` and `LinkAtScreen` resolve configured hyperlink spans to host-facing targets.
 - `ScrollAllowManual` keeps wheel/manual viewport scrolling enabled.
 - `ScrollFollowCursorOnly` ignores manual viewport scrolling and keeps viewport movement cursor-driven.
 
@@ -76,6 +79,7 @@ Viewport integration:
 - `GutterStyleForKey` to resolve keyed gutter segment styles (fallback: `Style.Gutter`).
 - `VirtualTextProvider` for per-line virtual deletions/insertions.
 - `Highlighter` for per-line highlight spans.
+- `LinkProvider` for per-line hyperlink spans (`LinkSpan`) over raw line text.
 - `GhostProvider` for inline ghost suggestions at cursor column.
 - `VirtualOverlayStyleForKey` to resolve keyed overlay insertion styles (fallback: `Style.VirtualOverlay`).
 - `GhostStyleForKey` to resolve keyed ghost insertion styles (fallback: `Style.Ghost`).
@@ -211,6 +215,12 @@ Virtual text rules:
 - cursor/selection remain document-based.
 - cursor/selection-only editor updates rerender only dirty logical rows (old/new cursor rows plus old/new selection coverage).
 - `VirtualTextProvider` is treated as row-local for cursor/selection movement: non-dirty rows are expected to remain unchanged.
+
+Hyperlink rules:
+- `LinkProvider` receives both raw line text and visible text (after virtual deletions).
+- hyperlink spans are interpreted in raw grapheme columns and sanitized to non-overlapping ranges.
+- rendered hyperlink spans emit OSC8 links and apply `Style.Link` by default.
+- `LinkAt` / `LinkAtScreen` return `LinkHit{Row, StartGraphemeCol, EndGraphemeCol, Target}` for host navigation handling.
 
 Gutter rules:
 - gutter is disabled when `Gutter.Width` is nil (or resolves to `<=0`).

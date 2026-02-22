@@ -1,6 +1,10 @@
 package editor
 
-import "github.com/iw2rmb/flourish/buffer"
+import (
+	"sort"
+
+	"github.com/iw2rmb/flourish/buffer"
+)
 
 type wrapLayoutCacheKey struct {
 	textVersion uint64
@@ -9,6 +13,9 @@ type wrapLayoutCacheKey struct {
 	tabWidth     int
 	contentWidth int
 	focused      bool
+
+	linkProvider uintptr
+	linkSet      bool
 }
 
 type wrapLayoutRow struct {
@@ -20,6 +27,7 @@ type wrapLayoutLine struct {
 	rawLine string
 	vt      VirtualText
 	visual  VisualLine
+	links   []resolvedLinkSpan
 
 	segments       []wrappedSegment
 	firstVisualRow int
@@ -43,6 +51,8 @@ func (m *Model) layoutKey(lines []string) wrapLayoutCacheKey {
 		tabWidth:     m.cfg.TabWidth,
 		contentWidth: m.contentWidth(len(lines)),
 		focused:      m.focused,
+		linkProvider: providerPtr(m.cfg.LinkProvider),
+		linkSet:      m.cfg.LinkProvider != nil,
 	}
 	if m.buf == nil {
 		return key
@@ -100,6 +110,7 @@ func (m *Model) buildLayoutLine(row int, rawLine string, contentWidth int) wrapL
 	vt := m.virtualTextForRow(row, rawLine)
 	vt = m.virtualTextWithGhost(row, rawLine, vt)
 	visual := BuildVisualLine(rawLine, vt, m.cfg.TabWidth)
+	links := m.linksForLine(row, rawLine, vt, m.buf.Cursor())
 	segments := wrapSegmentsForVisualLine(visual, m.cfg.WrapMode, contentWidth)
 	if len(segments) == 0 {
 		segments = []wrappedSegment{{
@@ -115,6 +126,7 @@ func (m *Model) buildLayoutLine(row int, rawLine string, contentWidth int) wrapL
 		rawLine:  rawLine,
 		vt:       vt,
 		visual:   visual,
+		links:    links,
 		segments: segments,
 	}
 }
@@ -131,7 +143,12 @@ func (m *Model) refreshLayoutRows(lines []string, dirtyRows map[int]struct{}) bo
 	}
 
 	contentWidth := m.layout.key.contentWidth
+	rows := make([]int, 0, len(dirtyRows))
 	for row := range dirtyRows {
+		rows = append(rows, row)
+	}
+	sort.Ints(rows)
+	for _, row := range rows {
 		if row < 0 || row >= len(lines) {
 			continue
 		}
