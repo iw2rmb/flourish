@@ -117,22 +117,8 @@ func (b *Buffer) moveGrapheme(p Pos, dir MoveDir) Pos {
 			return Pos{Row: row, GraphemeCol: col + 1}
 		}
 		return Pos{Row: row + 1, GraphemeCol: 0}
-	case DirUp:
-		if row == 0 {
-			return p
-		}
-		nr := row - 1
-		return Pos{Row: nr, GraphemeCol: min(col, len(b.lines[nr]))}
-	case DirDown:
-		if row == lastRow {
-			return p
-		}
-		nr := row + 1
-		return Pos{Row: nr, GraphemeCol: min(col, len(b.lines[nr]))}
-	case DirHome:
-		return Pos{Row: row, GraphemeCol: 0}
-	case DirEnd:
-		return Pos{Row: row, GraphemeCol: len(b.lines[row])}
+	case DirUp, DirDown, DirHome, DirEnd:
+		return b.moveLine(p, dir)
 	default:
 		return p
 	}

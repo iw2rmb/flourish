@@ -6,6 +6,28 @@ import (
 	"github.com/iw2rmb/flourish/internal/grapheme"
 )
 
+// doLocalEdit is the common boilerplate for local edits:
+// snapshot → beginChange → replaceRange → set cursor → clear selection →
+// bump version → recordUndo → commitChange.
+// Returns false if nothing changed.
+func (b *Buffer) doLocalEdit(r Range, text string) bool {
+	prev := b.snapshot()
+	change := b.beginChange(ChangeSourceLocal)
+
+	nextCursor, applied, changed := b.replaceRange(r, text)
+	if !changed {
+		return false
+	}
+
+	b.cursor = nextCursor
+	b.sel = selectionState{}
+	b.version++
+	b.recordUndo(prev)
+	change.addAppliedEdit(applied)
+	b.commitChange(change)
+	return true
+}
+
 // InsertText inserts text at the cursor, or replaces the active selection.
 func (b *Buffer) InsertText(s string) {
 	if s == "" {
@@ -15,25 +37,11 @@ func (b *Buffer) InsertText(s string) {
 		return
 	}
 
-	prev := b.snapshot()
-	change := b.beginChange(ChangeSourceLocal)
-
 	r, ok := b.Selection()
 	if !ok {
 		r = Range{Start: b.cursor, End: b.cursor}
 	}
-
-	nextCursor, applied, changed := b.replaceRange(r, s)
-	if !changed {
-		return
-	}
-
-	b.cursor = nextCursor
-	b.sel = selectionState{}
-	b.version++
-	b.recordUndo(prev)
-	change.addAppliedEdit(applied)
-	b.commitChange(change)
+	b.doLocalEdit(r, s)
 }
 
 // InsertGrapheme inserts a single grapheme cluster at the cursor, or replaces
@@ -63,39 +71,20 @@ func (b *Buffer) DeleteBackward() {
 		return
 	}
 
-	prev := b.snapshot()
-	change := b.beginChange(ChangeSourceLocal)
-
 	if col > 0 {
-		start := Pos{Row: row, GraphemeCol: col - 1}
-		end := Pos{Row: row, GraphemeCol: col}
-		nextCursor, applied, changed := b.replaceRange(Range{Start: start, End: end}, "")
-		if !changed {
-			return
-		}
-		b.cursor = nextCursor
-		b.sel = selectionState{}
-		b.version++
-		b.recordUndo(prev)
-		change.addAppliedEdit(applied)
-		b.commitChange(change)
+		b.doLocalEdit(Range{
+			Start: Pos{Row: row, GraphemeCol: col - 1},
+			End:   Pos{Row: row, GraphemeCol: col},
+		}, "")
 		return
 	}
 
 	// Join with previous line (delete the newline).
 	prevRow := row - 1
-	start := Pos{Row: prevRow, GraphemeCol: len(b.lines[prevRow])}
-	end := Pos{Row: row, GraphemeCol: 0}
-	nextCursor, applied, changed := b.replaceRange(Range{Start: start, End: end}, "")
-	if !changed {
-		return
-	}
-	b.cursor = nextCursor
-	b.sel = selectionState{}
-	b.version++
-	b.recordUndo(prev)
-	change.addAppliedEdit(applied)
-	b.commitChange(change)
+	b.doLocalEdit(Range{
+		Start: Pos{Row: prevRow, GraphemeCol: len(b.lines[prevRow])},
+		End:   Pos{Row: row, GraphemeCol: 0},
+	}, "")
 }
 
 // DeleteForward applies delete-key semantics.
@@ -111,38 +100,19 @@ func (b *Buffer) DeleteForward() {
 		return
 	}
 
-	prev := b.snapshot()
-	change := b.beginChange(ChangeSourceLocal)
-
 	if col < len(b.lines[row]) {
-		start := Pos{Row: row, GraphemeCol: col}
-		end := Pos{Row: row, GraphemeCol: col + 1}
-		nextCursor, applied, changed := b.replaceRange(Range{Start: start, End: end}, "")
-		if !changed {
-			return
-		}
-		b.cursor = nextCursor
-		b.sel = selectionState{}
-		b.version++
-		b.recordUndo(prev)
-		change.addAppliedEdit(applied)
-		b.commitChange(change)
+		b.doLocalEdit(Range{
+			Start: Pos{Row: row, GraphemeCol: col},
+			End:   Pos{Row: row, GraphemeCol: col + 1},
+		}, "")
 		return
 	}
 
 	// Join with next line (delete the newline).
-	start := Pos{Row: row, GraphemeCol: col}
-	end := Pos{Row: row + 1, GraphemeCol: 0}
-	nextCursor, applied, changed := b.replaceRange(Range{Start: start, End: end}, "")
-	if !changed {
-		return
-	}
-	b.cursor = nextCursor
-	b.sel = selectionState{}
-	b.version++
-	b.recordUndo(prev)
-	change.addAppliedEdit(applied)
-	b.commitChange(change)
+	b.doLocalEdit(Range{
+		Start: Pos{Row: row, GraphemeCol: col},
+		End:   Pos{Row: row + 1, GraphemeCol: 0},
+	}, "")
 }
 
 // DeleteSelection deletes the active selection, if any.
@@ -151,18 +121,7 @@ func (b *Buffer) DeleteSelection() {
 	if !ok {
 		return
 	}
-	prev := b.snapshot()
-	change := b.beginChange(ChangeSourceLocal)
-	nextCursor, applied, changed := b.replaceRange(r, "")
-	if !changed {
-		return
-	}
-	b.cursor = nextCursor
-	b.sel = selectionState{}
-	b.version++
-	b.recordUndo(prev)
-	change.addAppliedEdit(applied)
-	b.commitChange(change)
+	b.doLocalEdit(r, "")
 }
 
 func (b *Buffer) replaceRange(r Range, text string) (nextCursor Pos, applied AppliedEdit, changed bool) {
