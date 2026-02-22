@@ -7,6 +7,7 @@ import "github.com/charmbracelet/bubbles/key"
 // Bindings must be portable across terminals (ctrl/alt fallbacks).
 type KeyMap struct {
 	Left, Right, Up, Down                     key.Binding
+	PageUp, PageDown                          key.Binding
 	ShiftLeft, ShiftRight, ShiftUp, ShiftDown key.Binding
 	WordLeft, WordRight                       key.Binding
 	WordShiftLeft, WordShiftRight             key.Binding
@@ -21,10 +22,12 @@ type KeyMap struct {
 
 func DefaultKeyMap() KeyMap {
 	return KeyMap{
-		Left:  key.NewBinding(key.WithKeys("left"), key.WithHelp("←", "left")),
-		Right: key.NewBinding(key.WithKeys("right"), key.WithHelp("→", "right")),
-		Up:    key.NewBinding(key.WithKeys("up"), key.WithHelp("↑", "up")),
-		Down:  key.NewBinding(key.WithKeys("down"), key.WithHelp("↓", "down")),
+		Left:     key.NewBinding(key.WithKeys("left"), key.WithHelp("←", "left")),
+		Right:    key.NewBinding(key.WithKeys("right"), key.WithHelp("→", "right")),
+		Up:       key.NewBinding(key.WithKeys("up"), key.WithHelp("↑", "up")),
+		Down:     key.NewBinding(key.WithKeys("down"), key.WithHelp("↓", "down")),
+		PageUp:   key.NewBinding(key.WithKeys("pgup"), key.WithHelp("pgup", "page up")),
+		PageDown: key.NewBinding(key.WithKeys("pgdown"), key.WithHelp("pgdown", "page down")),
 
 		ShiftLeft:  key.NewBinding(key.WithKeys("shift+left"), key.WithHelp("shift+←", "select left")),
 		ShiftRight: key.NewBinding(key.WithKeys("shift+right"), key.WithHelp("shift+→", "select right")),

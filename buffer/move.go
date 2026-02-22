@@ -23,8 +23,10 @@ const (
 )
 
 type Move struct {
-	Unit   MoveUnit
-	Dir    MoveDir
+	Unit MoveUnit
+	Dir  MoveDir
+	// Count repeats the movement this many times. Values <= 0 are treated as 1.
+	Count  int
 	Extend bool // if true, updates selection anchor/end; if false clears selection
 }
 
@@ -66,18 +68,31 @@ func selectionStateEqual(a, b selectionState) bool {
 }
 
 func (b *Buffer) moveCursor(p Pos, m Move) Pos {
-	switch m.Unit {
-	case MoveGrapheme:
-		return b.moveGrapheme(p, m.Dir)
-	case MoveWord:
-		return b.moveWord(p, m.Dir)
-	case MoveLine:
-		return b.moveLine(p, m.Dir)
-	case MoveDoc:
-		return b.moveDoc(p, m.Dir)
-	default:
-		return p
+	count := m.Count
+	if count <= 0 {
+		count = 1
 	}
+
+	next := p
+	for i := 0; i < count; i++ {
+		prev := next
+		switch m.Unit {
+		case MoveGrapheme:
+			next = b.moveGrapheme(next, m.Dir)
+		case MoveWord:
+			next = b.moveWord(next, m.Dir)
+		case MoveLine:
+			next = b.moveLine(next, m.Dir)
+		case MoveDoc:
+			next = b.moveDoc(next, m.Dir)
+		default:
+			return next
+		}
+		if next == prev {
+			break
+		}
+	}
+	return next
 }
 
 func (b *Buffer) moveGrapheme(p Pos, dir MoveDir) Pos {

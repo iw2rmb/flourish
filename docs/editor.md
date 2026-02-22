@@ -50,6 +50,7 @@ Primary API:
 
 Keyboard:
 - movement, selection extension, editing, undo/redo, clipboard shortcuts.
+- default `pgup`/`pgdown` move by the current visible row count.
 - `ReadOnly=true` blocks text mutation, keeps movement/selection enabled.
 - text mutation shortcuts include typing, enter, delete/backspace, cut, paste, undo/redo.
 
@@ -246,6 +247,11 @@ Mode behavior:
 Read-only behavior:
 - `ReadOnly=true` still allows move/select intents.
 - mutation intents (`insert/delete/undo/redo/paste`) are suppressed.
+
+Move/select payloads:
+- `MoveIntentPayload.Move.Count` and `SelectIntentPayload.Move.Count` repeat the move operation.
+- default arrow/word/home/end moves use `Count=1` (zero value also means `1`).
+- default `pgup`/`pgdown` emit `MoveLine` with `Count=visible row count`.
 
 Clipboard behavior:
 - copy remains local-only.

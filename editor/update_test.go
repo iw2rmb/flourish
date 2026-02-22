@@ -324,6 +324,26 @@ func TestUpdate_ViewportFollowsCursor_Minimal(t *testing.T) {
 	}
 }
 
+func TestUpdate_PageUpDown_MoveByVisibleRows(t *testing.T) {
+	m := New(Config{Text: "0\n1\n2\n3\n4\n5\n6\n7\n8\n9"})
+	m = m.SetSize(10, 3)
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyPgDown})
+	if got, want := m.buf.Cursor(), (buffer.Pos{Row: 3, GraphemeCol: 0}); got != want {
+		t.Fatalf("cursor after pgdown: got %v, want %v", got, want)
+	}
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyPgDown})
+	if got, want := m.buf.Cursor(), (buffer.Pos{Row: 6, GraphemeCol: 0}); got != want {
+		t.Fatalf("cursor after second pgdown: got %v, want %v", got, want)
+	}
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyPgUp})
+	if got, want := m.buf.Cursor(), (buffer.Pos{Row: 3, GraphemeCol: 0}); got != want {
+		t.Fatalf("cursor after pgup: got %v, want %v", got, want)
+	}
+}
+
 func TestUpdate_HorizontalScroll_FollowsCursor_LongLine(t *testing.T) {
 	m := New(Config{Text: "abcdefghij"})
 	m = m.SetSize(5, 1)

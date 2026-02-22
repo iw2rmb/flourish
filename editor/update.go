@@ -138,6 +138,14 @@ func (m *Model) buildIntentsFromKey(msg tea.KeyMsg, before EditorState) (IntentB
 		move := buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirDown}
 		appendIntent(IntentMove, MoveIntentPayload{Move: move})
 		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+	case key.Matches(msg, km.PageUp):
+		move := buffer.Move{Unit: buffer.MoveLine, Dir: buffer.DirUp, Count: m.pageMoveCount()}
+		appendIntent(IntentMove, MoveIntentPayload{Move: move})
+		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
+	case key.Matches(msg, km.PageDown):
+		move := buffer.Move{Unit: buffer.MoveLine, Dir: buffer.DirDown, Count: m.pageMoveCount()}
+		appendIntent(IntentMove, MoveIntentPayload{Move: move})
+		mutations = append(mutations, func(mm *Model) { mm.buf.Move(move) })
 
 	case key.Matches(msg, km.ShiftLeft):
 		move := buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirLeft, Extend: true}
@@ -337,6 +345,14 @@ func textInRange(text string, r buffer.Range) string {
 		sb.WriteString(grapheme.Join(rr[startCol:endCol]))
 	}
 	return sb.String()
+}
+
+func (m *Model) pageMoveCount() int {
+	count := m.visibleRowCount()
+	if count <= 0 {
+		return 1
+	}
+	return count
 }
 
 func (m *Model) buildCompletionIntentsFromKey(msg tea.KeyMsg, before EditorState) (completionKeyResult, bool) {

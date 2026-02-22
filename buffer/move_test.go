@@ -53,6 +53,26 @@ func TestBuffer_MoveLine_HomeEndAndVerticalClamp(t *testing.T) {
 	}
 }
 
+func TestBuffer_Move_CountRepeatsAndClamps(t *testing.T) {
+	b := New("a\nb\nc\nd", Options{})
+
+	b.SetCursor(Pos{Row: 1, GraphemeCol: 0})
+	b.Move(Move{Unit: MoveLine, Dir: DirDown, Count: 2})
+	if got := b.Cursor(); got != (Pos{Row: 3, GraphemeCol: 0}) {
+		t.Fatalf("cursor=%v, want (3,0)", got)
+	}
+
+	b.Move(Move{Unit: MoveLine, Dir: DirUp, Count: 10})
+	if got := b.Cursor(); got != (Pos{Row: 0, GraphemeCol: 0}) {
+		t.Fatalf("cursor=%v, want (0,0)", got)
+	}
+
+	b.Move(Move{Unit: MoveLine, Dir: DirDown, Count: 0})
+	if got := b.Cursor(); got != (Pos{Row: 1, GraphemeCol: 0}) {
+		t.Fatalf("cursor=%v, want (1,0)", got)
+	}
+}
+
 func TestBuffer_MoveDoc_StartEnd(t *testing.T) {
 	b := New("a\nbc", Options{})
 

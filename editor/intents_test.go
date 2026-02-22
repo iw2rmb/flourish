@@ -195,6 +195,25 @@ func TestIntentEmission_KeyKindsAndSelectionAwareDeleteAndPaste(t *testing.T) {
 			want: IntentMove,
 		},
 		{
+			name: "move page down",
+			cfg:  Config{Text: "0\n1\n2\n3\n4\n5", MutationMode: EmitIntentsOnly},
+			setup: func(m *Model) {
+				*m = m.SetSize(10, 3)
+			},
+			msg:  tea.KeyMsg{Type: tea.KeyPgDown},
+			want: IntentMove,
+			checkFn: func(t *testing.T, in Intent) {
+				t.Helper()
+				p, ok := in.Payload.(MoveIntentPayload)
+				if !ok {
+					t.Fatalf("move payload type: got %T", in.Payload)
+				}
+				if got, want := p.Move, (buffer.Move{Unit: buffer.MoveLine, Dir: buffer.DirDown, Count: 3}); got != want {
+					t.Fatalf("move payload: got %+v, want %+v", got, want)
+				}
+			},
+		},
+		{
 			name: "select",
 			cfg:  Config{Text: "ab", MutationMode: EmitIntentsOnly},
 			msg:  tea.KeyMsg{Type: tea.KeyShiftRight},
