@@ -73,11 +73,11 @@ func unicodeConversionFixtures() []conversionFixture {
 }
 
 func strictConvertPolicy() ConvertPolicy {
-	return ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
+	return ConvertPolicy{ClampMode: OffsetError}
 }
 
 func clampConvertPolicy() ConvertPolicy {
-	return ConvertPolicy{ClampMode: OffsetClamp, NewlineMode: NewlineAsSingleRune}
+	return ConvertPolicy{ClampMode: OffsetClamp}
 }
 
 func TestBuffer_UnicodeFixtures_BoundaryRoundTrip(t *testing.T) {

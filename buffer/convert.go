@@ -14,15 +14,8 @@ const (
 	OffsetClamp
 )
 
-type NewlineMode uint8
-
-const (
-	NewlineAsSingleRune NewlineMode = iota
-)
-
 type ConvertPolicy struct {
-	ClampMode   OffsetClampMode
-	NewlineMode NewlineMode
+	ClampMode OffsetClampMode
 }
 
 type GapBias uint8
@@ -46,10 +39,6 @@ const (
 )
 
 func (b *Buffer) PosFromByteOffset(off int, p ConvertPolicy) (Pos, bool) {
-	if !validNewlineMode(p.NewlineMode) {
-		return Pos{}, false
-	}
-
 	off, ok := clampOffset(off, b.docLen(offsetUnitByte), p.ClampMode)
 	if !ok {
 		return Pos{}, false
@@ -58,10 +47,6 @@ func (b *Buffer) PosFromByteOffset(off int, p ConvertPolicy) (Pos, bool) {
 }
 
 func (b *Buffer) ByteOffsetFromPos(pos Pos, p ConvertPolicy) (int, bool) {
-	if !validNewlineMode(p.NewlineMode) {
-		return 0, false
-	}
-
 	pos, ok := b.normalizePosForMode(pos, p.ClampMode)
 	if !ok {
 		return 0, false
@@ -70,10 +55,6 @@ func (b *Buffer) ByteOffsetFromPos(pos Pos, p ConvertPolicy) (int, bool) {
 }
 
 func (b *Buffer) PosFromRuneOffset(off int, p ConvertPolicy) (Pos, bool) {
-	if !validNewlineMode(p.NewlineMode) {
-		return Pos{}, false
-	}
-
 	off, ok := clampOffset(off, b.docLen(offsetUnitRune), p.ClampMode)
 	if !ok {
 		return Pos{}, false
@@ -82,10 +63,6 @@ func (b *Buffer) PosFromRuneOffset(off int, p ConvertPolicy) (Pos, bool) {
 }
 
 func (b *Buffer) RuneOffsetFromPos(pos Pos, p ConvertPolicy) (int, bool) {
-	if !validNewlineMode(p.NewlineMode) {
-		return 0, false
-	}
-
 	pos, ok := b.normalizePosForMode(pos, p.ClampMode)
 	if !ok {
 		return 0, false
@@ -94,10 +71,6 @@ func (b *Buffer) RuneOffsetFromPos(pos Pos, p ConvertPolicy) (int, bool) {
 }
 
 func (b *Buffer) PosFromUTF16Offset(off int, p ConvertPolicy) (Pos, bool) {
-	if !validNewlineMode(p.NewlineMode) {
-		return Pos{}, false
-	}
-
 	off, ok := clampOffset(off, b.docLen(offsetUnitUTF16), p.ClampMode)
 	if !ok {
 		return Pos{}, false
@@ -106,10 +79,6 @@ func (b *Buffer) PosFromUTF16Offset(off int, p ConvertPolicy) (Pos, bool) {
 }
 
 func (b *Buffer) UTF16OffsetFromPos(pos Pos, p ConvertPolicy) (int, bool) {
-	if !validNewlineMode(p.NewlineMode) {
-		return 0, false
-	}
-
 	pos, ok := b.normalizePosForMode(pos, p.ClampMode)
 	if !ok {
 		return 0, false
@@ -122,8 +91,7 @@ func (b *Buffer) GapFromPos(pos Pos, bias GapBias) (Gap, bool) {
 		return Gap{}, false
 	}
 	off, ok := b.RuneOffsetFromPos(pos, ConvertPolicy{
-		ClampMode:   OffsetError,
-		NewlineMode: NewlineAsSingleRune,
+		ClampMode: OffsetError,
 	})
 	if !ok {
 		return Gap{}, false
@@ -136,10 +104,6 @@ func (b *Buffer) PosFromGap(g Gap, p ConvertPolicy) (Pos, bool) {
 		return Pos{}, false
 	}
 	return b.PosFromRuneOffset(g.RuneOffset, p)
-}
-
-func validNewlineMode(mode NewlineMode) bool {
-	return mode == NewlineAsSingleRune
 }
 
 func validGapBias(bias GapBias) bool {

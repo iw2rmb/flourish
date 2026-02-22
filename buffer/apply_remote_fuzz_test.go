@@ -147,10 +147,7 @@ func buildApplyRemoteFuzzOptions(tc applyRemoteFuzzCase, baseVersion uint64) App
 
 	return ApplyRemoteOptions{
 		BaseVersion: base,
-		ClampPolicy: ConvertPolicy{
-			ClampMode:   tc.clampMode,
-			NewlineMode: NewlineAsSingleRune,
-		},
+		ClampPolicy: ConvertPolicy{ClampMode: tc.clampMode},
 		VersionMismatchMode: tc.versionMismatchMode,
 	}
 }
@@ -258,10 +255,7 @@ func (r *fuzzByteReader) nextInt(max int) int {
 }
 
 func fuzzPosFromBuffer(b *Buffer, r *fuzzByteReader) Pos {
-	policy := ConvertPolicy{
-		ClampMode:   OffsetClamp,
-		NewlineMode: NewlineAsSingleRune,
-	}
+	policy := ConvertPolicy{ClampMode: OffsetClamp}
 	maxRune := b.docLen(offsetUnitRune)
 	off := r.nextInt(maxRune + 2)
 	pos, ok := b.PosFromRuneOffset(off, policy)

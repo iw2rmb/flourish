@@ -51,9 +51,6 @@ func (b *Buffer) ApplyRemote(edits []RemoteEdit, opts ApplyRemoteOptions) (Apply
 	if !validVersionMismatchMode(opts.VersionMismatchMode) {
 		return ApplyRemoteResult{}, false
 	}
-	if !validNewlineMode(opts.ClampPolicy.NewlineMode) {
-		return ApplyRemoteResult{}, false
-	}
 	if !validRemoteClampMode(opts.ClampPolicy.ClampMode) {
 		return ApplyRemoteResult{}, false
 	}
@@ -179,17 +176,11 @@ func validRemoteClampMode(mode OffsetClampMode) bool {
 }
 
 func remoteOffsetErrorPolicy() ConvertPolicy {
-	return ConvertPolicy{
-		ClampMode:   OffsetError,
-		NewlineMode: NewlineAsSingleRune,
-	}
+	return ConvertPolicy{ClampMode: OffsetError}
 }
 
 func remoteOffsetClampPolicy() ConvertPolicy {
-	return ConvertPolicy{
-		ClampMode:   OffsetClamp,
-		NewlineMode: NewlineAsSingleRune,
-	}
+	return ConvertPolicy{ClampMode: OffsetClamp}
 }
 
 func (b *Buffer) normalizeRemoteRangeForMode(r Range, mode OffsetClampMode) (Range, bool) {

@@ -5,10 +5,7 @@ import "testing"
 func remoteOpts(base uint64) ApplyRemoteOptions {
 	return ApplyRemoteOptions{
 		BaseVersion: base,
-		ClampPolicy: ConvertPolicy{
-			ClampMode:   OffsetClamp,
-			NewlineMode: NewlineAsSingleRune,
-		},
+		ClampPolicy: ConvertPolicy{ClampMode: OffsetClamp},
 		VersionMismatchMode: VersionMismatchReject,
 	}
 }
@@ -395,11 +392,6 @@ func TestBuffer_ApplyRemote_InvalidOptionsRejected(t *testing.T) {
 		t.Fatalf("expected changed=false for invalid clamp mode")
 	}
 
-	invalidNewline := remoteOpts(b.Version())
-	invalidNewline.ClampPolicy.NewlineMode = NewlineMode(99)
-	if _, changed := b.ApplyRemote(edit, invalidNewline); changed {
-		t.Fatalf("expected changed=false for invalid newline mode")
-	}
 }
 
 func TestRemapStatus_AllValuesReachable(t *testing.T) {

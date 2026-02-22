@@ -17,7 +17,7 @@ func TestBuffer_ConversionAPIs_ExportedAndCallable(t *testing.T) {
 	)
 
 	b := New("ab\ncd", Options{})
-	policy := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
+	policy := ConvertPolicy{ClampMode: OffsetError}
 	if _, ok := b.PosFromByteOffset(0, policy); !ok {
 		t.Fatalf("PosFromByteOffset should be callable")
 	}
@@ -53,8 +53,8 @@ func TestBuffer_ConversionAPIs_ExportedAndCallable(t *testing.T) {
 func TestBuffer_PosFromByteOffset(t *testing.T) {
 	b := New("ab\ncd", Options{})
 
-	clamp := ConvertPolicy{ClampMode: OffsetClamp, NewlineMode: NewlineAsSingleRune}
-	errMode := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
+	clamp := ConvertPolicy{ClampMode: OffsetClamp}
+	errMode := ConvertPolicy{ClampMode: OffsetError}
 
 	cases := []struct {
 		name string
@@ -89,7 +89,7 @@ func TestBuffer_PosFromByteOffset(t *testing.T) {
 
 func TestBuffer_PosFromByteOffset_RejectsInteriorClusterBytes(t *testing.T) {
 	b := New("éx", Options{})
-	p := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
+	p := ConvertPolicy{ClampMode: OffsetError}
 	if _, ok := b.PosFromByteOffset(1, p); ok {
 		t.Fatalf("expected byte offset inside grapheme cluster to fail")
 	}
@@ -98,8 +98,8 @@ func TestBuffer_PosFromByteOffset_RejectsInteriorClusterBytes(t *testing.T) {
 func TestBuffer_PosFromRuneOffset(t *testing.T) {
 	b := New("ab\ncd", Options{})
 
-	clamp := ConvertPolicy{ClampMode: OffsetClamp, NewlineMode: NewlineAsSingleRune}
-	errMode := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
+	clamp := ConvertPolicy{ClampMode: OffsetClamp}
+	errMode := ConvertPolicy{ClampMode: OffsetError}
 
 	cases := []struct {
 		name string
@@ -134,7 +134,7 @@ func TestBuffer_PosFromRuneOffset(t *testing.T) {
 
 func TestBuffer_PosFromRuneOffset_RejectsInteriorClusterRunes(t *testing.T) {
 	b := New("e\u0301x", Options{})
-	p := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
+	p := ConvertPolicy{ClampMode: OffsetError}
 	if _, ok := b.PosFromRuneOffset(1, p); ok {
 		t.Fatalf("expected rune offset inside grapheme cluster to fail")
 	}
@@ -143,8 +143,8 @@ func TestBuffer_PosFromRuneOffset_RejectsInteriorClusterRunes(t *testing.T) {
 func TestBuffer_PosFromUTF16Offset(t *testing.T) {
 	b := New("ab\n😀", Options{})
 
-	clamp := ConvertPolicy{ClampMode: OffsetClamp, NewlineMode: NewlineAsSingleRune}
-	errMode := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
+	clamp := ConvertPolicy{ClampMode: OffsetClamp}
+	errMode := ConvertPolicy{ClampMode: OffsetError}
 
 	cases := []struct {
 		name string
@@ -179,7 +179,7 @@ func TestBuffer_PosFromUTF16Offset(t *testing.T) {
 
 func TestBuffer_PosFromUTF16Offset_RejectsInteriorClusterUnits(t *testing.T) {
 	b := New("😀x", Options{})
-	p := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
+	p := ConvertPolicy{ClampMode: OffsetError}
 	if _, ok := b.PosFromUTF16Offset(1, p); ok {
 		t.Fatalf("expected utf16 offset inside grapheme cluster to fail")
 	}
@@ -187,8 +187,8 @@ func TestBuffer_PosFromUTF16Offset_RejectsInteriorClusterUnits(t *testing.T) {
 
 func TestBuffer_OffsetFromPos(t *testing.T) {
 	b := New("ab\né", Options{})
-	errMode := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
-	clamp := ConvertPolicy{ClampMode: OffsetClamp, NewlineMode: NewlineAsSingleRune}
+	errMode := ConvertPolicy{ClampMode: OffsetError}
+	clamp := ConvertPolicy{ClampMode: OffsetClamp}
 
 	gotByte, ok := b.ByteOffsetFromPos(Pos{Row: 1, GraphemeCol: 1}, errMode)
 	if !ok || gotByte != 5 {
@@ -230,7 +230,7 @@ func TestBuffer_OffsetFromPos(t *testing.T) {
 
 func TestBuffer_GapConversions(t *testing.T) {
 	b := New("a\nβ", Options{})
-	p := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
+	p := ConvertPolicy{ClampMode: OffsetError}
 
 	g, ok := b.GapFromPos(Pos{Row: 1, GraphemeCol: 1}, GapBiasRight)
 	if !ok {
@@ -256,7 +256,7 @@ func TestBuffer_GapConversions(t *testing.T) {
 	if _, ok := b.PosFromGap(Gap{RuneOffset: 99, Bias: GapBiasLeft}, p); ok {
 		t.Fatalf("expected out-of-range gap rune offset in error mode to fail")
 	}
-	clamp := ConvertPolicy{ClampMode: OffsetClamp, NewlineMode: NewlineAsSingleRune}
+	clamp := ConvertPolicy{ClampMode: OffsetClamp}
 	if got, ok := b.PosFromGap(Gap{RuneOffset: 99, Bias: GapBiasLeft}, clamp); !ok || got != (Pos{Row: 1, GraphemeCol: 1}) {
 		t.Fatalf("clamped PosFromGap=(%v,%v), want ((1,1),true)", got, ok)
 	}
@@ -264,7 +264,7 @@ func TestBuffer_GapConversions(t *testing.T) {
 
 func TestBuffer_OffsetConversions_DeterministicAcrossCalls(t *testing.T) {
 	b := New("aé\ne\u0301\n👨‍👩‍👧‍👦", Options{})
-	p := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
+	p := ConvertPolicy{ClampMode: OffsetError}
 
 	assertDeterministic := func(start, end int, fn func(int) (Pos, bool)) {
 		for off := start; off <= end; off++ {
@@ -291,7 +291,7 @@ func TestBuffer_OffsetConversions_DeterministicAcrossCalls(t *testing.T) {
 
 func TestBuffer_OffsetConversions_RoundTripAtBoundaries(t *testing.T) {
 	b := New("é\ne\u0301\n👨‍👩‍👧‍👦", Options{})
-	p := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
+	p := ConvertPolicy{ClampMode: OffsetError}
 
 	cases := []Pos{
 		{Row: 0, GraphemeCol: 0},
@@ -334,7 +334,7 @@ func TestBuffer_OffsetConversions_RoundTripAtBoundaries(t *testing.T) {
 
 func TestBuffer_GapConversions_Boundaries(t *testing.T) {
 	b := New("a\nβ", Options{})
-	p := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineAsSingleRune}
+	p := ConvertPolicy{ClampMode: OffsetError}
 
 	cases := []struct {
 		pos      Pos
@@ -363,30 +363,6 @@ func TestBuffer_GapConversions_Boundaries(t *testing.T) {
 				t.Fatalf("PosFromGap(%v)=(%v,%v), want (%v,true)", g, gotPos, ok, tc.pos)
 			}
 		}
-	}
-}
-
-func TestBuffer_ConversionAPIs_InvalidNewlineMode(t *testing.T) {
-	b := New("ab", Options{})
-	p := ConvertPolicy{ClampMode: OffsetError, NewlineMode: NewlineMode(99)}
-
-	if _, ok := b.PosFromByteOffset(0, p); ok {
-		t.Fatalf("expected invalid newline mode to fail")
-	}
-	if _, ok := b.ByteOffsetFromPos(Pos{Row: 0, GraphemeCol: 0}, p); ok {
-		t.Fatalf("expected invalid newline mode to fail")
-	}
-	if _, ok := b.PosFromRuneOffset(0, p); ok {
-		t.Fatalf("expected invalid newline mode to fail")
-	}
-	if _, ok := b.RuneOffsetFromPos(Pos{Row: 0, GraphemeCol: 0}, p); ok {
-		t.Fatalf("expected invalid newline mode to fail")
-	}
-	if _, ok := b.PosFromUTF16Offset(0, p); ok {
-		t.Fatalf("expected invalid newline mode to fail")
-	}
-	if _, ok := b.UTF16OffsetFromPos(Pos{Row: 0, GraphemeCol: 0}, p); ok {
-		t.Fatalf("expected invalid newline mode to fail")
 	}
 }
 
