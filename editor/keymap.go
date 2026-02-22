@@ -20,6 +20,38 @@ type KeyMap struct {
 	Copy, Cut, Paste key.Binding
 }
 
+// isZero returns true when no bindings have been configured.
+func (km KeyMap) isZero() bool {
+	return bindingIsZero(km.Left) &&
+		bindingIsZero(km.Right) &&
+		bindingIsZero(km.Up) &&
+		bindingIsZero(km.Down) &&
+		bindingIsZero(km.PageUp) &&
+		bindingIsZero(km.PageDown) &&
+		bindingIsZero(km.ShiftLeft) &&
+		bindingIsZero(km.ShiftRight) &&
+		bindingIsZero(km.ShiftUp) &&
+		bindingIsZero(km.ShiftDown) &&
+		bindingIsZero(km.WordLeft) &&
+		bindingIsZero(km.WordRight) &&
+		bindingIsZero(km.WordShiftLeft) &&
+		bindingIsZero(km.WordShiftRight) &&
+		bindingIsZero(km.Home) &&
+		bindingIsZero(km.End) &&
+		bindingIsZero(km.Backspace) &&
+		bindingIsZero(km.Delete) &&
+		bindingIsZero(km.Enter) &&
+		bindingIsZero(km.Undo) &&
+		bindingIsZero(km.Redo) &&
+		bindingIsZero(km.Copy) &&
+		bindingIsZero(km.Cut) &&
+		bindingIsZero(km.Paste)
+}
+
+func bindingIsZero(b key.Binding) bool {
+	return len(b.Keys()) == 0
+}
+
 func DefaultKeyMap() KeyMap {
 	return KeyMap{
 		Left:     key.NewBinding(key.WithKeys("left"), key.WithHelp("←", "left")),

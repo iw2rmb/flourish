@@ -18,6 +18,25 @@ type Style struct {
 	VirtualOverlay lipgloss.Style
 }
 
+// isZero returns true when every lipgloss.Style field is at its default
+// (renders text unchanged). This replaces reflect.DeepEqual with short-circuit
+// render checks.
+func (s Style) isZero() bool {
+	return isLipglossZero(s.Gutter) &&
+		isLipglossZero(s.Text) &&
+		isLipglossZero(s.Selection) &&
+		isLipglossZero(s.Cursor) &&
+		isLipglossZero(s.Link) &&
+		isLipglossZero(s.CompletionItem) &&
+		isLipglossZero(s.CompletionSelected) &&
+		isLipglossZero(s.Ghost) &&
+		isLipglossZero(s.VirtualOverlay)
+}
+
+func isLipglossZero(s lipgloss.Style) bool {
+	return s.Render("x") == "x"
+}
+
 func DefaultStyle() Style {
 	gutter := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	return Style{

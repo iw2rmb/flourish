@@ -66,10 +66,18 @@ func (m Model) completionPopupRender(base string) (completionPopupRender, bool) 
 		return completionPopupRender{}, false
 	}
 
+	// Single pass: compute segments for each item, measure width, and store for rendering.
+	type itemEntry struct {
+		item     CompletionItem
+		segments []CompletionSegment
+	}
+	entries := make([]itemEntry, len(itemIndices))
 	popupWidth := 0
-	for _, idx := range itemIndices {
+	for i, idx := range itemIndices {
 		item := state.Items[idx]
-		if w := completionSegmentsCellWidth(completionItemSegments(item)); w > popupWidth {
+		segs := completionItemSegments(item)
+		entries[i] = itemEntry{item: item, segments: segs}
+		if w := completionSegmentsCellWidth(segs); w > popupWidth {
 			popupWidth = w
 		}
 	}
@@ -82,10 +90,9 @@ func (m Model) completionPopupRender(base string) (completionPopupRender, bool) 
 
 	selected := clampCompletionSelected(state.Selected, len(visible))
 	rendered := make([]string, 0, len(itemIndices))
-	for row, idx := range itemIndices {
-		item := state.Items[idx]
+	for row, e := range entries {
 		selectedRow := row == selected
-		rendered = append(rendered, m.renderCompletionPopupRow(item, selectedRow, popupWidth))
+		rendered = append(rendered, m.renderCompletionPopupRowFromSegments(e.item, e.segments, selectedRow, popupWidth))
 	}
 
 	y := anchorY + 1
@@ -125,8 +132,8 @@ func (m Model) completionPopupRender(base string) (completionPopupRender, bool) 
 	}, true
 }
 
-func (m Model) renderCompletionPopupRow(item CompletionItem, selected bool, width int) string {
-	segments := truncateCompletionSegments(completionItemSegments(item), width)
+func (m Model) renderCompletionPopupRowFromSegments(item CompletionItem, precomputed []CompletionSegment, selected bool, width int) string {
+	segments := truncateCompletionSegments(precomputed, width)
 	base := completionRowBaseStyle(m.cfg.Style, selected)
 
 	var sb strings.Builder

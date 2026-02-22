@@ -75,6 +75,17 @@ func (b *Buffer) Text() string {
 	return sb.String()
 }
 
+// RawLines returns the document as a slice of strings (one per line),
+// joining grapheme clusters directly without the serialize-then-split
+// round-trip of Text() + strings.Split().
+func (b *Buffer) RawLines() []string {
+	out := make([]string, len(b.lines))
+	for i, line := range b.lines {
+		out[i] = grapheme.Join(line)
+	}
+	return out
+}
+
 func (b *Buffer) Version() uint64 { return b.version }
 
 // TextVersion increments only on effective text mutations.

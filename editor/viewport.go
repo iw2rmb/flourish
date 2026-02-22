@@ -31,6 +31,8 @@ type wrapLayoutLine struct {
 
 	segments       []wrappedSegment
 	firstVisualRow int
+
+	linksResolved bool
 }
 
 type wrapLayoutCache struct {
@@ -76,7 +78,7 @@ func (m *Model) ensureLayoutCache(lines []string) wrapLayoutCache {
 	}
 
 	for row, rawLine := range lines {
-		line := m.buildLayoutLine(row, rawLine, key.contentWidth)
+		line := m.buildLayoutLineNoLinks(row, rawLine, key.contentWidth)
 		firstVisualRow := len(cache.rows)
 		line.firstVisualRow = firstVisualRow
 		cache.lines = append(cache.lines, line)
@@ -98,19 +100,29 @@ func (m *Model) ensureLayoutCache(lines []string) wrapLayoutCache {
 				EndGraphemeCol:   0,
 				Cells:            0,
 			}},
+			linksResolved: true,
 		})
 		cache.rows = append(cache.rows, wrapLayoutRow{})
 	}
+
+	// Resolve links only for visible lines.
+	m.resolveLinksForVisibleRows(&cache)
 
 	m.layout = cache
 	return cache
 }
 
 func (m *Model) buildLayoutLine(row int, rawLine string, contentWidth int) wrapLayoutLine {
+	line := m.buildLayoutLineNoLinks(row, rawLine, contentWidth)
+	line.links = m.linksForLine(row, rawLine, line.vt, m.buf.Cursor())
+	line.linksResolved = true
+	return line
+}
+
+func (m *Model) buildLayoutLineNoLinks(row int, rawLine string, contentWidth int) wrapLayoutLine {
 	vt := m.virtualTextForRow(row, rawLine)
 	vt = m.virtualTextWithGhost(row, rawLine, vt)
 	visual := BuildVisualLine(rawLine, vt, m.cfg.TabWidth)
-	links := m.linksForLine(row, rawLine, vt, m.buf.Cursor())
 	segments := wrapSegmentsForVisualLine(visual, m.cfg.WrapMode, contentWidth)
 	if len(segments) == 0 {
 		segments = []wrappedSegment{{
@@ -126,8 +138,38 @@ func (m *Model) buildLayoutLine(row int, rawLine string, contentWidth int) wrapL
 		rawLine:  rawLine,
 		vt:       vt,
 		visual:   visual,
-		links:    links,
 		segments: segments,
+	}
+}
+
+// resolveLinksForVisibleRows computes link spans only for lines visible in the
+// current viewport, avoiding the cost of calling LinkProvider for every line in
+// the document.
+func (m *Model) resolveLinksForVisibleRows(cache *wrapLayoutCache) {
+	if m.cfg.LinkProvider == nil || m.buf == nil {
+		return
+	}
+	h := m.viewport.Height - m.viewport.Style.GetVerticalFrameSize()
+	if h <= 0 {
+		return
+	}
+	cursor := m.buf.Cursor()
+	start := clampInt(m.viewport.YOffset, 0, len(cache.rows))
+	end := start + h
+	if end > len(cache.rows) {
+		end = len(cache.rows)
+	}
+	seen := make(map[int]bool, end-start)
+	for vr := start; vr < end; vr++ {
+		row := cache.rows[vr].logicalRow
+		if seen[row] {
+			continue
+		}
+		seen[row] = true
+		line := cache.lines[row]
+		line.links = m.linksForLine(row, line.rawLine, line.vt, cursor)
+		line.linksResolved = true
+		cache.lines[row] = line
 	}
 }
 

@@ -115,6 +115,11 @@ func (m *Model) renderLayoutRow(
 		return "", false
 	}
 	line := layout.lines[row]
+	if !line.linksResolved {
+		line.links = m.linksForLine(row, line.rawLine, line.vt, cursor)
+		line.linksResolved = true
+		layout.lines[row] = line
+	}
 	if ref.segmentIndex < 0 || ref.segmentIndex >= len(line.segments) {
 		return "", false
 	}

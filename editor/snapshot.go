@@ -206,11 +206,12 @@ func (m *Model) buildRenderSnapshot(token SnapshotToken) RenderSnapshot {
 			DocStartGrapheme: seg.StartGraphemeCol,
 			DocEndGrapheme:   seg.EndGraphemeCol,
 		}
-		if seg.endCell > seg.startCell {
-			row.VisibleDocCols = make([]int, 0, seg.endCell-seg.startCell)
-			for cell := seg.startCell; cell < seg.endCell; cell++ {
-				row.VisibleDocCols = append(row.VisibleDocCols, line.visual.DocGraphemeColForVisualCell(cell))
+		if n := seg.endCell - seg.startCell; n > 0 {
+			cols := make([]int, n)
+			for i := range cols {
+				cols[i] = line.visual.DocGraphemeColForVisualCell(seg.startCell + i)
 			}
+			row.VisibleDocCols = cols
 		}
 		s.Rows = append(s.Rows, row)
 	}

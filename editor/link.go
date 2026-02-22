@@ -222,6 +222,11 @@ func (m *Model) linkAtDocPos(pos buffer.Pos) (LinkHit, bool) {
 	}
 
 	line := layout.lines[pos.Row]
+	if !line.linksResolved {
+		line.links = m.linksForLine(pos.Row, line.rawLine, line.vt, m.buf.Cursor())
+		line.linksResolved = true
+		m.layout.lines[pos.Row] = line
+	}
 	col := clampInt(pos.GraphemeCol, 0, line.visual.RawGraphemeLen)
 	for _, link := range line.links {
 		if col < link.StartRawGraphemeCol || col >= link.EndRawGraphemeCol {

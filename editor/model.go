@@ -1,7 +1,6 @@
 package editor
 
 import (
-	"reflect"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
@@ -47,10 +46,10 @@ type Model struct {
 }
 
 func New(cfg Config) Model {
-	if reflect.DeepEqual(cfg.Style, Style{}) {
+	if cfg.Style.isZero() {
 		cfg.Style = DefaultStyle()
 	}
-	if reflect.DeepEqual(cfg.KeyMap, KeyMap{}) {
+	if cfg.KeyMap.isZero() {
 		cfg.KeyMap = DefaultKeyMap()
 	}
 	cfg.CompletionKeyMap = normalizeCompletionKeyMap(cfg.CompletionKeyMap)
@@ -673,10 +672,6 @@ func selectionColsForRow(sel buffer.Range, selOK bool, row int, lineLen int) (st
 	return startCol, endCol, true
 }
 
-func rawLinesFromBufferText(text string) []string {
-	return strings.Split(text, "\n")
-}
-
 func (m *Model) ensureLines() []string {
 	if m.buf == nil {
 		return nil
@@ -685,7 +680,7 @@ func (m *Model) ensureLines() []string {
 	if m.cachedLines != nil && m.cachedLinesVer == ver {
 		return m.cachedLines
 	}
-	m.cachedLines = rawLinesFromBufferText(m.buf.Text())
+	m.cachedLines = m.buf.RawLines()
 	m.cachedLinesVer = ver
 	return m.cachedLines
 }

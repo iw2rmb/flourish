@@ -1,8 +1,6 @@
 package editor
 
 import (
-	"reflect"
-
 	"github.com/charmbracelet/bubbles/key"
 
 	"github.com/iw2rmb/flourish/buffer"
@@ -75,6 +73,17 @@ type CompletionKeyMap struct {
 	PagePrev key.Binding
 }
 
+func (km CompletionKeyMap) isZero() bool {
+	return bindingIsZero(km.Trigger) &&
+		bindingIsZero(km.Accept) &&
+		!km.AcceptTab &&
+		bindingIsZero(km.Dismiss) &&
+		bindingIsZero(km.Next) &&
+		bindingIsZero(km.Prev) &&
+		bindingIsZero(km.PageNext) &&
+		bindingIsZero(km.PagePrev)
+}
+
 func DefaultCompletionKeyMap() CompletionKeyMap {
 	return CompletionKeyMap{
 		Trigger: key.NewBinding(
@@ -145,7 +154,7 @@ func normalizeCompletionInputMode(mode CompletionInputMode) CompletionInputMode 
 }
 
 func normalizeCompletionKeyMap(km CompletionKeyMap) CompletionKeyMap {
-	if reflect.DeepEqual(km, CompletionKeyMap{}) {
+	if km.isZero() {
 		return DefaultCompletionKeyMap()
 	}
 	return km
