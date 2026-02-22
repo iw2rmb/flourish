@@ -215,7 +215,7 @@ func (m *Model) linkAtDocPos(pos buffer.Pos) (LinkHit, bool) {
 	}
 	m.syncFromBuffer()
 
-	lines := rawLinesFromBufferText(m.buf.Text())
+	lines := m.ensureLines()
 	layout := m.ensureLayoutCache(lines)
 	if pos.Row < 0 || pos.Row >= len(layout.lines) {
 		return LinkHit{}, false

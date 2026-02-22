@@ -14,7 +14,7 @@ func (m *Model) renderContent() string {
 	}
 	m.syncFromBuffer()
 
-	lines := rawLinesFromBufferText(m.buf.Text())
+	lines := m.ensureLines()
 	layout := m.ensureLayoutCache(lines)
 	rows := m.renderRows(lines, layout, nil, false)
 	return strings.Join(rows, "\n")
@@ -167,7 +167,7 @@ func (m *Model) rebuildGutterRows(rows []int) bool {
 	if m.buf == nil {
 		return false
 	}
-	lines := rawLinesFromBufferText(m.buf.Text())
+	lines := m.ensureLines()
 	layout := m.ensureLayoutCache(lines)
 	if len(layout.rows) == 0 || len(m.renderedRows) != len(layout.rows) {
 		return false

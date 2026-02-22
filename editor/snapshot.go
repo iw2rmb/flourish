@@ -178,7 +178,7 @@ func (m *Model) buildRenderSnapshot(token SnapshotToken) RenderSnapshot {
 	}
 	s.BufferVersion = m.buf.Version()
 
-	lines := rawLinesFromBufferText(m.buf.Text())
+	lines := m.ensureLines()
 	layout := m.ensureLayoutCache(lines)
 	if len(layout.rows) == 0 {
 		return s

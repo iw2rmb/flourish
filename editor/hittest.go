@@ -18,7 +18,7 @@ func (m *Model) screenToDocPos(x, y int) buffer.Pos {
 	}
 	m.syncFromBuffer()
 
-	lines := rawLinesFromBufferText(m.buf.Text())
+	lines := m.ensureLines()
 	layout := m.ensureLayoutCache(lines)
 	if len(layout.rows) == 0 {
 		return buffer.Pos{}
@@ -76,7 +76,7 @@ func (m *Model) docToScreenPos(pos buffer.Pos) (x int, y int, ok bool) {
 	}
 	m.syncFromBuffer()
 
-	lines := rawLinesFromBufferText(m.buf.Text())
+	lines := m.ensureLines()
 	layout := m.ensureLayoutCache(lines)
 	if len(layout.lines) == 0 || len(layout.rows) == 0 {
 		return 0, 0, false

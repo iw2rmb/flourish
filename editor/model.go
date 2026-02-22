@@ -40,6 +40,9 @@ type Model struct {
 
 	gutterInvalidationVersion uint64
 	renderedRows              []string
+
+	cachedLines    []string
+	cachedLinesVer uint64
 }
 
 func New(cfg Config) Model {
@@ -77,7 +80,7 @@ func (m *Model) ghostForCursor() (Ghost, bool) {
 	}
 
 	cur := m.buf.Cursor()
-	lines := rawLinesFromBufferText(m.buf.Text())
+	lines := m.ensureLines()
 	if cur.Row < 0 || cur.Row >= len(lines) {
 		return Ghost{}, false
 	}
@@ -298,7 +301,7 @@ func (m *Model) rebuildCursorSelectionDirtyRows(
 		return false
 	}
 
-	lines := rawLinesFromBufferText(m.buf.Text())
+	lines := m.ensureLines()
 	layout := m.ensureLayoutCache(lines)
 	if len(layout.rows) == 0 || len(m.renderedRows) != len(layout.rows) {
 		return false
@@ -387,7 +390,7 @@ func (m *Model) cursorOutsideCompletionAnchorToken() bool {
 		return true
 	}
 
-	lines := strings.Split(m.buf.Text(), "\n")
+	lines := m.ensureLines()
 	if state.Anchor.Row < 0 || state.Anchor.Row >= len(lines) {
 		return true
 	}
@@ -403,7 +406,7 @@ func (m *Model) rebuildContent() {
 		m.setRenderedRows(nil)
 		return
 	}
-	lines := rawLinesFromBufferText(m.buf.Text())
+	lines := m.ensureLines()
 	layout := m.ensureLayoutCache(lines)
 	rows := m.renderRows(lines, layout, nil, false)
 	m.setRenderedRows(rows)
@@ -443,7 +446,7 @@ func (m *Model) followCursorWithForce(force bool) {
 		return
 	}
 	cur := m.buf.Cursor()
-	lines := rawLinesFromBufferText(m.buf.Text())
+	lines := m.ensureLines()
 	layout := m.ensureLayoutCache(lines)
 
 	h := m.viewport.Height - m.viewport.Style.GetVerticalFrameSize()
@@ -597,4 +600,17 @@ func selectionColsForRow(sel buffer.Range, selOK bool, row int, lineLen int) (st
 
 func rawLinesFromBufferText(text string) []string {
 	return strings.Split(text, "\n")
+}
+
+func (m *Model) ensureLines() []string {
+	if m.buf == nil {
+		return nil
+	}
+	ver := m.buf.TextVersion()
+	if m.cachedLines != nil && m.cachedLinesVer == ver {
+		return m.cachedLines
+	}
+	m.cachedLines = rawLinesFromBufferText(m.buf.Text())
+	m.cachedLinesVer = ver
+	return m.cachedLines
 }
