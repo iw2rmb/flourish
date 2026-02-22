@@ -44,6 +44,10 @@ type CompletionFilterContext struct {
 	Cursor     buffer.Pos
 	DocID      string
 	DocVersion uint64
+
+	// lowerCache holds pre-computed lowercased flattened text per item,
+	// used by defaultCompletionFilter to avoid re-lowercasing on every keystroke.
+	lowerCache []string
 }
 
 type CompletionFilterResult struct {
@@ -256,6 +260,7 @@ func (m Model) CompletionState() CompletionState {
 
 func (m Model) SetCompletionState(state CompletionState) Model {
 	m.completionState = cloneCompletionState(state)
+	m.completionLowerCache = nil // invalidate; recomputeCompletionFilter rebuilds
 	m.recomputeCompletionFilter(&m.completionState)
 	return m
 }

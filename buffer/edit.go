@@ -184,7 +184,8 @@ func (b *Buffer) replaceRange(r Range, text string) (nextCursor Pos, applied App
 	}
 
 	b.lines = out
-	b.offsetIdx.valid = false
+	b.offsetIdx.byteRuneValid = false
+	b.offsetIdx.utf16Valid = false
 	applied = AppliedEdit{
 		RangeBefore: r,
 		RangeAfter: Range{

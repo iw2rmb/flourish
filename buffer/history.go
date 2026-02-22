@@ -35,7 +35,8 @@ func (b *Buffer) restore(s bufferSnapshot) {
 		lines[i] = append([]string(nil), line...)
 	}
 	b.lines = lines
-	b.offsetIdx.valid = false
+	b.offsetIdx.byteRuneValid = false
+	b.offsetIdx.utf16Valid = false
 	b.cursor = ClampPos(s.cursor, len(b.lines), b.lineLen)
 
 	if !s.sel.active {

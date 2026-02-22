@@ -37,14 +37,18 @@ type Buffer struct {
 
 // lineOffsetIndex caches cumulative byte/rune/UTF-16 offsets per line so that
 // offset ↔ position conversions are O(log n + line length) instead of O(document).
+// Each unit is computed lazily and tracked with its own version.
 type lineOffsetIndex struct {
-	textVersion uint64
-	valid       bool
-	// lineStart[unit][i] = document offset at the start of line i.
-	// Length: len(lines).
-	byteStarts  []int
-	runeStarts  []int
-	utf16Starts []int
+	// byteRune covers both byte and rune (cheap to compute together).
+	byteRuneVersion uint64
+	byteRuneValid   bool
+	byteStarts      []int
+	runeStarts      []int
+
+	// utf16 is computed separately (expensive due to utf16.RuneLen per rune).
+	utf16Version uint64
+	utf16Valid   bool
+	utf16Starts  []int
 }
 
 func New(text string, opt Options) *Buffer {

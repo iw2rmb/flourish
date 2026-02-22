@@ -31,7 +31,28 @@ func (m *Model) renderRows(
 	lineCount := len(lines)
 	gutterWidth := m.resolvedGutterWidth(lineCount)
 
-	highlightVisible := make([]bool, len(layout.lines))
+	nLines := len(layout.lines)
+	highlightVisible := m.highlightVisible
+	highlightsByLine := m.highlightsByLine
+	highlightsComputed := m.highlightsComputed
+	if cap(highlightVisible) >= nLines {
+		highlightVisible = highlightVisible[:nLines]
+		highlightsByLine = highlightsByLine[:nLines]
+		highlightsComputed = highlightsComputed[:nLines]
+	} else {
+		highlightVisible = make([]bool, nLines)
+		highlightsByLine = make([][]HighlightSpan, nLines)
+		highlightsComputed = make([]bool, nLines)
+	}
+	clear(highlightVisible)
+	for i := range highlightsComputed {
+		highlightsByLine[i] = nil
+		highlightsComputed[i] = false
+	}
+	m.highlightVisible = highlightVisible
+	m.highlightsByLine = highlightsByLine
+	m.highlightsComputed = highlightsComputed
+
 	if m.cfg.Highlighter != nil {
 		h := m.viewport.Height - m.viewport.Style.GetVerticalFrameSize()
 		if h > 0 {
@@ -42,14 +63,12 @@ func (m *Model) renderRows(
 			}
 			for visualRow := start; visualRow < end; visualRow++ {
 				ref := layout.rows[visualRow]
-				if ref.logicalRow >= 0 && ref.logicalRow < len(layout.lines) {
+				if ref.logicalRow >= 0 && ref.logicalRow < nLines {
 					highlightVisible[ref.logicalRow] = true
 				}
 			}
 		}
 	}
-	highlightsByLine := make([][]HighlightSpan, len(layout.lines))
-	highlightsComputed := make([]bool, len(layout.lines))
 
 	out := make([]string, 0, len(layout.rows))
 	maxIntVal := int(^uint(0) >> 1)

@@ -163,29 +163,51 @@ func unitWidth(cluster string, unit offsetUnit) int {
 	return len(cluster)
 }
 
-func (b *Buffer) ensureOffsetIndex() {
-	if b.offsetIdx.valid && b.offsetIdx.textVersion == b.textVersion {
+func (b *Buffer) ensureByteRuneIndex() {
+	if b.offsetIdx.byteRuneValid && b.offsetIdx.byteRuneVersion == b.textVersion {
 		return
 	}
 	n := len(b.lines)
 	if cap(b.offsetIdx.byteStarts) >= n {
 		b.offsetIdx.byteStarts = b.offsetIdx.byteStarts[:n]
 		b.offsetIdx.runeStarts = b.offsetIdx.runeStarts[:n]
-		b.offsetIdx.utf16Starts = b.offsetIdx.utf16Starts[:n]
 	} else {
 		b.offsetIdx.byteStarts = make([]int, n)
 		b.offsetIdx.runeStarts = make([]int, n)
-		b.offsetIdx.utf16Starts = make([]int, n)
 	}
 
-	byteOff, runeOff, utf16Off := 0, 0, 0
+	byteOff, runeOff := 0, 0
 	for i, line := range b.lines {
 		b.offsetIdx.byteStarts[i] = byteOff
 		b.offsetIdx.runeStarts[i] = runeOff
-		b.offsetIdx.utf16Starts[i] = utf16Off
 		for _, cluster := range line {
 			byteOff += len(cluster)
 			runeOff += utf8.RuneCountInString(cluster)
+		}
+		if i < len(b.lines)-1 {
+			byteOff++
+			runeOff++
+		}
+	}
+	b.offsetIdx.byteRuneVersion = b.textVersion
+	b.offsetIdx.byteRuneValid = true
+}
+
+func (b *Buffer) ensureUTF16Index() {
+	if b.offsetIdx.utf16Valid && b.offsetIdx.utf16Version == b.textVersion {
+		return
+	}
+	n := len(b.lines)
+	if cap(b.offsetIdx.utf16Starts) >= n {
+		b.offsetIdx.utf16Starts = b.offsetIdx.utf16Starts[:n]
+	} else {
+		b.offsetIdx.utf16Starts = make([]int, n)
+	}
+
+	utf16Off := 0
+	for i, line := range b.lines {
+		b.offsetIdx.utf16Starts[i] = utf16Off
+		for _, cluster := range line {
 			for _, r := range cluster {
 				n := utf16.RuneLen(r)
 				if n < 0 {
@@ -195,23 +217,23 @@ func (b *Buffer) ensureOffsetIndex() {
 			}
 		}
 		if i < len(b.lines)-1 {
-			byteOff++
-			runeOff++
 			utf16Off++
 		}
 	}
-	b.offsetIdx.textVersion = b.textVersion
-	b.offsetIdx.valid = true
+	b.offsetIdx.utf16Version = b.textVersion
+	b.offsetIdx.utf16Valid = true
 }
 
 func (b *Buffer) lineStarts(unit offsetUnit) []int {
-	b.ensureOffsetIndex()
 	switch unit {
-	case offsetUnitRune:
-		return b.offsetIdx.runeStarts
 	case offsetUnitUTF16:
+		b.ensureUTF16Index()
 		return b.offsetIdx.utf16Starts
+	case offsetUnitRune:
+		b.ensureByteRuneIndex()
+		return b.offsetIdx.runeStarts
 	default:
+		b.ensureByteRuneIndex()
 		return b.offsetIdx.byteStarts
 	}
 }

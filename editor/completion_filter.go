@@ -11,12 +11,21 @@ func (m *Model) recomputeCompletionFilter(state *CompletionState) {
 		return
 	}
 
+	// Rebuild lowercased text cache when item list changes.
+	if len(m.completionLowerCache) != len(state.Items) {
+		m.completionLowerCache = make([]string, len(state.Items))
+		for i := range state.Items {
+			m.completionLowerCache[i] = strings.ToLower(flattenCompletionItemText(state.Items[i]))
+		}
+	}
+
 	ctx := CompletionFilterContext{
 		Query:      state.Query,
 		Items:      state.Items,
 		Cursor:     m.completionFilterCursor(),
 		DocID:      m.cfg.DocID,
 		DocVersion: m.docVersion(),
+		lowerCache: m.completionLowerCache,
 	}
 
 	result := CompletionFilterResult{}
@@ -40,8 +49,14 @@ func (m *Model) completionFilterCursor() buffer.Pos {
 func defaultCompletionFilter(ctx CompletionFilterContext) CompletionFilterResult {
 	query := strings.ToLower(ctx.Query)
 	visible := make([]int, 0, len(ctx.Items))
+	lowerCache := ctx.lowerCache
 	for i := range ctx.Items {
-		itemText := strings.ToLower(flattenCompletionItemText(ctx.Items[i]))
+		var itemText string
+		if i < len(lowerCache) {
+			itemText = lowerCache[i]
+		} else {
+			itemText = strings.ToLower(flattenCompletionItemText(ctx.Items[i]))
+		}
 		if strings.Contains(itemText, query) {
 			visible = append(visible, i)
 		}

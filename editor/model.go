@@ -19,6 +19,7 @@ type Model struct {
 
 	completionState       CompletionState
 	completionFilterClean bool // set by recomputeCompletionQueryFromAnchor to skip redundant filter in syncFromBuffer
+	completionLowerCache  []string // cached lowercased flattened text per completion item
 
 	viewport viewport.Model
 	// xOffset is the horizontal scroll offset in terminal cells. It is used only
@@ -40,6 +41,11 @@ type Model struct {
 
 	gutterInvalidationVersion uint64
 	renderedRows              []string
+
+	// Reusable per-render highlight bookkeeping, sized to logical line count.
+	highlightVisible  []bool
+	highlightsByLine  [][]HighlightSpan
+	highlightsComputed []bool
 
 	cachedLines    []string
 	cachedLinesVer uint64
@@ -487,7 +493,13 @@ func (m *Model) tryIncrementalTextRebuild(
 }
 
 func (m *Model) setRenderedRows(rows []string) {
-	m.renderedRows = append([]string(nil), rows...)
+	// Reuse the backing array when it has enough capacity.
+	if cap(m.renderedRows) >= len(rows) {
+		m.renderedRows = m.renderedRows[:len(rows)]
+	} else {
+		m.renderedRows = make([]string, len(rows))
+	}
+	copy(m.renderedRows, rows)
 	m.viewport.SetContent(strings.Join(rows, "\n"))
 }
 

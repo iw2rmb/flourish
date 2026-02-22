@@ -3,6 +3,7 @@ package grapheme
 import (
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/rivo/uniseg"
 )
@@ -13,7 +14,7 @@ func Split(text string) []string {
 		return nil
 	}
 	g := uniseg.NewGraphemes(text)
-	out := make([]string, 0, len([]rune(text)))
+	out := make([]string, 0, utf8.RuneCountInString(text))
 	for g.Next() {
 		out = append(out, g.Str())
 	}
