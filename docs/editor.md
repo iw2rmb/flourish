@@ -73,6 +73,7 @@ Viewport integration:
 - `ViewportState().VisibleRows` reports content-area rows (excludes reserved horizontal scrollbar row when horizontal scrollbar is visible).
 - `ScreenToDoc` and `DocToScreen` provide stable host-side coordinate mapping.
 - snapshot-bound mapping APIs (`RenderSnapshot`, `ScreenToDocWithSnapshot`, `DocToScreenWithSnapshot`) provide frame-stable mapping with stale-token rejection.
+- snapshot token signatures include scrollbar config (`Vertical`, `Horizontal`, `MinThumb`) to invalidate stale host caches when scrollbar policy changes.
 - `LinkAt` and `LinkAtScreen` resolve configured hyperlink spans to host-facing targets.
 - `ScrollAllowManual` keeps wheel/manual viewport scrolling enabled.
 - `ScrollFollowCursorOnly` ignores manual viewport scrolling and keeps viewport movement cursor-driven.
@@ -179,7 +180,8 @@ Completion popup rendering and placement (Phase 4):
 - popup anchor uses `CompletionState.Anchor` projected through `DocToScreen`.
 - vertical placement prefers below the anchor row, then flips above when below-space is insufficient.
 - when anchor is offscreen (`DocToScreen` not visible), popup render is suppressed while completion state remains intact.
-- popup width is measured from rendered completion rows, then clamped by `CompletionMaxWidth` and viewport bounds.
+- popup width is measured from rendered completion rows, then clamped by `CompletionMaxWidth` and content-area width (excludes gutter and reserved vertical scrollbar column).
+- popup X placement is clamped to content-area bounds, so overlay never paints into reserved scrollbar chrome.
 - completion popup segment cell widths are precomputed per item and reused for width measurement.
 - popup row count is clamped by `CompletionMaxVisibleRows`, available vertical space, and visible completion count.
 - runnable host integration example: `examples/completion-popup/main.go`.

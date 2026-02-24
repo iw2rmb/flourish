@@ -66,6 +66,12 @@ func TestScrollbarMouse_VerticalTrackClickPages(t *testing.T) {
 	if got, want := m.ViewportState().TopVisualRow, metrics.contentHeight; got != want {
 		t.Fatalf("top row after paging down: got %d, want %d", got, want)
 	}
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, GraphemeCol: 0}) {
+		t.Fatalf("cursor changed by vertical scrollbar page-down click: got %v", got)
+	}
+	if _, ok := m.buf.Selection(); ok {
+		t.Fatalf("selection must stay clear after vertical scrollbar page-down click")
+	}
 
 	metrics = scrollbarMouseMetricsForTest(&m)
 	upY := metrics.vThumbPos - 1
@@ -75,6 +81,12 @@ func TestScrollbarMouse_VerticalTrackClickPages(t *testing.T) {
 	m, _ = m.Update(tea.MouseMsg{X: x, Y: upY, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft})
 	if got, want := m.ViewportState().TopVisualRow, 0; got != want {
 		t.Fatalf("top row after paging up: got %d, want %d", got, want)
+	}
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, GraphemeCol: 0}) {
+		t.Fatalf("cursor changed by vertical scrollbar page-up click: got %v", got)
+	}
+	if _, ok := m.buf.Selection(); ok {
+		t.Fatalf("selection must stay clear after vertical scrollbar page-up click")
 	}
 }
 
@@ -129,6 +141,12 @@ func TestScrollbarMouse_HorizontalTrackClickPages(t *testing.T) {
 	if got, want := m.ViewportState().LeftCellOffset, metrics.contentWidth; got != want {
 		t.Fatalf("left offset after paging right: got %d, want %d", got, want)
 	}
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, GraphemeCol: 0}) {
+		t.Fatalf("cursor changed by horizontal scrollbar page-right click: got %v", got)
+	}
+	if _, ok := m.buf.Selection(); ok {
+		t.Fatalf("selection must stay clear after horizontal scrollbar page-right click")
+	}
 
 	metrics = scrollbarMouseMetricsForTest(&m)
 	leftX := metrics.hThumbPos - 1
@@ -138,6 +156,12 @@ func TestScrollbarMouse_HorizontalTrackClickPages(t *testing.T) {
 	m, _ = m.Update(tea.MouseMsg{X: leftX, Y: y, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft})
 	if got, want := m.ViewportState().LeftCellOffset, 0; got != want {
 		t.Fatalf("left offset after paging left: got %d, want %d", got, want)
+	}
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, GraphemeCol: 0}) {
+		t.Fatalf("cursor changed by horizontal scrollbar page-left click: got %v", got)
+	}
+	if _, ok := m.buf.Selection(); ok {
+		t.Fatalf("selection must stay clear after horizontal scrollbar page-left click")
 	}
 }
 

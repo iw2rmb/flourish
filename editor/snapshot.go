@@ -39,6 +39,9 @@ type snapshotSignature struct {
 	viewportYOffset           int
 	xOffset                   int
 	wrapMode                  WrapMode
+	scrollbarVMode            ScrollbarMode
+	scrollbarHMode            ScrollbarMode
+	scrollbarMinThumb         int
 	tabWidth                  int
 	focused                   bool
 	docID                     string
@@ -81,6 +84,9 @@ func (m *Model) currentSnapshotSignature() snapshotSignature {
 		viewportYOffset:           m.viewport.YOffset,
 		xOffset:                   m.xOffset,
 		wrapMode:                  m.cfg.WrapMode,
+		scrollbarVMode:            m.cfg.Scrollbar.Vertical,
+		scrollbarHMode:            m.cfg.Scrollbar.Horizontal,
+		scrollbarMinThumb:         m.cfg.Scrollbar.MinThumb,
 		tabWidth:                  m.cfg.TabWidth,
 		focused:                   m.focused,
 		docID:                     m.cfg.DocID,
@@ -142,6 +148,9 @@ func hashSnapshotSignature(sig snapshotSignature) SnapshotToken {
 	writeI(sig.viewportYOffset)
 	writeI(sig.xOffset)
 	writeI(int(sig.wrapMode))
+	writeI(int(sig.scrollbarVMode))
+	writeI(int(sig.scrollbarHMode))
+	writeI(sig.scrollbarMinThumb)
 	writeI(sig.tabWidth)
 	writeB(sig.focused)
 	writeS(sig.docID)

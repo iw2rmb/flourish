@@ -134,6 +134,42 @@ func TestRenderSnapshot_TokenInvalidationMatrix(t *testing.T) {
 		}
 	})
 
+	t.Run("vertical scrollbar mode change", func(t *testing.T) {
+		m := New(Config{Text: "abcdef"})
+		m = m.SetSize(3, 1)
+		t0 := m.RenderSnapshot().Token
+
+		m.cfg.Scrollbar.Vertical = ScrollbarNever
+		t1 := m.RenderSnapshot().Token
+		if t1 == t0 {
+			t.Fatalf("token must change after vertical scrollbar mode change")
+		}
+	})
+
+	t.Run("horizontal scrollbar mode change", func(t *testing.T) {
+		m := New(Config{Text: "abcdef"})
+		m = m.SetSize(3, 1)
+		t0 := m.RenderSnapshot().Token
+
+		m.cfg.Scrollbar.Horizontal = ScrollbarNever
+		t1 := m.RenderSnapshot().Token
+		if t1 == t0 {
+			t.Fatalf("token must change after horizontal scrollbar mode change")
+		}
+	})
+
+	t.Run("scrollbar min thumb change", func(t *testing.T) {
+		m := New(Config{Text: "abcdef"})
+		m = m.SetSize(3, 1)
+		t0 := m.RenderSnapshot().Token
+
+		m.cfg.Scrollbar.MinThumb = 2
+		t1 := m.RenderSnapshot().Token
+		if t1 == t0 {
+			t.Fatalf("token must change after scrollbar min thumb change")
+		}
+	})
+
 	t.Run("focus change", func(t *testing.T) {
 		m := New(Config{Text: "ab"})
 		m = m.SetSize(3, 1)

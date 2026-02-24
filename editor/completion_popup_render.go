@@ -16,9 +16,18 @@ func (m Model) completionPopupRender(base string) (completionPopupRender, bool) 
 		return completionPopupRender{}, false
 	}
 
-	viewportWidth := m.viewport.Width - m.viewport.Style.GetHorizontalFrameSize()
-	viewportHeight := m.visibleRowCount()
-	if viewportWidth <= 0 || viewportHeight <= 0 {
+	mm := &m
+	lines := mm.ensureLines()
+	layout := mm.ensureLayoutCache(lines)
+	metrics := mm.resolveScrollbarMetrics(lines, layout)
+	viewportHeight := metrics.contentHeight
+	if metrics.innerWidth <= 0 || viewportHeight <= 0 {
+		return completionPopupRender{}, false
+	}
+	gutterWidth := mm.resolvedGutterWidth(len(lines))
+	contentLeft := gutterWidth
+	contentRight := contentLeft + metrics.contentWidth
+	if contentRight <= contentLeft {
 		return completionPopupRender{}, false
 	}
 
@@ -64,7 +73,7 @@ func (m Model) completionPopupRender(base string) (completionPopupRender, bool) 
 		itemIndices = itemIndices[start : start+rowCount]
 	}
 
-	widthCap := min(normalizeCompletionMaxWidth(m.cfg.CompletionMaxWidth), viewportWidth)
+	widthCap := min(normalizeCompletionMaxWidth(m.cfg.CompletionMaxWidth), metrics.contentWidth)
 	if widthCap <= 0 {
 		return completionPopupRender{}, false
 	}
@@ -113,11 +122,8 @@ func (m Model) completionPopupRender(base string) (completionPopupRender, bool) 
 	}
 
 	x := anchorX
-	maxX := viewportWidth - popupWidth
-	if maxX < 0 {
-		maxX = 0
-	}
-	x = clampInt(x, 0, maxX)
+	maxX := contentRight - popupWidth
+	x = clampInt(x, contentLeft, maxX)
 
 	leftFrame := m.viewport.Style.GetMarginLeft() + m.viewport.Style.GetBorderLeftSize() + m.viewport.Style.GetPaddingLeft()
 	topFrame := m.viewport.Style.GetMarginTop() + m.viewport.Style.GetBorderTopSize() + m.viewport.Style.GetPaddingTop()

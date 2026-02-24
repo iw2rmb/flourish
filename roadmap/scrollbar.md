@@ -132,7 +132,7 @@ Legend: [ ] todo, [x] done.
   - Tests: Add `editor/update_test.go` and/or `editor/scrollbar_mouse_test.go` cases for drag, page clicks, and policy blocking — expect offset changes only when manual scrolling is allowed.
 
 ## Phase 5: Mapping, Snapshot, and Overlay Consistency
-- [ ] Keep host-facing state/mapping/snapshot coherent with scrollbar-reserved geometry — Prevents API inconsistencies and stale host caches.
+- [x] Keep host-facing state/mapping/snapshot coherent with scrollbar-reserved geometry — Prevents API inconsistencies and stale host caches.
   - Repository: `flourish`
   - Component: `editor` snapshot + viewport + hit-test + completion popup
   - Scope:

@@ -180,6 +180,46 @@ func TestCompletionPopupRender_WrapNonePlacementRespectsXOffset(t *testing.T) {
 	assertLines(t, got, want)
 }
 
+func TestCompletionPopupRender_ClampsToContentAreaWhenBothScrollbarsVisible(t *testing.T) {
+	m := New(Config{
+		Text:                     "aaaaaa\nbbbbbb\ncccccc",
+		CompletionMaxVisibleRows: 1,
+	})
+	m = m.Blur()
+	m = m.SetSize(5, 3)
+	m = m.SetCompletionState(CompletionState{
+		Visible: true,
+		Anchor:  bufferPos(0, 3),
+		Items: []CompletionItem{
+			{ID: "0", Label: []CompletionSegment{{Text: "WXYZ"}}},
+		},
+	})
+
+	got := strings.Split(stripANSI(m.View()), "\n")
+	want := []string{"aaaa ", "WXYZ ", "     "}
+	assertLines(t, got, want)
+}
+
+func TestCompletionPopupRender_ClampsWidthToContentAreaWhenVerticalScrollbarVisible(t *testing.T) {
+	m := New(Config{
+		Text:                     "0000\n1111\n2222",
+		CompletionMaxVisibleRows: 1,
+	})
+	m = m.Blur()
+	m = m.SetSize(5, 2)
+	m = m.SetCompletionState(CompletionState{
+		Visible: true,
+		Anchor:  bufferPos(0, 3),
+		Items: []CompletionItem{
+			{ID: "0", Label: []CompletionSegment{{Text: "ABCDE"}}},
+		},
+	})
+
+	got := strings.Split(stripANSI(m.View()), "\n")
+	want := []string{"0000 ", "ABCD "}
+	assertLines(t, got, want)
+}
+
 func assertLines(t *testing.T, got, want []string) {
 	t.Helper()
 	if len(got) != len(want) {
