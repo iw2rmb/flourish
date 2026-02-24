@@ -87,3 +87,12 @@ func TestDocToScreen_WrapNone_UsesHorizontalOffset(t *testing.T) {
 		t.Fatalf("DocToScreen left-clipped col: got (x=%d,y=%d,ok=%v), want (-3,0,false)", x, y, ok)
 	}
 }
+
+func TestViewportState_VisibleRows_ExcludesHorizontalScrollbarRow(t *testing.T) {
+	m := New(Config{Text: "abcdef"})
+	m = m.SetSize(5, 2)
+
+	if got, want := m.ViewportState().VisibleRows, 1; got != want {
+		t.Fatalf("visible rows with horizontal overflow: got %d, want %d", got, want)
+	}
+}

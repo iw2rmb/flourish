@@ -51,7 +51,7 @@ Legend: [ ] todo, [x] done.
   - Tests: Add `editor/config_normalization_test.go` cases for `MinThumb`; add `editor/style` zero/default tests for new style fields — expect normalized defaults and no style regressions.
 
 ## Phase 2: Scrollbar Metrics + Content Area Reservation
-- [ ] Introduce resolved per-frame scrollbar metrics and use it for content width/height — Prevents text/overlay overlap and keeps both axes coherent.
+- [x] Introduce resolved per-frame scrollbar metrics and use it for content width/height — Prevents text/overlay overlap and keeps both axes coherent.
   - Repository: `flourish`
   - Component: `editor` layout/viewport computations
   - Scope: Add `editor/scrollbar.go` (new helper), integrate calls in `editor/model.go` (`contentWidth`, `visibleRowCount`, `followCursorWithForce`), and anywhere height/width assumptions are currently raw viewport-frame based.

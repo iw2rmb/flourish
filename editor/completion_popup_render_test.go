@@ -155,7 +155,13 @@ func TestCompletionPopupRender_WrapPlacementUsesProjectedAnchor(t *testing.T) {
 }
 
 func TestCompletionPopupRender_WrapNonePlacementRespectsXOffset(t *testing.T) {
-	m := New(Config{Text: "abcdefghi\n123456789"})
+	m := New(Config{
+		Text: "abcdefghi\n123456789",
+		Scrollbar: ScrollbarConfig{
+			Vertical:   ScrollbarNever,
+			Horizontal: ScrollbarNever,
+		},
+	})
 	m = m.Blur()
 	m = m.SetSize(5, 2)
 	m.xOffset = 4

@@ -15,13 +15,15 @@ func (m *Model) renderContent() string {
 
 	lines := m.ensureLines()
 	layout := m.ensureLayoutCache(lines)
-	rows := m.renderRows(lines, layout, nil, false)
+	metrics := m.resolveScrollbarMetrics(lines, layout)
+	rows := m.renderRows(lines, layout, metrics, nil, false)
 	return strings.Join(rows, "\n")
 }
 
 func (m *Model) renderRows(
 	lines []string,
 	layout wrapLayoutCache,
+	metrics scrollbarMetrics,
 	dirtyLogicalRows map[int]struct{},
 	useCachedRows bool,
 ) []string {
@@ -53,9 +55,9 @@ func (m *Model) renderRows(
 	m.highlightsComputed = highlightsComputed
 
 	if m.cfg.Highlighter != nil {
-		h := m.viewport.Height - m.viewport.Style.GetVerticalFrameSize()
+		h := metrics.contentHeight
 		if h > 0 {
-			start := clampInt(m.viewport.YOffset, 0, len(layout.rows))
+			start := clampInt(metrics.yOffset, 0, len(layout.rows))
 			end := start + h
 			if end > len(layout.rows) {
 				end = len(layout.rows)
@@ -71,8 +73,8 @@ func (m *Model) renderRows(
 
 	out := make([]string, 0, len(layout.rows))
 	maxIntVal := int(^uint(0) >> 1)
-	contentWidth := m.contentWidth(lineCount)
-	leftNoWrap := max(m.xOffset, 0)
+	contentWidth := metrics.contentWidth
+	leftNoWrap := max(metrics.xOffset, 0)
 	rightNoWrap := maxIntVal
 	if m.cfg.WrapMode == WrapNone && contentWidth > 0 {
 		rightNoWrap = leftNoWrap + contentWidth
@@ -103,6 +105,7 @@ func (m *Model) renderRows(
 			layout,
 			ref,
 			lineCount,
+			contentWidth,
 			gutterWidth,
 			cursor,
 			sel,
@@ -125,7 +128,7 @@ func (m *Model) renderRows(
 func (m *Model) renderLayoutRow(
 	layout wrapLayoutCache,
 	ref wrapLayoutRow,
-	lineCount, gutterWidth int,
+	lineCount, contentWidth, gutterWidth int,
 	cursor buffer.Pos,
 	sel buffer.Range,
 	selOK bool,
@@ -169,7 +172,6 @@ func (m *Model) renderLayoutRow(
 		// renderVisualLine keeps the cursor visible on the last visible glyph.
 		if row == cursor.Row && cursor.GraphemeCol == line.visual.RawGraphemeLen {
 			eolCell := cursorCellForVisualLine(line.visual, cursor.GraphemeCol)
-			contentWidth := m.contentWidth(lineCount)
 			if eolCell == right && seg.Cells < contentWidth {
 				right++
 			}
@@ -214,11 +216,12 @@ func (m *Model) rebuildGutterRows(rows []int) bool {
 		return true
 	}
 
-	rendered := m.renderRows(lines, layout, dirty, true)
+	metrics := m.resolveScrollbarMetrics(lines, layout)
+	rendered := m.renderRows(lines, layout, metrics, dirty, true)
 	if len(rendered) != len(layout.rows) {
 		return false
 	}
-	m.setRenderedRows(rendered)
+	m.setRenderedRows(rendered, metrics)
 	return true
 }
 

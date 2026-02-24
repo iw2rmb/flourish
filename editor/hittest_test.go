@@ -158,6 +158,10 @@ func TestHitTest_SoftWrap_UsesWrappedSegmentsAndViewportYOffset(t *testing.T) {
 	m := New(Config{
 		Text:     "abcdef\nghijkl",
 		WrapMode: WrapGrapheme,
+		Scrollbar: ScrollbarConfig{
+			Vertical:   ScrollbarNever,
+			Horizontal: ScrollbarNever,
+		},
 	})
 	m = m.SetSize(3, 2)
 

@@ -67,6 +67,7 @@ Mouse:
 
 Viewport integration:
 - `ViewportState()` exposes top visual row, visible row count, wrap mode, and no-wrap horizontal offset.
+- `ViewportState().VisibleRows` reports content-area rows (excludes reserved horizontal scrollbar row when horizontal scrollbar is visible).
 - `ScreenToDoc` and `DocToScreen` provide stable host-side coordinate mapping.
 - snapshot-bound mapping APIs (`RenderSnapshot`, `ScreenToDocWithSnapshot`, `DocToScreenWithSnapshot`) provide frame-stable mapping with stale-token rejection.
 - `LinkAt` and `LinkAtScreen` resolve configured hyperlink spans to host-facing targets.
@@ -94,6 +95,7 @@ Viewport integration:
 Scrollbar config:
 - `Scrollbar.Vertical` and `Scrollbar.Horizontal` use `ScrollbarMode` (`ScrollbarAuto`, `ScrollbarAlways`, `ScrollbarNever`).
 - `Scrollbar.MinThumb` defaults to `1` when `<=0`.
+- per-frame scrollbar metrics resolve axis visibility and reserve content area dimensions (`contentWidth`/`contentHeight`) used by layout, cursor-follow, and viewport state.
 
 Scrollbar style fields:
 - `Style.ScrollbarTrack`

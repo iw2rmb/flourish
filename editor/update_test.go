@@ -397,6 +397,10 @@ func TestUpdate_SoftWrap_ViewportFollowsCursorByVisualRow(t *testing.T) {
 	m := New(Config{
 		Text:     "0123456789",
 		WrapMode: WrapGrapheme,
+		Scrollbar: ScrollbarConfig{
+			Vertical:   ScrollbarNever,
+			Horizontal: ScrollbarNever,
+		},
 	})
 	m = m.SetSize(3, 2)
 

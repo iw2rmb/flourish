@@ -344,11 +344,12 @@ func (m *Model) rebuildCursorSelectionDirtyRows(
 		return false
 	}
 
-	rendered := m.renderRows(lines, layout, dirty, true)
+	metrics := m.resolveScrollbarMetrics(lines, layout)
+	rendered := m.renderRows(lines, layout, metrics, dirty, true)
 	if len(rendered) != len(layout.rows) {
 		return false
 	}
-	m.setRenderedRows(rendered)
+	m.setRenderedRows(rendered, metrics)
 	return true
 }
 
@@ -418,13 +419,14 @@ func (m *Model) cursorOutsideCompletionAnchorToken() bool {
 func (m *Model) rebuildContent() {
 	m.invalidateLayoutCache()
 	if m.buf == nil {
-		m.setRenderedRows(nil)
+		m.setRenderedRows(nil, scrollbarMetrics{})
 		return
 	}
 	lines := m.ensureLines()
 	layout := m.ensureLayoutCache(lines)
-	rows := m.renderRows(lines, layout, nil, false)
-	m.setRenderedRows(rows)
+	metrics := m.resolveScrollbarMetrics(lines, layout)
+	rows := m.renderRows(lines, layout, metrics, nil, false)
+	m.setRenderedRows(rows, metrics)
 }
 
 // tryIncrementalTextRebuild attempts to rebuild only the lines that changed
@@ -447,7 +449,7 @@ func (m *Model) tryIncrementalTextRebuild(
 	}
 
 	// Check that layout config hasn't changed.
-	contentWidth := m.contentWidth(len(lines))
+	contentWidth := m.contentWidth(lines)
 	k := m.layout.key
 	if k.wrapMode != m.cfg.WrapMode ||
 		k.tabWidth != m.cfg.TabWidth ||
@@ -487,15 +489,16 @@ func (m *Model) tryIncrementalTextRebuild(
 		return false
 	}
 
-	rendered := m.renderRows(lines, m.layout, dirty, true)
+	metrics := m.resolveScrollbarMetrics(lines, m.layout)
+	rendered := m.renderRows(lines, m.layout, metrics, dirty, true)
 	if len(rendered) != len(m.layout.rows) {
 		return false
 	}
-	m.setRenderedRows(rendered)
+	m.setRenderedRows(rendered, metrics)
 	return true
 }
 
-func (m *Model) setRenderedRows(rows []string) {
+func (m *Model) setRenderedRows(rows []string, metrics scrollbarMetrics) {
 	// Reuse the backing array when it has enough capacity.
 	if cap(m.renderedRows) >= len(rows) {
 		m.renderedRows = m.renderedRows[:len(rows)]
@@ -503,15 +506,20 @@ func (m *Model) setRenderedRows(rows []string) {
 		m.renderedRows = make([]string, len(rows))
 	}
 	copy(m.renderedRows, rows)
-	m.viewport.SetContent(strings.Join(rows, "\n"))
+
+	content := strings.Join(rows, "\n")
+	if metrics.showH {
+		if content == "" {
+			content = "\n"
+		} else {
+			content += "\n"
+		}
+	}
+	m.viewport.SetContent(content)
 }
 
-func (m Model) contentWidth(lineCount int) int {
-	w := m.viewport.Width - m.viewport.Style.GetHorizontalFrameSize() - m.resolvedGutterWidth(lineCount)
-	if w < 0 {
-		w = 0
-	}
-	return w
+func (m *Model) contentWidth(lines []string) int {
+	return m.resolveScrollbarMetrics(lines, m.layout).contentWidth
 }
 
 func cursorCellForVisualLine(vl VisualLine, cursorCol int) int {
@@ -537,25 +545,30 @@ func (m *Model) followCursorWithForce(force bool) {
 	cur := m.buf.Cursor()
 	lines := m.ensureLines()
 	layout := m.ensureLayoutCache(lines)
+	metrics := m.resolveScrollbarMetrics(lines, layout)
 
-	h := m.viewport.Height - m.viewport.Style.GetVerticalFrameSize()
 	beforeYOffset := m.viewport.YOffset
-	newYOffset := beforeYOffset
-	if h > 0 {
+	newYOffset := metrics.yOffset
+	if metrics.contentHeight > 0 {
 		cursorVisualRow := cur.Row
 		if vr, _, ok := layout.cursorVisualPosition(cur); ok {
 			cursorVisualRow = vr
 		}
-		if cursorVisualRow < beforeYOffset {
+		if cursorVisualRow < newYOffset {
 			newYOffset = cursorVisualRow
-		} else if cursorVisualRow >= beforeYOffset+h {
-			newYOffset = cursorVisualRow - h + 1
+		} else if cursorVisualRow >= newYOffset+metrics.contentHeight {
+			newYOffset = cursorVisualRow - metrics.contentHeight + 1
 		}
-		if newYOffset != beforeYOffset {
-			m.viewport.SetYOffset(newYOffset)
-			if m.cfg.Highlighter != nil {
-				m.rebuildContent()
-			}
+		maxYOffset := 0
+		if metrics.totalRows > metrics.contentHeight {
+			maxYOffset = metrics.totalRows - metrics.contentHeight
+		}
+		newYOffset = clampInt(newYOffset, 0, maxYOffset)
+	}
+	if newYOffset != beforeYOffset {
+		m.viewport.SetYOffset(newYOffset)
+		if m.cfg.Highlighter != nil {
+			m.rebuildContent()
 		}
 	}
 
@@ -575,7 +588,7 @@ func (m *Model) followCursorWithForce(force bool) {
 		return
 	}
 
-	cw := m.contentWidth(len(lines))
+	cw := metrics.contentWidth
 	if cw <= 0 {
 		if m.xOffset != 0 {
 			m.xOffset = 0
@@ -590,7 +603,7 @@ func (m *Model) followCursorWithForce(force bool) {
 	vl := BuildVisualLine(rawLine, vt, m.cfg.TabWidth)
 
 	cursorCell := cursorCellForVisualLine(vl, cur.GraphemeCol)
-	newXOffset := m.xOffset
+	newXOffset := metrics.xOffset
 	if cursorCell < newXOffset {
 		newXOffset = cursorCell
 	} else if cursorCell >= newXOffset+cw {
@@ -599,6 +612,11 @@ func (m *Model) followCursorWithForce(force bool) {
 	if newXOffset < 0 {
 		newXOffset = 0
 	}
+	maxXOffset := 0
+	if metrics.totalCols > cw {
+		maxXOffset = metrics.totalCols - cw
+	}
+	newXOffset = clampInt(newXOffset, 0, maxXOffset)
 
 	// When not forced, avoid shifting horizontally while the user is actively
 	// mouse-dragging a selection (it makes hit-testing feel unstable).

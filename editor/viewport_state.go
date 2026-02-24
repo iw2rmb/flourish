@@ -49,9 +49,8 @@ func (m Model) DocToScreen(pos buffer.Pos) (x int, y int, ok bool) {
 }
 
 func (m Model) visibleRowCount() int {
-	h := m.viewport.Height - m.viewport.Style.GetVerticalFrameSize()
-	if h < 0 {
-		return 0
-	}
-	return h
+	mm := &m
+	lines := mm.ensureLines()
+	metrics := mm.resolveScrollbarMetrics(lines, mm.layout)
+	return metrics.contentHeight
 }

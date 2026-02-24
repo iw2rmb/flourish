@@ -53,7 +53,7 @@ func (m *Model) layoutKey(lines []string) wrapLayoutCacheKey {
 	key := wrapLayoutCacheKey{
 		wrapMode:     m.cfg.WrapMode,
 		tabWidth:     m.cfg.TabWidth,
-		contentWidth: m.contentWidth(len(lines)),
+		contentWidth: m.contentWidth(lines),
 		focused:      m.focused,
 		linkProvider: providerPtr(m.cfg.LinkProvider),
 		linkSet:      m.cfg.LinkProvider != nil,
@@ -108,7 +108,7 @@ func (m *Model) ensureLayoutCache(lines []string) wrapLayoutCache {
 	}
 
 	// Resolve links only for visible lines.
-	m.resolveLinksForVisibleRows(&cache)
+	m.resolveLinksForVisibleRows(lines, &cache)
 
 	m.layout = cache
 	return cache
@@ -151,16 +151,17 @@ func (m *Model) buildLayoutLineNoLinks(row int, rawLine string, contentWidth int
 // resolveLinksForVisibleRows computes link spans only for lines visible in the
 // current viewport, avoiding the cost of calling LinkProvider for every line in
 // the document.
-func (m *Model) resolveLinksForVisibleRows(cache *wrapLayoutCache) {
+func (m *Model) resolveLinksForVisibleRows(lines []string, cache *wrapLayoutCache) {
 	if m.cfg.LinkProvider == nil || m.buf == nil {
 		return
 	}
-	h := m.viewport.Height - m.viewport.Style.GetVerticalFrameSize()
+	metrics := m.resolveScrollbarMetrics(lines, *cache)
+	h := metrics.contentHeight
 	if h <= 0 {
 		return
 	}
 	cursor := m.buf.Cursor()
-	start := clampInt(m.viewport.YOffset, 0, len(cache.rows))
+	start := clampInt(metrics.yOffset, 0, len(cache.rows))
 	end := start + h
 	if end > len(cache.rows) {
 		end = len(cache.rows)
