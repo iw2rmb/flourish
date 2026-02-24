@@ -37,6 +37,10 @@ type Model struct {
 	mouseDragging bool
 	mouseAnchor   buffer.Pos
 
+	scrollbarDragAxis        scrollbarDragAxis
+	scrollbarDragStartCell   int
+	scrollbarDragStartOffset int
+
 	layout wrapLayoutCache
 
 	gutterInvalidationVersion uint64
@@ -50,6 +54,14 @@ type Model struct {
 	cachedLines    []string
 	cachedLinesVer uint64
 }
+
+type scrollbarDragAxis int
+
+const (
+	dragNone scrollbarDragAxis = iota
+	dragVertical
+	dragHorizontal
+)
 
 func New(cfg Config) Model {
 	if cfg.Style.isZero() {

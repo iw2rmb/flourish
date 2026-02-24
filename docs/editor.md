@@ -64,6 +64,9 @@ Mouse:
 - drag to update selection.
 - hit-testing maps from viewport-local `(x,y)` cells to document positions.
 - wheel scroll is controlled by `ScrollPolicy`.
+- left-click on scrollbar track pages by one visible span on the corresponding axis.
+- left-button thumb drag updates vertical `TopVisualRow` or no-wrap horizontal `LeftCellOffset`.
+- `ScrollFollowCursorOnly` blocks manual scrollbar interactions (press/drag) in addition to wheel scrolling.
 
 Viewport integration:
 - `ViewportState()` exposes top visual row, visible row count, wrap mode, and no-wrap horizontal offset.
@@ -100,6 +103,7 @@ Scrollbar config:
 - vertical scrollbar paints track/thumb in the rightmost inner viewport column for content rows only.
 - horizontal scrollbar paints track/thumb in the reserved bottom inner row (content area only), clears the reserved row first, and paints `ScrollbarCorner` when both axes are visible.
 - scrollbar cells render as styled spaces (`" "`) using `Style.ScrollbarTrack`, `Style.ScrollbarThumb`, and `Style.ScrollbarCorner`.
+- scrollbar interactions are manual-scroll operations: page clicks and thumb dragging are active only when `ScrollPolicy==ScrollAllowManual`.
 
 Scrollbar style fields:
 - `Style.ScrollbarTrack`

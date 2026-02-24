@@ -102,7 +102,7 @@ Legend: [ ] todo, [x] done.
   - Tests: Extend `editor/render_test.go` with cases for vertical-only, horizontal-only (`WrapNone`), and both-axis corner rendering — expect no text overlap and correct thumb placement.
 
 ## Phase 4: Mouse Interaction (Thumb Drag + Track Click + Wheel)
-- [ ] Add scrollbar hit-testing and drag state in mouse update flow — Enables direct manual navigation and paging behavior.
+- [x] Add scrollbar hit-testing and drag state in mouse update flow — Enables direct manual navigation and paging behavior.
   - Repository: `flourish`
   - Component: `editor` input/update
   - Scope: Update `editor/model.go` state (drag axis/origin fields) and `editor/update_mouse.go`:
