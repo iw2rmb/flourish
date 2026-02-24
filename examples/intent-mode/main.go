@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/iw2rmb/flourish/buffer"
 	"github.com/iw2rmb/flourish/editor"
 )
 
@@ -37,7 +38,7 @@ func (s *intentState) handleIntent(batch editor.IntentBatch) editor.IntentDecisi
 	return editor.IntentDecision{ApplyLocally: applyLocally}
 }
 
-func (s *intentState) handleChange(editor.ChangeEvent) {
+func (s *intentState) handleChange(buffer.Change) {
 	s.changeCount++
 }
 

@@ -39,7 +39,7 @@ func TestIntentMode_EmitIntentsOnly_EmitsWithoutLocalApplyOrOnChange(t *testing.
 			intents = append(intents, batch.Intents...)
 			return IntentDecision{ApplyLocally: true}
 		},
-		OnChange: func(ChangeEvent) {
+		OnChange: func(buffer.Change) {
 			onChangeCalls++
 		},
 	})
@@ -72,7 +72,7 @@ func TestIntentMode_EmitIntentsAndMutate_DecisionFalseSkipsApplyAndOnChange(t *t
 			intents = append(intents, batch.Intents...)
 			return IntentDecision{ApplyLocally: false}
 		},
-		OnChange: func(ChangeEvent) {
+		OnChange: func(buffer.Change) {
 			onChangeCalls++
 		},
 	})

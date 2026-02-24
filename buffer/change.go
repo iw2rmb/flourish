@@ -1,5 +1,7 @@
 package buffer
 
+import "slices"
+
 // ChangeSource identifies where a change originated.
 type ChangeSource uint8
 
@@ -52,7 +54,7 @@ func (b *Buffer) LastChange() (Change, bool) {
 
 func cloneChange(in Change) Change {
 	out := in
-	out.AppliedEdits = append([]AppliedEdit(nil), in.AppliedEdits...)
+	out.AppliedEdits = slices.Clone(in.AppliedEdits)
 	return out
 }
 

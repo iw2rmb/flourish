@@ -1,6 +1,10 @@
 package editor
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"github.com/charmbracelet/lipgloss"
+
+	"github.com/iw2rmb/flourish/buffer"
+)
 
 // ScrollbarMode controls visibility policy for a scrollbar axis.
 type ScrollbarMode int
@@ -94,9 +98,8 @@ type Config struct {
 	LinkProvider LinkProvider
 
 	// OnChange, if set, fires after every effective buffer change triggered via
-	// Update. The payload is delta-first (`ChangeEvent.Change` backed by
-	// `buffer.Change`). It is not fired for host-driven buffer changes.
-	OnChange func(ChangeEvent)
+	// Update. It is not fired for host-driven buffer changes.
+	OnChange func(buffer.Change)
 
 	// MutationMode controls whether key handling mutates locally, emits intents,
 	// or does both. Zero value is MutateInEditor.

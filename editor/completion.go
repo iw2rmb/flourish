@@ -1,6 +1,8 @@
 package editor
 
 import (
+	"slices"
+
 	"github.com/charmbracelet/bubbles/key"
 
 	"github.com/iw2rmb/flourish/buffer"
@@ -79,14 +81,10 @@ type CompletionKeyMap struct {
 }
 
 func (km CompletionKeyMap) isZero() bool {
-	return bindingIsZero(km.Trigger) &&
-		bindingIsZero(km.Accept) &&
-		!km.AcceptTab &&
-		bindingIsZero(km.Dismiss) &&
-		bindingIsZero(km.Next) &&
-		bindingIsZero(km.Prev) &&
-		bindingIsZero(km.PageNext) &&
-		bindingIsZero(km.PagePrev)
+	return !km.AcceptTab && allBindingsZero([]key.Binding{
+		km.Trigger, km.Accept, km.Dismiss,
+		km.Next, km.Prev, km.PageNext, km.PagePrev,
+	})
 }
 
 func DefaultCompletionKeyMap() CompletionKeyMap {
@@ -194,35 +192,18 @@ func normalizeCompletionState(state CompletionState) CompletionState {
 
 func cloneCompletionState(state CompletionState) CompletionState {
 	state.Items = cloneCompletionItems(state.Items)
-	if len(state.VisibleIndices) == 0 {
-		state.VisibleIndices = nil
-	} else {
-		state.VisibleIndices = append([]int(nil), state.VisibleIndices...)
-	}
+	state.VisibleIndices = slices.Clone(state.VisibleIndices)
 	return state
 }
 
 func cloneCompletionItems(items []CompletionItem) []CompletionItem {
-	if len(items) == 0 {
-		return nil
-	}
-	out := make([]CompletionItem, len(items))
-	copy(out, items)
+	out := slices.Clone(items)
 	for i := range out {
-		out[i].Edits = cloneTextEdits(out[i].Edits)
-		out[i].Prefix = cloneCompletionSegments(out[i].Prefix)
-		out[i].Label = cloneCompletionSegments(out[i].Label)
-		out[i].Detail = cloneCompletionSegments(out[i].Detail)
+		out[i].Edits = slices.Clone(out[i].Edits)
+		out[i].Prefix = slices.Clone(out[i].Prefix)
+		out[i].Label = slices.Clone(out[i].Label)
+		out[i].Detail = slices.Clone(out[i].Detail)
 	}
-	return out
-}
-
-func cloneCompletionSegments(segments []CompletionSegment) []CompletionSegment {
-	if len(segments) == 0 {
-		return nil
-	}
-	out := make([]CompletionSegment, len(segments))
-	copy(out, segments)
 	return out
 }
 

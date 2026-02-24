@@ -20,36 +20,32 @@ type KeyMap struct {
 	Copy, Cut, Paste key.Binding
 }
 
-// isZero returns true when no bindings have been configured.
-func (km KeyMap) isZero() bool {
-	return bindingIsZero(km.Left) &&
-		bindingIsZero(km.Right) &&
-		bindingIsZero(km.Up) &&
-		bindingIsZero(km.Down) &&
-		bindingIsZero(km.PageUp) &&
-		bindingIsZero(km.PageDown) &&
-		bindingIsZero(km.ShiftLeft) &&
-		bindingIsZero(km.ShiftRight) &&
-		bindingIsZero(km.ShiftUp) &&
-		bindingIsZero(km.ShiftDown) &&
-		bindingIsZero(km.WordLeft) &&
-		bindingIsZero(km.WordRight) &&
-		bindingIsZero(km.WordShiftLeft) &&
-		bindingIsZero(km.WordShiftRight) &&
-		bindingIsZero(km.Home) &&
-		bindingIsZero(km.End) &&
-		bindingIsZero(km.Backspace) &&
-		bindingIsZero(km.Delete) &&
-		bindingIsZero(km.Enter) &&
-		bindingIsZero(km.Undo) &&
-		bindingIsZero(km.Redo) &&
-		bindingIsZero(km.Copy) &&
-		bindingIsZero(km.Cut) &&
-		bindingIsZero(km.Paste)
+// bindings returns all key bindings as a slice.
+func (km KeyMap) bindings() []key.Binding {
+	return []key.Binding{
+		km.Left, km.Right, km.Up, km.Down,
+		km.PageUp, km.PageDown,
+		km.ShiftLeft, km.ShiftRight, km.ShiftUp, km.ShiftDown,
+		km.WordLeft, km.WordRight, km.WordShiftLeft, km.WordShiftRight,
+		km.Home, km.End,
+		km.Backspace, km.Delete, km.Enter,
+		km.Undo, km.Redo,
+		km.Copy, km.Cut, km.Paste,
+	}
 }
 
-func bindingIsZero(b key.Binding) bool {
-	return len(b.Keys()) == 0
+// isZero returns true when no bindings have been configured.
+func (km KeyMap) isZero() bool {
+	return allBindingsZero(km.bindings())
+}
+
+func allBindingsZero(bindings []key.Binding) bool {
+	for _, b := range bindings {
+		if len(b.Keys()) > 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func DefaultKeyMap() KeyMap {

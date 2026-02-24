@@ -1,6 +1,10 @@
 package editor
 
-import "github.com/iw2rmb/flourish/buffer"
+import (
+	"slices"
+
+	"github.com/iw2rmb/flourish/buffer"
+)
 
 // MutationMode controls whether key handling mutates the local buffer,
 // emits intents to the host, or both.
@@ -122,10 +126,5 @@ func normalizeMutationMode(mode MutationMode) MutationMode {
 }
 
 func cloneTextEdits(in []buffer.TextEdit) []buffer.TextEdit {
-	if len(in) == 0 {
-		return nil
-	}
-	out := make([]buffer.TextEdit, len(in))
-	copy(out, in)
-	return out
+	return slices.Clone(in)
 }

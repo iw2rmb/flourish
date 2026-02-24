@@ -353,12 +353,11 @@ if pos, ok := ed.ScreenToDocWithSnapshot(snap, mouseX, mouseY); ok {
 
 ## Change Events
 
-`OnChange` receives:
-- `ChangeEvent{ Change buffer.Change }`
+`OnChange` receives a `buffer.Change` directly.
 
 Event contract:
 - delta-first payload (no full text snapshot).
-- `Change` includes version/cursor/selection before+after and ordered `AppliedEdits`.
+- The change includes version/cursor/selection before+after and ordered `AppliedEdits`.
 - cursor/selection-only changes have `AppliedEdits=[]`.
 - no-op updates emit no event.
 - in intent modes, `OnChange` fires only if local apply actually mutates editor state.

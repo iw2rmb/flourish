@@ -205,8 +205,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.rebuildContent()
 		}
 		if m.cfg.OnChange != nil && m.buf != nil && m.buf.Version() != beforeVer {
-			if ev, ok := buildChangeEvent(m.buf); ok {
-				m.cfg.OnChange(ev)
+			if ch, ok := m.buf.LastChange(); ok {
+				m.cfg.OnChange(ch)
 			}
 		}
 		// Don't force-follow cursor here; mouse scroll behavior is controlled by
@@ -221,8 +221,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		m, cmd := m.updateKey(msg)
 		cursorChanged, versionChanged := m.syncFromBuffer()
 		if m.cfg.OnChange != nil && m.buf != nil && m.buf.Version() != beforeVer {
-			if ev, ok := buildChangeEvent(m.buf); ok {
-				m.cfg.OnChange(ev)
+			if ch, ok := m.buf.LastChange(); ok {
+				m.cfg.OnChange(ch)
 			}
 		}
 		if cursorChanged || versionChanged {

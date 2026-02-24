@@ -7,19 +7,20 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/iw2rmb/flourish/buffer"
 	"github.com/iw2rmb/flourish/editor"
 )
 
 type eventState struct {
 	count   int
 	hasLast bool
-	last    editor.ChangeEvent
+	last    buffer.Change
 }
 
-func (s *eventState) handleChange(ev editor.ChangeEvent) {
+func (s *eventState) handleChange(ch buffer.Change) {
 	s.count++
 	s.hasLast = true
-	s.last = ev
+	s.last = ch
 }
 
 type model struct {
@@ -70,7 +71,7 @@ func (m model) View() string {
 		fmt.Sprintf("events: %d", m.events.count),
 	}
 	if m.events.hasLast {
-		ch := m.events.last.Change
+		ch := m.events.last
 		selection := "none"
 		if ch.SelectionAfter.Active {
 			r := ch.SelectionAfter.Range

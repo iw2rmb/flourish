@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"hash/fnv"
 	"reflect"
+	"slices"
 
 	"github.com/iw2rmb/flourish/buffer"
 )
@@ -230,16 +231,9 @@ func (m *Model) buildRenderSnapshot(token SnapshotToken) RenderSnapshot {
 
 func cloneRenderSnapshot(in RenderSnapshot) RenderSnapshot {
 	out := in
-	if len(in.Rows) == 0 {
-		out.Rows = nil
-		return out
-	}
-	out.Rows = make([]RowMap, len(in.Rows))
-	for i := range in.Rows {
-		out.Rows[i] = in.Rows[i]
-		if len(in.Rows[i].VisibleDocCols) > 0 {
-			out.Rows[i].VisibleDocCols = append([]int(nil), in.Rows[i].VisibleDocCols...)
-		}
+	out.Rows = slices.Clone(in.Rows)
+	for i := range out.Rows {
+		out.Rows[i].VisibleDocCols = slices.Clone(out.Rows[i].VisibleDocCols)
 	}
 	return out
 }
