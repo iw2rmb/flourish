@@ -57,8 +57,11 @@ func (m Model) completionPopupRender(base string) (completionPopupRender, bool) 
 	}
 
 	itemIndices := visible
+	selected := clampCompletionSelected(state.Selected, len(visible))
+	start := 0
 	if len(itemIndices) > rowCount {
-		itemIndices = itemIndices[:rowCount]
+		start = clampInt(selected-rowCount+1, 0, len(itemIndices)-rowCount)
+		itemIndices = itemIndices[start : start+rowCount]
 	}
 
 	widthCap := min(normalizeCompletionMaxWidth(m.cfg.CompletionMaxWidth), viewportWidth)
@@ -88,10 +91,9 @@ func (m Model) completionPopupRender(base string) (completionPopupRender, bool) 
 		popupWidth = widthCap
 	}
 
-	selected := clampCompletionSelected(state.Selected, len(visible))
 	rendered := make([]string, 0, len(itemIndices))
 	for row, e := range entries {
-		selectedRow := row == selected
+		selectedRow := row == selected-start
 		rendered = append(rendered, m.renderCompletionPopupRowFromSegments(e.item, e.segments, selectedRow, popupWidth))
 	}
 

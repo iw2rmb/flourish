@@ -109,6 +109,31 @@ func TestCompletionPopupRender_DefaultLimitsClampToSmallViewport(t *testing.T) {
 	assertLines(t, got, want)
 }
 
+func TestCompletionPopupRender_ScrollsWindowToSelectedItem(t *testing.T) {
+	m := New(Config{
+		Text:                     "000000\n111111\n222222\n333333",
+		CompletionMaxVisibleRows: 2,
+	})
+	m = m.Blur()
+	m = m.SetSize(6, 4)
+	m = m.SetCompletionState(CompletionState{
+		Visible: true,
+		Anchor:  bufferPos(0, 0),
+		Items: []CompletionItem{
+			{ID: "0", Label: []CompletionSegment{{Text: "aa"}}},
+			{ID: "1", Label: []CompletionSegment{{Text: "bb"}}},
+			{ID: "2", Label: []CompletionSegment{{Text: "cc"}}},
+			{ID: "3", Label: []CompletionSegment{{Text: "dd"}}},
+		},
+		Selected: 3,
+	})
+	m.completionState.Selected = 3
+
+	got := strings.Split(stripANSI(m.View()), "\n")
+	want := []string{"000000", "cc1111", "dd2222", "333333"}
+	assertLines(t, got, want)
+}
+
 func TestCompletionPopupRender_WrapPlacementUsesProjectedAnchor(t *testing.T) {
 	m := New(Config{
 		Text:     "abcdef\nghijkl",
