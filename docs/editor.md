@@ -96,6 +96,10 @@ Scrollbar config:
 - `Scrollbar.Vertical` and `Scrollbar.Horizontal` use `ScrollbarMode` (`ScrollbarAuto`, `ScrollbarAlways`, `ScrollbarNever`).
 - `Scrollbar.MinThumb` defaults to `1` when `<=0`.
 - per-frame scrollbar metrics resolve axis visibility and reserve content area dimensions (`contentWidth`/`contentHeight`) used by layout, cursor-follow, and viewport state.
+- scrollbar chrome is painted in `Model.View()` on top of `viewport.View()` output and before completion popup composition.
+- vertical scrollbar paints track/thumb in the rightmost inner viewport column for content rows only.
+- horizontal scrollbar paints track/thumb in the reserved bottom inner row (content area only), clears the reserved row first, and paints `ScrollbarCorner` when both axes are visible.
+- scrollbar cells render as styled spaces (`" "`) using `Style.ScrollbarTrack`, `Style.ScrollbarThumb`, and `Style.ScrollbarCorner`.
 
 Scrollbar style fields:
 - `Style.ScrollbarTrack`
@@ -221,6 +225,10 @@ cfg := editor.Config{
     },
 }
 ```
+
+Scrollbar design and implementation roadmap:
+- `design/scrollbar.md`
+- `roadmap/scrollbar.md`
 
 Virtual text rules:
 - deletions hide grapheme ranges from view.

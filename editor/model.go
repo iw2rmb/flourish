@@ -228,6 +228,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 func (m Model) View() string {
 	base := m.viewport.View()
+	base = m.renderScrollbarChrome(base)
 	if popup, ok := m.completionPopupRender(base); ok {
 		return popup.View
 	}

@@ -77,7 +77,7 @@ Legend: [ ] todo, [x] done.
   - Tests: Add `editor/scrollbar_metrics_test.go` for visibility, fixed-point coupling, and thumb math at start/mid/end offsets — expect deterministic geometry with clamped offsets.
 
 ## Phase 3: Render Pipeline Integration (Track/Thumb/Corner)
-- [ ] Render vertical and horizontal bars after content rows are built — Adds visible scrollbar chrome without disturbing text shaping.
+- [x] Render vertical and horizontal bars after content rows are built — Adds visible scrollbar chrome without disturbing text shaping.
   - Repository: `flourish`
   - Component: `editor` rendering
   - Scope: Update `editor/render.go` and `editor/model.go:View()` pipeline to apply scrollbar row/column painting; ensure content uses reserved area dimensions from metrics.

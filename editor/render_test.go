@@ -573,3 +573,84 @@ func TestRender_GhostStyleKey_UsesCallbackAndFallback(t *testing.T) {
 		t.Fatalf("ghost fallback render: got %q, want %q", got, "aXb")
 	}
 }
+
+func TestView_ScrollbarChrome_VerticalOnly(t *testing.T) {
+	st := scrollbarStyleForViewTest()
+	m := New(Config{
+		Text:  "abc\ndef\nghi",
+		Style: st,
+	})
+	m = m.Blur()
+	m = m.SetSize(4, 2)
+
+	got := m.View()
+	if gotPlain, wantPlain := stripANSI(got), "abc \ndef "; gotPlain != wantPlain {
+		t.Fatalf("vertical scrollbar render:\n got: %q\nwant: %q", got, wantPlain)
+	}
+	if !strings.Contains(got, st.ScrollbarThumb.Render(" ")) {
+		t.Fatalf("vertical scrollbar render: expected thumb style sequence in output")
+	}
+	if !strings.Contains(got, st.ScrollbarTrack.Render(" ")) {
+		t.Fatalf("vertical scrollbar render: expected track style sequence in output")
+	}
+}
+
+func TestView_ScrollbarChrome_HorizontalOnlyWrapNone(t *testing.T) {
+	st := scrollbarStyleForViewTest()
+	m := New(Config{
+		Text:  "abcdef",
+		Style: st,
+	})
+	m = m.Blur()
+	m = m.SetSize(5, 2)
+
+	got := m.View()
+	if gotPlain, wantPlain := stripANSI(got), "abcde\n     "; gotPlain != wantPlain {
+		t.Fatalf("horizontal scrollbar render:\n got: %q\nwant: %q", got, wantPlain)
+	}
+	if !strings.Contains(got, st.ScrollbarThumb.Render(" ")) {
+		t.Fatalf("horizontal scrollbar render: expected thumb style sequence in output")
+	}
+	if !strings.Contains(got, st.ScrollbarTrack.Render(" ")) {
+		t.Fatalf("horizontal scrollbar render: expected track style sequence in output")
+	}
+}
+
+func TestView_ScrollbarChrome_BothAxesAndCorner(t *testing.T) {
+	st := scrollbarStyleForViewTest()
+	m := New(Config{
+		Text:  "12345\n12345\n12345",
+		Style: st,
+	})
+	m = m.Blur()
+	m = m.SetSize(5, 2)
+
+	got := m.View()
+	if gotPlain, wantPlain := stripANSI(got), "1234 \n     "; gotPlain != wantPlain {
+		t.Fatalf("both-axis scrollbar render:\n got: %q\nwant: %q", got, wantPlain)
+	}
+	if !strings.Contains(got, st.ScrollbarThumb.Render(" ")) {
+		t.Fatalf("both-axis scrollbar render: expected thumb style sequence in output")
+	}
+	if !strings.Contains(got, st.ScrollbarTrack.Render(" ")) {
+		t.Fatalf("both-axis scrollbar render: expected track style sequence in output")
+	}
+	if !strings.Contains(got, st.ScrollbarCorner.Render(" ")) {
+		t.Fatalf("both-axis scrollbar render: expected corner style sequence in output")
+	}
+}
+
+func scrollbarStyleForViewTest() Style {
+	r := lipgloss.NewRenderer(io.Discard)
+	r.SetColorProfile(termenv.TrueColor)
+	r.SetHasDarkBackground(true)
+
+	return Style{
+		Text:           r.NewStyle(),
+		Cursor:         r.NewStyle().Reverse(true), // keep style non-zero so New doesn't replace it
+		ScrollbarTrack: r.NewStyle().Background(lipgloss.Color("52")),
+		ScrollbarThumb: r.NewStyle().Background(lipgloss.Color("22")),
+		ScrollbarCorner: r.NewStyle().
+			Background(lipgloss.Color("17")),
+	}
+}

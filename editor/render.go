@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	overlay "github.com/rmhubbert/bubbletea-overlay"
 	"github.com/iw2rmb/flourish/buffer"
 )
 
@@ -18,6 +19,113 @@ func (m *Model) renderContent() string {
 	metrics := m.resolveScrollbarMetrics(lines, layout)
 	rows := m.renderRows(lines, layout, metrics, nil, false)
 	return strings.Join(rows, "\n")
+}
+
+func (m Model) renderScrollbarChrome(base string) string {
+	if m.buf == nil {
+		return base
+	}
+
+	mm := &m
+	lines := mm.ensureLines()
+	layout := mm.ensureLayoutCache(lines)
+	metrics := mm.resolveScrollbarMetrics(lines, layout)
+	if !metrics.showV && !metrics.showH {
+		return base
+	}
+	if metrics.innerWidth <= 0 || metrics.innerHeight <= 0 {
+		return base
+	}
+
+	leftFrame := m.viewport.Style.GetMarginLeft() + m.viewport.Style.GetBorderLeftSize() + m.viewport.Style.GetPaddingLeft()
+	topFrame := m.viewport.Style.GetMarginTop() + m.viewport.Style.GetBorderTopSize() + m.viewport.Style.GetPaddingTop()
+	view := base
+
+	if metrics.showV && metrics.contentHeight > 0 {
+		trackCell := m.cfg.Style.ScrollbarTrack.Render(" ")
+		thumbCell := m.cfg.Style.ScrollbarThumb.Render(" ")
+		col := renderScrollbarAxisCells(metrics.contentHeight, metrics.vThumbPos, metrics.vThumbLen, trackCell, thumbCell, "\n")
+		if col != "" {
+			view = overlay.Composite(
+				col,
+				view,
+				overlay.Left,
+				overlay.Top,
+				leftFrame+metrics.innerWidth-1,
+				topFrame,
+			)
+		}
+	}
+
+	if metrics.showH {
+		clearCell := m.cfg.Style.Text.Render(" ")
+		row := renderScrollbarAxisCells(metrics.innerWidth, 0, 0, clearCell, clearCell, "")
+		if row != "" {
+			view = overlay.Composite(
+				row,
+				view,
+				overlay.Left,
+				overlay.Top,
+				leftFrame,
+				topFrame+metrics.innerHeight-1,
+			)
+		}
+
+		if metrics.contentWidth > 0 {
+			trackCell := m.cfg.Style.ScrollbarTrack.Render(" ")
+			thumbCell := m.cfg.Style.ScrollbarThumb.Render(" ")
+			hRow := renderScrollbarAxisCells(metrics.contentWidth, metrics.hThumbPos, metrics.hThumbLen, trackCell, thumbCell, "")
+			if hRow != "" {
+				gutterWidth := mm.resolvedGutterWidth(len(lines))
+				view = overlay.Composite(
+					hRow,
+					view,
+					overlay.Left,
+					overlay.Top,
+					leftFrame+gutterWidth,
+					topFrame+metrics.innerHeight-1,
+				)
+			}
+		}
+	}
+
+	if metrics.showV && metrics.showH {
+		corner := m.cfg.Style.ScrollbarCorner.Render(" ")
+		view = overlay.Composite(
+			corner,
+			view,
+			overlay.Left,
+			overlay.Top,
+			leftFrame+metrics.innerWidth-1,
+			topFrame+metrics.innerHeight-1,
+		)
+	}
+
+	return view
+}
+
+func renderScrollbarAxisCells(length, thumbPos, thumbLen int, trackCell, thumbCell, sep string) string {
+	if length <= 0 {
+		return ""
+	}
+	if thumbLen < 0 {
+		thumbLen = 0
+	}
+	thumbStart := clampInt(thumbPos, 0, length)
+	thumbEnd := clampInt(thumbPos+thumbLen, 0, length)
+
+	var sb strings.Builder
+	for i := 0; i < length; i++ {
+		if i > 0 && sep != "" {
+			sb.WriteString(sep)
+		}
+		if i >= thumbStart && i < thumbEnd {
+			sb.WriteString(thumbCell)
+			continue
+		}
+		sb.WriteString(trackCell)
+	}
+	return sb.String()
 }
 
 func (m *Model) renderRows(
