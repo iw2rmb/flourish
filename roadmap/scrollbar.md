@@ -159,7 +159,7 @@ Legend: [ ] todo, [x] done.
   - Tests: Extend `editor/snapshot_test.go`, `editor/viewport_state_test.go`, `editor/completion_popup_render_test.go`, and `editor/hittest_test.go` — expect token invalidation on scrollbar config changes and correct content-area bounds.
 
 ## Phase 6: Documentation + End-to-End Verification
-- [ ] Update docs and run full package verification — Keeps behavior discoverable and ensures integration safety.
+- [x] Update docs and run full package verification — Keeps behavior discoverable and ensures integration safety.
   - Repository: `flourish`
   - Component: `docs` + `editor`
   - Scope:
