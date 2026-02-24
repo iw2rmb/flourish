@@ -38,6 +38,7 @@ Primary API:
 ## Rendering and Layout
 
 - optional custom gutter via `Config.Gutter` callbacks.
+- editor-owned scrollbars are configured with `Config.Scrollbar`.
 - wrap modes:
 - `WrapNone`: no soft wrap; horizontal scroll (`xOffset`) keeps cursor visible.
 - `WrapWord`: wraps at word boundaries; when no boundary fits, it falls back to width-based breaks.
@@ -89,6 +90,15 @@ Viewport integration:
 - `CompletionFilter` for host-defined completion item filtering and ordering.
 - `CompletionStyleForKey` for keyed completion row/segment style overrides.
 - `OnCompletionIntent` for completion semantic intent batches.
+
+Scrollbar config:
+- `Scrollbar.Vertical` and `Scrollbar.Horizontal` use `ScrollbarMode` (`ScrollbarAuto`, `ScrollbarAlways`, `ScrollbarNever`).
+- `Scrollbar.MinThumb` defaults to `1` when `<=0`.
+
+Scrollbar style fields:
+- `Style.ScrollbarTrack`
+- `Style.ScrollbarThumb`
+- `Style.ScrollbarCorner`
 
 Completion foundation config:
 - `CompletionKeyMap` controls completion-specific key bindings.
@@ -343,5 +353,7 @@ Examples:
 Cross references:
 - `docs/buffer.md`
 - `design/completion.md`
+- `design/scrollbar.md`
 - `design/collab-editing-best-practices.md`
+- `roadmap/scrollbar.md`
 - `research/collab.md`

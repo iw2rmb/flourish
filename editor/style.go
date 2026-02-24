@@ -10,6 +10,10 @@ type Style struct {
 	Selection lipgloss.Style
 	Cursor    lipgloss.Style
 	Link      lipgloss.Style
+	// Scrollbar styles are used for editor-owned scrollbar chrome.
+	ScrollbarTrack  lipgloss.Style
+	ScrollbarThumb  lipgloss.Style
+	ScrollbarCorner lipgloss.Style
 
 	CompletionItem     lipgloss.Style
 	CompletionSelected lipgloss.Style
@@ -27,6 +31,9 @@ func (s Style) isZero() bool {
 		isLipglossZero(s.Selection) &&
 		isLipglossZero(s.Cursor) &&
 		isLipglossZero(s.Link) &&
+		isLipglossZero(s.ScrollbarTrack) &&
+		isLipglossZero(s.ScrollbarThumb) &&
+		isLipglossZero(s.ScrollbarCorner) &&
 		isLipglossZero(s.CompletionItem) &&
 		isLipglossZero(s.CompletionSelected) &&
 		isLipglossZero(s.Ghost) &&
@@ -45,6 +52,10 @@ func DefaultStyle() Style {
 		Selection:      lipgloss.NewStyle().Background(lipgloss.Color("237")),
 		Cursor:         lipgloss.NewStyle().Reverse(true),
 		Link:           lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Underline(true),
+		ScrollbarTrack: lipgloss.NewStyle().Background(lipgloss.Color("236")),
+		ScrollbarThumb: lipgloss.NewStyle().Background(lipgloss.Color("241")),
+		ScrollbarCorner: lipgloss.NewStyle().
+			Background(lipgloss.Color("236")),
 		CompletionItem: lipgloss.NewStyle(),
 		CompletionSelected: lipgloss.NewStyle().
 			Background(lipgloss.Color("238")),

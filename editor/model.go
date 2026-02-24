@@ -18,7 +18,7 @@ type Model struct {
 	focused bool
 
 	completionState       CompletionState
-	completionFilterClean bool // set by recomputeCompletionQueryFromAnchor to skip redundant filter in syncFromBuffer
+	completionFilterClean bool     // set by recomputeCompletionQueryFromAnchor to skip redundant filter in syncFromBuffer
 	completionLowerCache  []string // cached lowercased flattened text per completion item
 
 	viewport viewport.Model
@@ -43,8 +43,8 @@ type Model struct {
 	renderedRows              []string
 
 	// Reusable per-render highlight bookkeeping, sized to logical line count.
-	highlightVisible  []bool
-	highlightsByLine  [][]HighlightSpan
+	highlightVisible   []bool
+	highlightsByLine   [][]HighlightSpan
 	highlightsComputed []bool
 
 	cachedLines    []string
@@ -62,6 +62,9 @@ func New(cfg Config) Model {
 	cfg.CompletionInputMode = normalizeCompletionInputMode(cfg.CompletionInputMode)
 	cfg.CompletionMaxVisibleRows = normalizeCompletionMaxVisibleRows(cfg.CompletionMaxVisibleRows)
 	cfg.CompletionMaxWidth = normalizeCompletionMaxWidth(cfg.CompletionMaxWidth)
+	if cfg.Scrollbar.MinThumb <= 0 {
+		cfg.Scrollbar.MinThumb = 1
+	}
 	if cfg.TabWidth <= 0 {
 		cfg.TabWidth = 4
 	}

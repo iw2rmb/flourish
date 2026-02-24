@@ -2,6 +2,26 @@ package editor
 
 import "github.com/charmbracelet/lipgloss"
 
+// ScrollbarMode controls visibility policy for a scrollbar axis.
+type ScrollbarMode int
+
+const (
+	// ScrollbarAuto shows a scrollbar only when the axis overflows.
+	ScrollbarAuto ScrollbarMode = iota
+	// ScrollbarAlways forces scrollbar visibility even when content fits.
+	ScrollbarAlways
+	// ScrollbarNever disables scrollbar visibility for the axis.
+	ScrollbarNever
+)
+
+// ScrollbarConfig configures editor-owned scrollbar behavior.
+type ScrollbarConfig struct {
+	Vertical   ScrollbarMode
+	Horizontal ScrollbarMode
+	// MinThumb is the minimum thumb size in cells. Values <= 0 normalize to 1.
+	MinThumb int
+}
+
 // Config configures the editor Model.
 type Config struct {
 	// Initial text for the internal buffer.
@@ -23,6 +43,9 @@ type Config struct {
 	// ScrollPolicy controls whether viewport scrolling can diverge from cursor.
 	// Default is ScrollAllowManual.
 	ScrollPolicy ScrollPolicy
+	// Scrollbar configures editor-owned vertical/horizontal scrollbar behavior.
+	// Zero value defaults to auto visibility with MinThumb normalized to 1.
+	Scrollbar ScrollbarConfig
 
 	// VirtualTextProvider optionally supplies per-line view-only transforms
 	// (virtual deletions/insertions) used by the VisualLine mapping layer.

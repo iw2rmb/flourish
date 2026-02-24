@@ -43,3 +43,30 @@ func TestConfig_CompletionKeyMapPartialPreserved(t *testing.T) {
 		t.Fatalf("expected AcceptTab default to remain false for partial completion keymap")
 	}
 }
+
+func TestConfig_ScrollbarMinThumbDefaultsToOne(t *testing.T) {
+	m := New(Config{})
+	if got, want := m.cfg.Scrollbar.MinThumb, 1; got != want {
+		t.Fatalf("scrollbar min thumb default: got %d, want %d", got, want)
+	}
+}
+
+func TestConfig_ScrollbarMinThumbClamp(t *testing.T) {
+	tests := []struct {
+		name string
+		in   int
+		want int
+	}{
+		{name: "zero", in: 0, want: 1},
+		{name: "negative", in: -3, want: 1},
+		{name: "positive", in: 4, want: 4},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := New(Config{Scrollbar: ScrollbarConfig{MinThumb: tt.in}})
+			if got := m.cfg.Scrollbar.MinThumb; got != tt.want {
+				t.Fatalf("min thumb normalize(%d): got %d, want %d", tt.in, got, tt.want)
+			}
+		})
+	}
+}
