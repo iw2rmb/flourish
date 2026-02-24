@@ -31,6 +31,7 @@ It provides a pure document buffer package and an editor component package.
 
 - `go run ./examples/simple`
 - `go run ./examples/wrap-modes`
+- `go run ./examples/scrollbar`
 - `go run ./examples/inline-suggestions`
 - `go run ./examples/virtual-text`
 - `go run ./examples/highlighter`

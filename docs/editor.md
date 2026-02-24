@@ -105,6 +105,7 @@ Scrollbar config:
 - horizontal scrollbar paints track/thumb in the reserved bottom inner row (content area only), clears the reserved row first, and paints `ScrollbarCorner` when both axes are visible.
 - scrollbar cells render as styled spaces (`" "`) using `Style.ScrollbarTrack`, `Style.ScrollbarThumb`, and `Style.ScrollbarCorner`.
 - scrollbar interactions are manual-scroll operations: page clicks and thumb dragging are active only when `ScrollPolicy==ScrollAllowManual`.
+- runnable host integration example: `examples/scrollbar/main.go`.
 
 Scrollbar style fields:
 - `Style.ScrollbarTrack`
