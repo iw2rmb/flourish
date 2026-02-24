@@ -222,12 +222,19 @@ func TestIntentEmission_KeyKindsAndSelectionAwareDeleteAndPaste(t *testing.T) {
 		{
 			name: "undo",
 			cfg:  Config{Text: "ab", MutationMode: EmitIntentsOnly},
+			setup: func(m *Model) {
+				m.buf.InsertText("X")
+			},
 			msg:  tea.KeyMsg{Type: tea.KeyCtrlZ},
 			want: IntentUndo,
 		},
 		{
 			name: "redo",
 			cfg:  Config{Text: "ab", MutationMode: EmitIntentsOnly},
+			setup: func(m *Model) {
+				m.buf.InsertText("X")
+				_ = m.buf.Undo()
+			},
 			msg:  tea.KeyMsg{Type: tea.KeyCtrlY},
 			want: IntentRedo,
 		},
@@ -309,5 +316,24 @@ func TestIntentMode_ReadOnlyBlocksMutationIntents(t *testing.T) {
 	}
 	if got, want := intents[1].Kind, IntentSelect; got != want {
 		t.Fatalf("second intent kind in read-only mode: got %v, want %v", got, want)
+	}
+}
+
+func TestIntentEmission_UndoRedoNoHistoryEmitNothing(t *testing.T) {
+	intents := make([]Intent, 0, 2)
+	m := New(Config{
+		Text:         "ab",
+		MutationMode: EmitIntentsOnly,
+		OnIntent: func(batch IntentBatch) IntentDecision {
+			intents = append(intents, batch.Intents...)
+			return IntentDecision{ApplyLocally: false}
+		},
+	})
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlZ})
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlY})
+
+	if got, want := len(intents), 0; got != want {
+		t.Fatalf("intent count with empty undo/redo history: got %d, want %d", got, want)
 	}
 }

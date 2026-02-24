@@ -192,13 +192,17 @@ func (m *Model) buildIntentsFromKey(msg tea.KeyMsg, before EditorState) (IntentB
 
 	case key.Matches(msg, km.Undo):
 		if !m.cfg.ReadOnly {
-			appendIntent(IntentUndo, UndoIntentPayload{})
-			mutations = append(mutations, func(mm *Model) { _ = mm.buf.Undo() })
+			if m.buf.CanUndo() {
+				appendIntent(IntentUndo, UndoIntentPayload{})
+				mutations = append(mutations, func(mm *Model) { _ = mm.buf.Undo() })
+			}
 		}
 	case key.Matches(msg, km.Redo):
 		if !m.cfg.ReadOnly {
-			appendIntent(IntentRedo, RedoIntentPayload{})
-			mutations = append(mutations, func(mm *Model) { _ = mm.buf.Redo() })
+			if m.buf.CanRedo() {
+				appendIntent(IntentRedo, RedoIntentPayload{})
+				mutations = append(mutations, func(mm *Model) { _ = mm.buf.Redo() })
+			}
 		}
 
 	case key.Matches(msg, km.Copy):

@@ -259,6 +259,8 @@ Mode behavior:
 - `MutateInEditor`: keeps existing behavior. No host intent callback required.
 - `EmitIntentsOnly`: emits intents and skips local apply.
 - `EmitIntentsAndMutate`: emits intents and applies locally only when `IntentDecision.ApplyLocally=true` (default true when `OnIntent` is nil).
+- `IntentUndo` is emitted only when undo history exists (`CanUndo()==true`).
+- `IntentRedo` is emitted only when redo history exists (`CanRedo()==true`).
 
 Read-only behavior:
 - `ReadOnly=true` still allows move/select intents.
