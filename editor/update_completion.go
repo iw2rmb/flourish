@@ -11,7 +11,7 @@ import (
 	"github.com/iw2rmb/flourish/internal/grapheme"
 )
 
-func (m *Model) buildCompletionIntentsFromKey(msg tea.KeyMsg, before EditorState) (completionKeyResult, bool) {
+func (m *Model) buildCompletionIntentsFromKey(msg tea.KeyPressMsg, before EditorState) (completionKeyResult, bool) {
 	ckm := m.cfg.CompletionKeyMap
 	km := m.cfg.KeyMap
 	result := completionKeyResult{
@@ -239,7 +239,7 @@ func (m *Model) acceptCompletionPayload() (CompletionAcceptIntentPayload, bool) 
 	}, true
 }
 
-func (m *Model) nextCompletionQueryFromKey(msg tea.KeyMsg) (string, bool) {
+func (m *Model) nextCompletionQueryFromKey(msg tea.KeyPressMsg) (string, bool) {
 	if key.Matches(msg, m.cfg.KeyMap.Backspace) {
 		parts := grapheme.Split(m.completionState.Query)
 		if len(parts) == 0 {
@@ -257,7 +257,7 @@ func (m *Model) nextCompletionQueryFromKey(msg tea.KeyMsg) (string, bool) {
 	return "", false
 }
 
-func (m *Model) nextCompletionQueryForMutateDocumentKey(msg tea.KeyMsg) (string, bool) {
+func (m *Model) nextCompletionQueryForMutateDocumentKey(msg tea.KeyPressMsg) (string, bool) {
 	if m.buf == nil {
 		return "", false
 	}

@@ -41,8 +41,8 @@ func BenchmarkCursorMove(b *testing.B) {
 }
 
 func benchmarkCursorPingPong(b *testing.B, m Model) {
-	right := tea.KeyMsg{Type: tea.KeyRight}
-	left := tea.KeyMsg{Type: tea.KeyLeft}
+	right := testKeyCode(tea.KeyRight)
+	left := testKeyCode(tea.KeyLeft)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

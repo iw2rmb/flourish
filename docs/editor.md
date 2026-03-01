@@ -53,12 +53,14 @@ Primary API:
 ## Input Behavior
 
 Keyboard:
+- Bubble Tea v2 key input is handled via `tea.KeyPressMsg`.
 - movement, selection extension, editing, undo/redo, clipboard shortcuts.
 - default `pgup`/`pgdown` move by the current visible row count.
 - `ReadOnly=true` blocks text mutation, keeps movement/selection enabled.
 - text mutation shortcuts include typing, enter, delete/backspace, cut, paste, undo/redo.
 
 Mouse:
+- Bubble Tea v2 typed mouse messages are handled via `tea.MouseClickMsg`, `tea.MouseMotionMsg`, `tea.MouseReleaseMsg`, and `tea.MouseWheelMsg`.
 - click to move cursor.
 - shift+click to extend selection.
 - drag to update selection.

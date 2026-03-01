@@ -17,7 +17,7 @@ func TestViewportState_ExposesOffsets(t *testing.T) {
 		t.Fatalf("initial viewport state: got %+v", st)
 	}
 
-	m, _ = m.Update(tea.MouseMsg{Action: tea.MouseActionPress, Button: tea.MouseButtonWheelDown})
+	m, _ = m.Update(testMouseWheel(0, 0, tea.MouseWheelDown))
 	st = m.ViewportState()
 	if st.TopVisualRow <= 0 {
 		t.Fatalf("top row after manual wheel scroll: got %d, want > 0", st.TopVisualRow)
@@ -31,13 +31,13 @@ func TestViewportState_ScrollFollowCursorOnly_IgnoresManualWheel(t *testing.T) {
 	})
 	m = m.SetSize(10, 2)
 
-	m, _ = m.Update(tea.MouseMsg{Action: tea.MouseActionPress, Button: tea.MouseButtonWheelDown})
+	m, _ = m.Update(testMouseWheel(0, 0, tea.MouseWheelDown))
 	if got := m.ViewportState().TopVisualRow; got != 0 {
 		t.Fatalf("top row after manual wheel in follow-cursor mode: got %d, want %d", got, 0)
 	}
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	m, _ = m.Update(testKeyCode(tea.KeyDown))
+	m, _ = m.Update(testKeyCode(tea.KeyDown))
 	if got := m.ViewportState().TopVisualRow; got != 1 {
 		t.Fatalf("top row after cursor-driven movement: got %d, want %d", got, 1)
 	}
@@ -46,7 +46,7 @@ func TestViewportState_ScrollFollowCursorOnly_IgnoresManualWheel(t *testing.T) {
 func TestDocScreenMapping_UsesViewportOffsets(t *testing.T) {
 	m := New(Config{Text: "ab\ncd\nef"})
 	m = m.SetSize(10, 2)
-	m, _ = m.Update(tea.MouseMsg{Action: tea.MouseActionPress, Button: tea.MouseButtonWheelDown})
+	m, _ = m.Update(testMouseWheel(0, 0, tea.MouseWheelDown))
 	top := m.ViewportState().TopVisualRow
 
 	if got := m.ScreenToDoc(1, 0); got != (buffer.Pos{Row: top, GraphemeCol: 1}) {
@@ -70,7 +70,7 @@ func TestDocToScreen_WrapNone_UsesHorizontalOffset(t *testing.T) {
 	m := New(Config{Text: "abcdef"})
 	m = m.SetSize(3, 1)
 	for i := 0; i < 5; i++ {
-		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+		m, _ = m.Update(testKeyCode(tea.KeyRight))
 	}
 
 	if got := m.ViewportState().LeftCellOffset; got != 3 {

@@ -29,7 +29,7 @@ func TestCompletionIntent_TriggerEmitsAndOpensInEmitIntentsOnly(t *testing.T) {
 	})
 	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 1})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyF2})
+	m, _ = m.Update(testKeyCode(tea.KeyF2))
 
 	if got, want := len(batches), 1; got != want {
 		t.Fatalf("completion intent batch count: got %d, want %d", got, want)
@@ -81,7 +81,7 @@ func TestCompletionIntent_NavigateAndDismissEmitAndUpdateStateInEmitIntentsOnly(
 		Selected:       0,
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	m, _ = m.Update(testKeyCode(tea.KeyDown))
 	if got, want := m.CompletionState().Selected, 1; got != want {
 		t.Fatalf("selected after navigate: got %d, want %d", got, want)
 	}
@@ -105,7 +105,7 @@ func TestCompletionIntent_NavigateAndDismissEmitAndUpdateStateInEmitIntentsOnly(
 		t.Fatalf("navigate payload item index: got %d, want %d", got, want)
 	}
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m, _ = m.Update(testKeyCode(tea.KeyEsc))
 	if got := m.CompletionState(); got.Visible {
 		t.Fatalf("dismiss should clear completion state")
 	}
@@ -190,7 +190,7 @@ func TestCompletionIntent_AcceptMutationModeParity(t *testing.T) {
 				VisibleIndices: []int{0},
 			})
 
-			m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+			m, _ = m.Update(testKeyCode(tea.KeyEnter))
 
 			if got, want := m.buf.Text(), tc.wantText; got != want {
 				t.Fatalf("buffer text after accept: got %q, want %q", got, want)
@@ -278,7 +278,7 @@ func TestCompletionIntent_MutateDocumentEmitsDualIntentsInOrder(t *testing.T) {
 		VisibleIndices: []int{0},
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	m, _ = m.Update(testKeyText("x"))
 
 	if got, want := order, []string{"completion", "document"}; len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
 		t.Fatalf("callback order: got %v, want %v", got, want)
@@ -340,7 +340,7 @@ func TestCompletionIntent_QueryOnlyUpdatesQueryInEmitIntentsOnly(t *testing.T) {
 		VisibleIndices: []int{0},
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	m, _ = m.Update(testKeyText("x"))
 
 	if got, want := len(completionIntents), 1; got != want {
 		t.Fatalf("completion intent count: got %d, want %d", got, want)

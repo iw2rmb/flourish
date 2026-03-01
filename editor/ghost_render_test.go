@@ -1,25 +1,19 @@
 package editor
 
 import (
-	"io"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/muesli/termenv"
 
 	"github.com/iw2rmb/flourish/buffer"
 )
 
 func TestRender_GhostInsertionAtEOL_UsesGhostStyle(t *testing.T) {
-	r := lipgloss.NewRenderer(io.Discard)
-	r.SetColorProfile(termenv.TrueColor)
-	r.SetHasDarkBackground(true)
-
 	st := Style{
-		Text:   r.NewStyle(),
-		Cursor: r.NewStyle().Reverse(true),
-		Ghost:  r.NewStyle().Faint(true),
+		Text:   lipgloss.NewStyle(),
+		Cursor: lipgloss.NewStyle().Reverse(true),
+		Ghost:  lipgloss.NewStyle().Faint(true),
 	}
 
 	m := New(Config{
@@ -46,14 +40,10 @@ func TestRender_GhostInsertionAtEOL_UsesGhostStyle(t *testing.T) {
 }
 
 func TestRender_GhostInsertionAtNonEOL_UsesGhostStyle(t *testing.T) {
-	r := lipgloss.NewRenderer(io.Discard)
-	r.SetColorProfile(termenv.TrueColor)
-	r.SetHasDarkBackground(true)
-
 	st := Style{
-		Text:   r.NewStyle(),
-		Cursor: r.NewStyle().Reverse(true),
-		Ghost:  r.NewStyle().Faint(true),
+		Text:   lipgloss.NewStyle(),
+		Cursor: lipgloss.NewStyle().Reverse(true),
+		Ghost:  lipgloss.NewStyle().Faint(true),
 	}
 
 	m := New(Config{
@@ -97,7 +87,7 @@ func TestUpdate_GhostAccept_TabAppliesEdits(t *testing.T) {
 	})
 	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 2}) // EOL
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	m, _ = m.Update(testKeyCode(tea.KeyTab))
 	if got := m.buf.Text(); got != "abX" {
 		t.Fatalf("text after ghost accept: got %q, want %q", got, "abX")
 	}
@@ -121,7 +111,7 @@ func TestUpdate_GhostAccept_RightAppliesEdits(t *testing.T) {
 	})
 	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 2}) // EOL
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	m, _ = m.Update(testKeyCode(tea.KeyRight))
 	if got := m.buf.Text(); got != "abX" {
 		t.Fatalf("text after ghost accept: got %q, want %q", got, "abX")
 	}
@@ -148,7 +138,7 @@ func TestUpdate_GhostAccept_TabAppliesEdits_NonEOL(t *testing.T) {
 	})
 	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 1}) // non-EOL
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	m, _ = m.Update(testKeyCode(tea.KeyTab))
 	if got := m.buf.Text(); got != "aXb" {
 		t.Fatalf("text after non-EOL ghost accept: got %q, want %q", got, "aXb")
 	}
@@ -175,7 +165,7 @@ func TestUpdate_GhostAccept_RightAppliesEdits_NonEOL(t *testing.T) {
 	})
 	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 1}) // non-EOL
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	m, _ = m.Update(testKeyCode(tea.KeyRight))
 	if got := m.buf.Text(); got != "aXb" {
 		t.Fatalf("text after non-EOL ghost accept: got %q, want %q", got, "aXb")
 	}
@@ -194,7 +184,7 @@ func TestUpdate_GhostAccept_EmptyEditsFallbacks(t *testing.T) {
 		})
 		m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 1}) // non-EOL
 
-		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+		m, _ = m.Update(testKeyCode(tea.KeyRight))
 		if got := m.buf.Text(); got != "ab" {
 			t.Fatalf("text after Right fallback: got %q, want %q", got, "ab")
 		}
@@ -212,7 +202,7 @@ func TestUpdate_GhostAccept_EmptyEditsFallbacks(t *testing.T) {
 		})
 		m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 1}) // non-EOL
 
-		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+		m, _ = m.Update(testKeyCode(tea.KeyTab))
 		if got := m.buf.Text(); got != "a\tb" {
 			t.Fatalf("text after Tab fallback: got %q, want %q", got, "a\\tb")
 		}
@@ -223,14 +213,10 @@ func TestUpdate_GhostAccept_EmptyEditsFallbacks(t *testing.T) {
 }
 
 func TestRender_GhostSuppressedWhenCompletionVisible(t *testing.T) {
-	r := lipgloss.NewRenderer(io.Discard)
-	r.SetColorProfile(termenv.TrueColor)
-	r.SetHasDarkBackground(true)
-
 	st := Style{
-		Text:   r.NewStyle(),
-		Cursor: r.NewStyle().Reverse(true),
-		Ghost:  r.NewStyle().Faint(true),
+		Text:   lipgloss.NewStyle(),
+		Cursor: lipgloss.NewStyle().Reverse(true),
+		Ghost:  lipgloss.NewStyle().Faint(true),
 	}
 
 	m := New(Config{
@@ -290,7 +276,7 @@ func TestUpdate_GhostAccept_RightSuppressedWhenCompletionVisible(t *testing.T) {
 		VisibleIndices: []int{0},
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	m, _ = m.Update(testKeyCode(tea.KeyRight))
 	if got, want := m.buf.Text(), "ab"; got != want {
 		t.Fatalf("right key should not accept ghost while completion visible: got %q, want %q", got, want)
 	}

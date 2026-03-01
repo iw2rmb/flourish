@@ -9,10 +9,18 @@ import (
 	"github.com/iw2rmb/flourish/buffer"
 )
 
+func testKey(code rune, mods ...tea.KeyMod) tea.KeyPressMsg {
+	var mod tea.KeyMod
+	for _, m := range mods {
+		mod |= m
+	}
+	return tea.KeyPressMsg{Code: code, Mod: mod}
+}
+
 func TestCompletionPopupArrowDownNavigatesSelection(t *testing.T) {
 	m := newModel()
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlAt})
+	updated, _ := m.Update(testKey(tea.KeySpace, tea.ModCtrl))
 	m = updated.(model)
 
 	state := m.editor.CompletionState()
@@ -23,7 +31,7 @@ func TestCompletionPopupArrowDownNavigatesSelection(t *testing.T) {
 		t.Fatalf("initial selected index: got %d, want %d", got, want)
 	}
 
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ = m.Update(testKey(tea.KeyDown))
 	m = updated.(model)
 
 	state = m.editor.CompletionState()
@@ -35,15 +43,15 @@ func TestCompletionPopupArrowDownNavigatesSelection(t *testing.T) {
 func TestCompletionPopupAccept_ReplacesProWithProject(t *testing.T) {
 	m := newModel()
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlAt})
+	updated, _ := m.Update(testKey(tea.KeySpace, tea.ModCtrl))
 	m = updated.(model)
 
 	for i := 0; i < 3; i++ {
-		updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+		updated, _ = m.Update(testKey(tea.KeyDown))
 		m = updated.(model)
 	}
 
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ = m.Update(testKey(tea.KeyEnter))
 	m = updated.(model)
 
 	lines := strings.Split(m.editor.Buffer().Text(), "\n")
@@ -55,15 +63,15 @@ func TestCompletionPopupAccept_ReplacesProWithProject(t *testing.T) {
 func TestCompletionPopupAccept_ReplacesProWithProfileLiteral(t *testing.T) {
 	m := newModel()
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlAt})
+	updated, _ := m.Update(testKey(tea.KeySpace, tea.ModCtrl))
 	m = updated.(model)
 
 	for i := 0; i < 2; i++ {
-		updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+		updated, _ = m.Update(testKey(tea.KeyDown))
 		m = updated.(model)
 	}
 
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ = m.Update(testKey(tea.KeyEnter))
 	m = updated.(model)
 
 	lines := strings.Split(m.editor.Buffer().Text(), "\n")
@@ -76,10 +84,10 @@ func TestCompletionPopupAccept_FromMiddleOfPro_ReplacesWholeIdentifier(t *testin
 	m := newModel()
 	m.editor.Buffer().SetCursor(buffer.Pos{Row: 10, GraphemeCol: 2})
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlAt})
+	updated, _ := m.Update(testKey(tea.KeySpace, tea.ModCtrl))
 	m = updated.(model)
 
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ = m.Update(testKey(tea.KeyEnter))
 	m = updated.(model)
 
 	lines := strings.Split(m.editor.Buffer().Text(), "\n")

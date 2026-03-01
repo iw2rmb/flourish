@@ -18,7 +18,7 @@ func TestOnChange_FiresOnMutationsAndSkipsNoOps(t *testing.T) {
 	})
 	events = nil
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	m, _ = m.Update(testKeyCode(tea.KeyRight))
 	if len(events) != 1 {
 		t.Fatalf("events after move: got %d, want %d", len(events), 1)
 	}
@@ -41,17 +41,17 @@ func TestOnChange_FiresOnMutationsAndSkipsNoOps(t *testing.T) {
 		t.Fatalf("event applied edits after move: got %d, want %d", got, 0)
 	}
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight}) // to EOL
+	m, _ = m.Update(testKeyCode(tea.KeyRight)) // to EOL
 	if len(events) != 2 {
 		t.Fatalf("events after move to EOL: got %d, want %d", len(events), 2)
 	}
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight}) // no-op at EOL
+	m, _ = m.Update(testKeyCode(tea.KeyRight)) // no-op at EOL
 	if len(events) != 2 {
 		t.Fatalf("events after no-op: got %d, want %d", len(events), 2)
 	}
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
+	m, _ = m.Update(testKeyText("X"))
 	if len(events) != 3 {
 		t.Fatalf("events after insert: got %d, want %d", len(events), 3)
 	}

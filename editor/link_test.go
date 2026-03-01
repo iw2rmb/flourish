@@ -5,24 +5,19 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
-	"github.com/muesli/termenv"
 
 	"github.com/iw2rmb/flourish/buffer"
 )
 
 func TestLinkProvider_RendersHyperlinksWithDefaultLinkStyle(t *testing.T) {
-	r := lipgloss.NewRenderer(io.Discard)
-	r.SetColorProfile(termenv.TrueColor)
-	r.SetHasDarkBackground(true)
-
-	textStyle := r.NewStyle()
-	linkStyle := r.NewStyle().Underline(true)
+	textStyle := lipgloss.NewStyle()
+	linkStyle := lipgloss.NewStyle().Underline(true)
 
 	m := New(Config{
 		Text: "abcd",
 		Style: Style{
 			Text:   textStyle,
-			Cursor: r.NewStyle().Reverse(true),
+			Cursor: lipgloss.NewStyle().Reverse(true),
 			Link:   linkStyle,
 		},
 		LinkProvider: func(ctx LinkContext) ([]LinkSpan, error) {

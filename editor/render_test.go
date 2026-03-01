@@ -2,12 +2,10 @@ package editor
 
 import (
 	"fmt"
-	"io"
 	"strings"
 	"testing"
 
 	"charm.land/lipgloss/v2"
-	"github.com/muesli/termenv"
 
 	"github.com/iw2rmb/flourish/buffer"
 )
@@ -49,7 +47,7 @@ func TestRender_CursorStyleAppliedWhenFocused(t *testing.T) {
 		Style: Style{Text: lipgloss.NewStyle(), Cursor: lipgloss.NewStyle().PaddingLeft(1).PaddingRight(1)},
 	})
 
-	got := m.renderContent()
+	got := stripANSI(m.renderContent())
 	want := " a b"
 	if got != want {
 		t.Fatalf("unexpected cursor rendering:\n got: %q\nwant: %q", got, want)
@@ -57,14 +55,10 @@ func TestRender_CursorStyleAppliedWhenFocused(t *testing.T) {
 }
 
 func TestRender_Selection_MultiLine_HalfOpen(t *testing.T) {
-	r := lipgloss.NewRenderer(io.Discard)
-	r.SetColorProfile(termenv.TrueColor)
-	r.SetHasDarkBackground(true)
-
 	st := Style{
-		Text:      r.NewStyle(),
-		Selection: r.NewStyle().Underline(true),
-		Cursor:    r.NewStyle().Reverse(true),
+		Text:      lipgloss.NewStyle(),
+		Selection: lipgloss.NewStyle().Underline(true),
+		Cursor:    lipgloss.NewStyle().Reverse(true),
 	}
 
 	m := New(Config{Text: "ab\ncd\nef", Style: st})
@@ -88,13 +82,9 @@ func TestRender_Selection_MultiLine_HalfOpen(t *testing.T) {
 }
 
 func TestRender_Selection_LineBoundary_EndAtStartOfNextLine(t *testing.T) {
-	r := lipgloss.NewRenderer(io.Discard)
-	r.SetColorProfile(termenv.TrueColor)
-	r.SetHasDarkBackground(true)
-
 	st := Style{
-		Text:      r.NewStyle(),
-		Selection: r.NewStyle().Underline(true),
+		Text:      lipgloss.NewStyle(),
+		Selection: lipgloss.NewStyle().Underline(true),
 	}
 
 	m := New(Config{Text: "ab\ncd", Style: st})
@@ -118,13 +108,9 @@ func TestRender_Selection_LineBoundary_EndAtStartOfNextLine(t *testing.T) {
 }
 
 func TestRender_Selection_EmptySelectionRendersAsText(t *testing.T) {
-	r := lipgloss.NewRenderer(io.Discard)
-	r.SetColorProfile(termenv.TrueColor)
-	r.SetHasDarkBackground(true)
-
 	st := Style{
-		Text:      r.NewStyle(),
-		Selection: r.NewStyle().Underline(true),
+		Text:      lipgloss.NewStyle(),
+		Selection: lipgloss.NewStyle().Underline(true),
 	}
 
 	m := New(Config{Text: "ab", Style: st})
@@ -143,13 +129,9 @@ func TestRender_Selection_EmptySelectionRendersAsText(t *testing.T) {
 }
 
 func TestRender_Selection_FullLineSelection(t *testing.T) {
-	r := lipgloss.NewRenderer(io.Discard)
-	r.SetColorProfile(termenv.TrueColor)
-	r.SetHasDarkBackground(true)
-
 	st := Style{
-		Text:      r.NewStyle(),
-		Selection: r.NewStyle().Underline(true),
+		Text:      lipgloss.NewStyle(),
+		Selection: lipgloss.NewStyle().Underline(true),
 	}
 
 	m := New(Config{Text: "ab\ncd", Style: st})
@@ -173,13 +155,9 @@ func TestRender_Selection_FullLineSelection(t *testing.T) {
 }
 
 func TestRender_Selection_DeletedRangesDoNotRenderHighlight(t *testing.T) {
-	r := lipgloss.NewRenderer(io.Discard)
-	r.SetColorProfile(termenv.TrueColor)
-	r.SetHasDarkBackground(true)
-
 	st := Style{
-		Text:      r.NewStyle(),
-		Selection: r.NewStyle().Underline(true),
+		Text:      lipgloss.NewStyle(),
+		Selection: lipgloss.NewStyle().Underline(true),
 	}
 
 	m := New(Config{
@@ -292,7 +270,7 @@ func TestRender_SoftWrapWord_CursorOnTrailingSpace_UsesNBSP(t *testing.T) {
 	m = m.SetSize(3, 4)
 	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 5}) // space after "hello"
 
-	got := m.renderContent()
+	got := stripANSI(m.renderContent())
 	want := "hel\nlo\u00a0\nwor\nld"
 	if got != want {
 		t.Fatalf("wrapped cursor on trailing space: got %q, want %q", got, want)
@@ -311,7 +289,7 @@ func TestRender_SoftWrapWord_CursorOnPenultimateTrailingSpace_UsesNBSP(t *testin
 	m = m.SetSize(7, 2)
 	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 5}) // first of two trailing spaces
 
-	got := m.renderContent()
+	got := stripANSI(m.renderContent())
 	want := "hello\u00a0 \nworld"
 	if got != want {
 		t.Fatalf("wrapped cursor on penultimate trailing space: got %q, want %q", got, want)
@@ -319,13 +297,9 @@ func TestRender_SoftWrapWord_CursorOnPenultimateTrailingSpace_UsesNBSP(t *testin
 }
 
 func TestRender_SoftWrapWord_CursorAtEOLOnFullRow_Visible(t *testing.T) {
-	r := lipgloss.NewRenderer(io.Discard)
-	r.SetColorProfile(termenv.TrueColor)
-	r.SetHasDarkBackground(true)
-
 	st := Style{
-		Text:   r.NewStyle(),
-		Cursor: r.NewStyle().Foreground(lipgloss.Color("1")),
+		Text:   lipgloss.NewStyle(),
+		Cursor: lipgloss.NewStyle().Reverse(true),
 	}
 
 	m := New(Config{
@@ -357,7 +331,7 @@ func TestRender_SoftWrap_CursorAtEOLOnNonFullRow_UsesTrailingCell(t *testing.T) 
 		m = m.SetSize(4, 2)
 		m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 3})
 
-		got := m.renderContent()
+		got := stripANSI(m.renderContent())
 		want := "abc \ndef"
 		if got != want {
 			t.Fatalf("mode %v trailing EOL cursor cell: got %q, want %q", mode, got, want)
@@ -641,16 +615,12 @@ func TestView_ScrollbarChrome_BothAxesAndCorner(t *testing.T) {
 }
 
 func scrollbarStyleForViewTest() Style {
-	r := lipgloss.NewRenderer(io.Discard)
-	r.SetColorProfile(termenv.TrueColor)
-	r.SetHasDarkBackground(true)
-
 	return Style{
-		Text:           r.NewStyle(),
-		Cursor:         r.NewStyle().Reverse(true), // keep style non-zero so New doesn't replace it
-		ScrollbarTrack: r.NewStyle().Background(lipgloss.Color("52")),
-		ScrollbarThumb: r.NewStyle().Background(lipgloss.Color("22")),
-		ScrollbarCorner: r.NewStyle().
+		Text:           lipgloss.NewStyle(),
+		Cursor:         lipgloss.NewStyle().Reverse(true), // keep style non-zero so New doesn't replace it
+		ScrollbarTrack: lipgloss.NewStyle().Background(lipgloss.Color("52")),
+		ScrollbarThumb: lipgloss.NewStyle().Background(lipgloss.Color("22")),
+		ScrollbarCorner: lipgloss.NewStyle().
 			Background(lipgloss.Color("17")),
 	}
 }

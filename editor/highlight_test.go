@@ -2,11 +2,9 @@ package editor
 
 import (
 	"errors"
-	"io"
 	"testing"
 
 	"charm.land/lipgloss/v2"
-	"github.com/muesli/termenv"
 
 	"github.com/iw2rmb/flourish/buffer"
 )
@@ -36,18 +34,14 @@ func TestHighlighting_CalledOnlyForVisibleLines(t *testing.T) {
 }
 
 func TestHighlighting_ErrorFallsBackToPlainText(t *testing.T) {
-	r := lipgloss.NewRenderer(io.Discard)
-	r.SetColorProfile(termenv.TrueColor)
-	r.SetHasDarkBackground(true)
-
-	st := Style{Text: r.NewStyle()}
+	st := Style{Text: lipgloss.NewStyle()}
 
 	m := New(Config{
 		Text:  "abcd",
 		Style: st,
 		Highlighter: &stubHighlighter{
 			fn: func(ctx LineContext) ([]HighlightSpan, error) {
-				return []HighlightSpan{{StartGraphemeCol: 1, EndGraphemeCol: 3, Style: r.NewStyle().Underline(true)}}, errors.New("boom")
+				return []HighlightSpan{{StartGraphemeCol: 1, EndGraphemeCol: 3, Style: lipgloss.NewStyle().Underline(true)}}, errors.New("boom")
 			},
 		},
 	})
@@ -86,12 +80,8 @@ func TestHighlighting_RebuildsAfterAutoFollowScroll(t *testing.T) {
 }
 
 func TestHighlighting_AppliesSpansToVisibleDocText(t *testing.T) {
-	r := lipgloss.NewRenderer(io.Discard)
-	r.SetColorProfile(termenv.TrueColor)
-	r.SetHasDarkBackground(true)
-
-	textStyle := r.NewStyle()
-	hlStyle := r.NewStyle().Underline(true)
+	textStyle := lipgloss.NewStyle()
+	hlStyle := lipgloss.NewStyle().Underline(true)
 	st := Style{Text: textStyle}
 
 	m := New(Config{

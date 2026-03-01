@@ -18,7 +18,7 @@ type completionKeyResult struct {
 	documentMutations   []localMutationOp
 }
 
-func (m Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
+func (m Model) updateKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	if !m.focused || m.buf == nil {
 		return m, nil
 	}
@@ -73,7 +73,7 @@ func (m *Model) emitDocumentIntentsAndResolveApply(batch IntentBatch) bool {
 	}
 }
 
-func (m *Model) buildIntentsFromKey(msg tea.KeyMsg, before EditorState) (IntentBatch, []localMutationOp) {
+func (m *Model) buildIntentsFromKey(msg tea.KeyPressMsg, before EditorState) (IntentBatch, []localMutationOp) {
 	batch := IntentBatch{}
 	mutations := make([]localMutationOp, 0, 1)
 	appendIntent := func(kind IntentKind, payload any) {
@@ -305,19 +305,19 @@ func (m Model) updatePaste(msg tea.PasteMsg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-func isTabKey(msg tea.KeyMsg) bool {
+func isTabKey(msg tea.KeyPressMsg) bool {
 	return msg.Key().Code == tea.KeyTab
 }
 
-func isSpaceKey(msg tea.KeyMsg) bool {
+func isSpaceKey(msg tea.KeyPressMsg) bool {
 	k := msg.Key()
 	return k.Code == tea.KeySpace || k.Text == " "
 }
 
-func hasAltMod(msg tea.KeyMsg) bool {
+func hasAltMod(msg tea.KeyPressMsg) bool {
 	return msg.Key().Mod&tea.ModAlt != 0
 }
 
-func keyText(msg tea.KeyMsg) string {
+func keyText(msg tea.KeyPressMsg) string {
 	return msg.Key().Text
 }

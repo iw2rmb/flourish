@@ -12,7 +12,7 @@ import (
 
 func TestCompletionInput_KeyRoutingVisibleVsHidden(t *testing.T) {
 	hidden := New(Config{Text: "a\nb\nc"})
-	hidden, _ = hidden.Update(tea.KeyMsg{Type: tea.KeyDown})
+	hidden, _ = hidden.Update(testKeyCode(tea.KeyDown))
 	if got, want := hidden.buf.Cursor(), (buffer.Pos{Row: 1, GraphemeCol: 0}); got != want {
 		t.Fatalf("hidden popup down key should move cursor: got %v, want %v", got, want)
 	}
@@ -24,7 +24,7 @@ func TestCompletionInput_KeyRoutingVisibleVsHidden(t *testing.T) {
 		VisibleIndices: []int{0, 1},
 		Selected:       0,
 	})
-	visible, _ = visible.Update(tea.KeyMsg{Type: tea.KeyDown})
+	visible, _ = visible.Update(testKeyCode(tea.KeyDown))
 	if got, want := visible.buf.Cursor(), (buffer.Pos{Row: 0, GraphemeCol: 0}); got != want {
 		t.Fatalf("visible popup down key should not move cursor: got %v, want %v", got, want)
 	}
@@ -41,8 +41,8 @@ func TestCompletionInput_TriggerOpensAtCursor(t *testing.T) {
 		Text:             "ab",
 		CompletionKeyMap: km,
 	})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	m, _ = m.Update(testKeyCode(tea.KeyRight))
+	m, _ = m.Update(testKeyCode(tea.KeyDown))
 
 	state := m.CompletionState()
 	if !state.Visible {
@@ -61,7 +61,7 @@ func TestCompletionInput_TriggerOpensAtCursor(t *testing.T) {
 
 func TestCompletionInput_DefaultTriggerMatchesCtrlSpaceAlias(t *testing.T) {
 	m := New(Config{Text: "ab"})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlAt})
+	m, _ = m.Update(testKeyCode(tea.KeySpace, tea.ModCtrl))
 
 	state := m.CompletionState()
 	if !state.Visible {
@@ -91,7 +91,7 @@ func TestCompletionAccept_AppliesItemEditsAndClearsPopup(t *testing.T) {
 		VisibleIndices: []int{0},
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m, _ = m.Update(testKeyCode(tea.KeyEnter))
 	if got, want := m.buf.Text(), "hXYZo"; got != want {
 		t.Fatalf("accept should apply item edits: got %q, want %q", got, want)
 	}
@@ -112,7 +112,7 @@ func TestCompletionAccept_FallsBackToInsertTextAtAnchor(t *testing.T) {
 		VisibleIndices: []int{0},
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m, _ = m.Update(testKeyCode(tea.KeyEnter))
 	if got, want := m.buf.Text(), "aZZbcd"; got != want {
 		t.Fatalf("fallback insert should use completion anchor: got %q, want %q", got, want)
 	}
@@ -129,7 +129,7 @@ func TestCompletionAccept_AcceptTabGate(t *testing.T) {
 			VisibleIndices: []int{0},
 		})
 
-		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+		m, _ = m.Update(testKeyCode(tea.KeyTab))
 		if got, want := m.buf.Text(), "Xab"; got != want {
 			t.Fatalf("tab should accept completion when enabled: got %q, want %q", got, want)
 		}
@@ -150,7 +150,7 @@ func TestCompletionAccept_AcceptTabGate(t *testing.T) {
 			VisibleIndices: []int{0},
 		})
 
-		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+		m, _ = m.Update(testKeyCode(tea.KeyTab))
 		if got, want := m.buf.Text(), "\tab"; got != want {
 			t.Fatalf("tab should fall through when AcceptTab=false: got %q, want %q", got, want)
 		}
@@ -168,9 +168,9 @@ func TestCompletionInput_QueryOnlyModeUpdatesQueryWithoutDocMutation(t *testing.
 		VisibleIndices: []int{0},
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeySpace})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	m, _ = m.Update(testKeyText("x"))
+	m, _ = m.Update(testKeyCode(tea.KeySpace))
+	m, _ = m.Update(testKeyCode(tea.KeyBackspace))
 
 	if got, want := m.buf.Text(), "ab"; got != want {
 		t.Fatalf("query-only typing/backspace should not mutate text: got %q, want %q", got, want)
@@ -197,7 +197,7 @@ func TestCompletionInput_MutateDocumentModeMutatesTextAndRecomputesQuery(t *test
 		VisibleIndices: []int{0},
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("Z")})
+	m, _ = m.Update(testKeyText("Z"))
 	if got, want := m.buf.Text(), "aZb"; got != want {
 		t.Fatalf("mutate-document typing should mutate text: got %q, want %q", got, want)
 	}
@@ -208,7 +208,7 @@ func TestCompletionInput_MutateDocumentModeMutatesTextAndRecomputesQuery(t *test
 		t.Fatalf("mutate-document typing should keep popup visible")
 	}
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	m, _ = m.Update(testKeyCode(tea.KeyBackspace))
 	if got, want := m.buf.Text(), "ab"; got != want {
 		t.Fatalf("mutate-document backspace should mutate text: got %q, want %q", got, want)
 	}
@@ -234,7 +234,7 @@ func TestCompletionInput_MutateDocumentModeAnchorInvalidationResetsQuery(t *test
 		VisibleIndices: []int{0},
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	m, _ = m.Update(testKeyCode(tea.KeyBackspace))
 	if got, want := m.CompletionState().Query, ""; got != want {
 		t.Fatalf("query should reset when cursor moves before anchor: got %q, want %q", got, want)
 	}
@@ -252,7 +252,7 @@ func TestCompletionInput_ReadOnlyMutateModeBehavesAsQueryOnly(t *testing.T) {
 		VisibleIndices: []int{0},
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	m, _ = m.Update(testKeyText("x"))
 	if got, want := m.buf.Text(), "ab"; got != want {
 		t.Fatalf("read-only mutate mode should not mutate text: got %q, want %q", got, want)
 	}
@@ -260,7 +260,7 @@ func TestCompletionInput_ReadOnlyMutateModeBehavesAsQueryOnly(t *testing.T) {
 		t.Fatalf("read-only mutate mode should update query: got %q, want %q", got, want)
 	}
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	m, _ = m.Update(testKeyCode(tea.KeyBackspace))
 	if got, want := m.CompletionState().Query, ""; got != want {
 		t.Fatalf("read-only mutate mode backspace should update query: got %q, want %q", got, want)
 	}
@@ -279,7 +279,7 @@ func TestCompletionAccept_ReadOnlySuppressesLocalMutation(t *testing.T) {
 		VisibleIndices: []int{0},
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m, _ = m.Update(testKeyCode(tea.KeyEnter))
 	if got, want := m.buf.Text(), "ab"; got != want {
 		t.Fatalf("read-only accept should not mutate text: got %q, want %q", got, want)
 	}
@@ -298,7 +298,7 @@ func TestCompletionCursorMoveWithinAnchorTokenKeepsPopupVisible(t *testing.T) {
 		VisibleIndices: []int{0},
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	m, _ = m.Update(testKeyCode(tea.KeyLeft))
 	if !m.CompletionState().Visible {
 		t.Fatalf("popup should stay visible while cursor remains within anchor token")
 	}
@@ -314,7 +314,7 @@ func TestCompletionCursorMoveOutsideAnchorTokenClosesPopup(t *testing.T) {
 		VisibleIndices: []int{0},
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	m, _ = m.Update(testKeyCode(tea.KeyRight))
 	if m.CompletionState().Visible {
 		t.Fatalf("popup should close when cursor leaves anchor token on same row")
 	}
@@ -330,7 +330,7 @@ func TestCompletionCursorMoveToDifferentRowClosesPopup(t *testing.T) {
 		VisibleIndices: []int{0},
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	m, _ = m.Update(testKeyCode(tea.KeyRight))
 	if m.CompletionState().Visible {
 		t.Fatalf("popup should close when cursor leaves anchor row")
 	}

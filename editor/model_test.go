@@ -192,7 +192,7 @@ func TestUpdate_CursorMove_RecomputesVirtualTextOnlyForDirtyRows(t *testing.T) {
 	m = m.SetSize(80, 10)
 
 	callsByRow = map[int]int{}
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	m, _ = m.Update(testKeyCode(tea.KeyRight))
 
 	if len(callsByRow) == 0 {
 		t.Fatalf("expected virtual text provider call on cursor move")

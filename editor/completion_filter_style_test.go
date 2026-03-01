@@ -76,12 +76,12 @@ func TestCompletionFilter_CallbackInvokedOnQueryItemsAndContextChanges(t *testin
 		t.Fatalf("set completion should run filter once: got %d, want %d", got, want)
 	}
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	m, _ = m.Update(testKeyCode(tea.KeyDown))
 	if got, want := callCount, 1; got != want {
 		t.Fatalf("selection navigation should not rerun filter: got %d, want %d", got, want)
 	}
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	m, _ = m.Update(testKeyText("x"))
 	if got, want := callCount, 2; got != want {
 		t.Fatalf("query change should rerun filter: got %d, want %d", got, want)
 	}
@@ -89,7 +89,7 @@ func TestCompletionFilter_CallbackInvokedOnQueryItemsAndContextChanges(t *testin
 		t.Fatalf("query change callback context: got %q, want %q", got, want)
 	}
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	m, _ = m.Update(testKeyCode(tea.KeyRight))
 	if got, want := callCount, 3; got != want {
 		t.Fatalf("cursor change should rerun filter: got %d, want %d", got, want)
 	}

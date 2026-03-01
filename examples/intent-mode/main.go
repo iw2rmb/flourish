@@ -72,7 +72,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.editor = m.editor.SetSize(msg.Width, editorHeight(msg.Height))
 		return m, nil
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if msg.String() == "ctrl+q" {
 			return m, tea.Quit
 		}
@@ -149,7 +149,7 @@ func noneIfEmpty(s string) string {
 }
 
 func main() {
-	p := tea.NewProgram(newModel(), tea.WithAltScreen(), tea.WithMouseAllMotion())
+	p := tea.NewProgram(newModel())
 	if _, err := p.Run(); err != nil {
 		_, _ = os.Stderr.WriteString(err.Error() + "\n")
 		os.Exit(1)

@@ -91,7 +91,7 @@ func TestRenderSnapshot_TokenInvalidationMatrix(t *testing.T) {
 		m = m.SetSize(8, 1)
 		t0 := m.RenderSnapshot().Token
 
-		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
+		m, _ = m.Update(testKeyText("X"))
 		t1 := m.RenderSnapshot().Token
 		if t1 == t0 {
 			t.Fatalf("token must change after buffer mutation")
@@ -103,7 +103,7 @@ func TestRenderSnapshot_TokenInvalidationMatrix(t *testing.T) {
 		m = m.SetSize(8, 2)
 		t0 := m.RenderSnapshot().Token
 
-		m, _ = m.Update(tea.MouseMsg{Action: tea.MouseActionPress, Button: tea.MouseButtonWheelDown})
+		m, _ = m.Update(testMouseWheel(0, 0, tea.MouseWheelDown))
 		t1 := m.RenderSnapshot().Token
 		if t1 == t0 {
 			t.Fatalf("token must change after viewport yoffset change")
@@ -272,7 +272,7 @@ func TestSnapshotMapping_RejectsStaleAndMatchesFresh(t *testing.T) {
 		t.Fatalf("fresh DocToScreenWithSnapshot mismatch: got (%d,%d,%v), want (%d,%d,%v)", gotX, gotY, gotOK, wantX, wantY, wantOK)
 	}
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	m, _ = m.Update(testKeyCode(tea.KeyRight))
 	if _, ok := m.ScreenToDocWithSnapshot(s0, 1, 0); ok {
 		t.Fatalf("stale snapshot must be rejected for ScreenToDocWithSnapshot")
 	}

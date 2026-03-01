@@ -18,7 +18,7 @@ func TestIntentMode_DefaultModeMutatesAndSkipsOnIntent(t *testing.T) {
 		},
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
+	m, _ = m.Update(testKeyText("X"))
 
 	if got, want := m.buf.Text(), "Xab"; got != want {
 		t.Fatalf("text after insert in default mode: got %q, want %q", got, want)
@@ -44,8 +44,8 @@ func TestIntentMode_EmitIntentsOnly_EmitsWithoutLocalApplyOrOnChange(t *testing.
 		},
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
+	m, _ = m.Update(testKeyCode(tea.KeyRight))
+	m, _ = m.Update(testKeyText("X"))
 
 	if got, want := m.buf.Text(), "ab"; got != want {
 		t.Fatalf("text in intents-only mode: got %q, want %q", got, want)
@@ -77,7 +77,7 @@ func TestIntentMode_EmitIntentsAndMutate_DecisionFalseSkipsApplyAndOnChange(t *t
 		},
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
+	m, _ = m.Update(testKeyText("X"))
 
 	if got, want := len(intents), 1; got != want {
 		t.Fatalf("intent count with ApplyLocally=false: got %d, want %d", got, want)
@@ -109,15 +109,15 @@ func TestIntentMode_ParityMutateVsEmitAndMutateApplyTrue(t *testing.T) {
 		},
 	})
 
-	seq := []tea.KeyMsg{
-		{Type: tea.KeyRight},
-		{Type: tea.KeyRight},
-		{Type: tea.KeyShiftRight},
-		{Type: tea.KeyCtrlV},
-		{Type: tea.KeyRight},
-		{Type: tea.KeyBackspace},
-		{Type: tea.KeyCtrlZ},
-		{Type: tea.KeyCtrlY},
+	seq := []tea.KeyPressMsg{
+		testKeyCode(tea.KeyRight),
+		testKeyCode(tea.KeyRight),
+		testKeyCode(tea.KeyRight, tea.ModShift),
+		testKeyCode('v', tea.ModCtrl),
+		testKeyCode(tea.KeyRight),
+		testKeyCode(tea.KeyBackspace),
+		testKeyCode('z', tea.ModCtrl),
+		testKeyCode('y', tea.ModCtrl),
 	}
 
 	for _, msg := range seq {
@@ -146,14 +146,14 @@ func TestIntentEmission_KeyKindsAndSelectionAwareDeleteAndPaste(t *testing.T) {
 		name    string
 		cfg     Config
 		setup   func(*Model)
-		msg     tea.KeyMsg
+		msg     tea.KeyPressMsg
 		want    IntentKind
 		checkFn func(t *testing.T, in Intent)
 	}{
 		{
 			name: "insert",
 			cfg:  Config{Text: "ab", MutationMode: EmitIntentsOnly},
-			msg:  tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")},
+			msg:  testKeyText("X"),
 			want: IntentInsert,
 			checkFn: func(t *testing.T, in Intent) {
 				t.Helper()
@@ -175,7 +175,7 @@ func TestIntentEmission_KeyKindsAndSelectionAwareDeleteAndPaste(t *testing.T) {
 					End:   buffer.Pos{Row: 0, GraphemeCol: 4},
 				})
 			},
-			msg:  tea.KeyMsg{Type: tea.KeyBackspace},
+			msg:  testKeyCode(tea.KeyBackspace),
 			want: IntentDelete,
 			checkFn: func(t *testing.T, in Intent) {
 				t.Helper()
@@ -191,7 +191,7 @@ func TestIntentEmission_KeyKindsAndSelectionAwareDeleteAndPaste(t *testing.T) {
 		{
 			name: "move",
 			cfg:  Config{Text: "ab", MutationMode: EmitIntentsOnly},
-			msg:  tea.KeyMsg{Type: tea.KeyRight},
+			msg:  testKeyCode(tea.KeyRight),
 			want: IntentMove,
 		},
 		{
@@ -200,7 +200,7 @@ func TestIntentEmission_KeyKindsAndSelectionAwareDeleteAndPaste(t *testing.T) {
 			setup: func(m *Model) {
 				*m = m.SetSize(10, 3)
 			},
-			msg:  tea.KeyMsg{Type: tea.KeyPgDown},
+			msg:  testKeyCode(tea.KeyPgDown),
 			want: IntentMove,
 			checkFn: func(t *testing.T, in Intent) {
 				t.Helper()
@@ -216,7 +216,7 @@ func TestIntentEmission_KeyKindsAndSelectionAwareDeleteAndPaste(t *testing.T) {
 		{
 			name: "select",
 			cfg:  Config{Text: "ab", MutationMode: EmitIntentsOnly},
-			msg:  tea.KeyMsg{Type: tea.KeyShiftRight},
+			msg:  testKeyCode(tea.KeyRight, tea.ModShift),
 			want: IntentSelect,
 		},
 		{
@@ -225,7 +225,7 @@ func TestIntentEmission_KeyKindsAndSelectionAwareDeleteAndPaste(t *testing.T) {
 			setup: func(m *Model) {
 				m.buf.InsertText("X")
 			},
-			msg:  tea.KeyMsg{Type: tea.KeyCtrlZ},
+			msg:  testKeyCode('z', tea.ModCtrl),
 			want: IntentUndo,
 		},
 		{
@@ -235,7 +235,7 @@ func TestIntentEmission_KeyKindsAndSelectionAwareDeleteAndPaste(t *testing.T) {
 				m.buf.InsertText("X")
 				_ = m.buf.Undo()
 			},
-			msg:  tea.KeyMsg{Type: tea.KeyCtrlY},
+			msg:  testKeyCode('y', tea.ModCtrl),
 			want: IntentRedo,
 		},
 		{
@@ -245,7 +245,7 @@ func TestIntentEmission_KeyKindsAndSelectionAwareDeleteAndPaste(t *testing.T) {
 				Clipboard:    &memClipboard{t: t, s: "X\r\nY\rZ"},
 				MutationMode: EmitIntentsOnly,
 			},
-			msg:  tea.KeyMsg{Type: tea.KeyCtrlV},
+			msg:  testKeyCode('v', tea.ModCtrl),
 			want: IntentPaste,
 			checkFn: func(t *testing.T, in Intent) {
 				t.Helper()
@@ -301,12 +301,12 @@ func TestIntentMode_ReadOnlyBlocksMutationIntents(t *testing.T) {
 		},
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlV})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlZ})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyShiftRight})
+	m, _ = m.Update(testKeyText("X"))
+	m, _ = m.Update(testKeyCode(tea.KeyBackspace))
+	m, _ = m.Update(testKeyCode('v', tea.ModCtrl))
+	m, _ = m.Update(testKeyCode('z', tea.ModCtrl))
+	m, _ = m.Update(testKeyCode(tea.KeyRight))
+	m, _ = m.Update(testKeyCode(tea.KeyRight, tea.ModShift))
 
 	if got, want := len(intents), 2; got != want {
 		t.Fatalf("intent count in read-only mode: got %d, want %d", got, want)
@@ -330,8 +330,8 @@ func TestIntentEmission_UndoRedoNoHistoryEmitNothing(t *testing.T) {
 		},
 	})
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlZ})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlY})
+	m, _ = m.Update(testKeyCode('z', tea.ModCtrl))
+	m, _ = m.Update(testKeyCode('y', tea.ModCtrl))
 
 	if got, want := len(intents), 0; got != want {
 		t.Fatalf("intent count with empty undo/redo history: got %d, want %d", got, want)
