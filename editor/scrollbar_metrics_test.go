@@ -98,7 +98,7 @@ func TestScrollbarMetrics_ClampsOffsets(t *testing.T) {
 	}, "\n")
 	m := New(Config{Text: text})
 	m = m.SetSize(5, 3)
-	m.viewport.YOffset = 999
+	m.viewport.SetYOffset(999)
 	m.xOffset = 999
 
 	metrics := metricsForTest(&m)

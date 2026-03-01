@@ -1,6 +1,6 @@
 package editor
 
-import "github.com/charmbracelet/lipgloss"
+import "charm.land/lipgloss/v2"
 
 // Style controls the editor's rendering.
 type Style struct {

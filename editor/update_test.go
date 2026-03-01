@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/iw2rmb/flourish/buffer"
 )
@@ -287,39 +287,39 @@ func TestUpdate_ViewportFollowsCursor_Minimal(t *testing.T) {
 	m := New(Config{Text: "0\n1\n2\n3\n4\n5\n6\n7\n8\n9"})
 	m = m.SetSize(10, 3)
 
-	if got := m.viewport.YOffset; got != 0 {
+	if got := m.viewport.YOffset(); got != 0 {
 		t.Fatalf("initial yoffset: got %d, want %d", got, 0)
 	}
 
 	// Move to row 2: still visible, no scroll.
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
-	if got := m.viewport.YOffset; got != 0 {
+	if got := m.viewport.YOffset(); got != 0 {
 		t.Fatalf("yoffset at row 2: got %d, want %d", got, 0)
 	}
 
 	// Move to row 3: scroll down by one line.
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
-	if got := m.viewport.YOffset; got != 1 {
+	if got := m.viewport.YOffset(); got != 1 {
 		t.Fatalf("yoffset at row 3: got %d, want %d", got, 1)
 	}
 
 	// Move to row 4: scroll down by one more line.
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
-	if got := m.viewport.YOffset; got != 2 {
+	if got := m.viewport.YOffset(); got != 2 {
 		t.Fatalf("yoffset at row 4: got %d, want %d", got, 2)
 	}
 
 	// Move up within view: no scroll.
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
-	if got := m.viewport.YOffset; got != 2 {
+	if got := m.viewport.YOffset(); got != 2 {
 		t.Fatalf("yoffset after up within view: got %d, want %d", got, 2)
 	}
 
 	// Move up above the viewport: yoffset follows cursor row.
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp}) // row 2
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp}) // row 1
-	if got := m.viewport.YOffset; got != 1 {
+	if got := m.viewport.YOffset(); got != 1 {
 		t.Fatalf("yoffset after moving above view: got %d, want %d", got, 1)
 	}
 }
@@ -410,7 +410,7 @@ func TestUpdate_SoftWrap_ViewportFollowsCursorByVisualRow(t *testing.T) {
 	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, GraphemeCol: 6}) {
 		t.Fatalf("cursor after 6 rights: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 6})
 	}
-	if got := m.viewport.YOffset; got != 1 {
+	if got := m.viewport.YOffset(); got != 1 {
 		t.Fatalf("yOffset after entering 3rd visual row: got %d, want %d", got, 1)
 	}
 	if got := m.xOffset; got != 0 {
@@ -423,7 +423,7 @@ func TestUpdate_SoftWrap_ViewportFollowsCursorByVisualRow(t *testing.T) {
 	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, GraphemeCol: 2}) {
 		t.Fatalf("cursor after moving left: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 2})
 	}
-	if got := m.viewport.YOffset; got != 0 {
+	if got := m.viewport.YOffset(); got != 0 {
 		t.Fatalf("yOffset after returning to first visual row: got %d, want %d", got, 0)
 	}
 }

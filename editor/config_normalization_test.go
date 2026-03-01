@@ -3,7 +3,7 @@ package editor
 import (
 	"testing"
 
-	"github.com/charmbracelet/bubbles/key"
+	"charm.land/bubbles/v2/key"
 )
 
 func TestConfig_KeyMapZeroDefaults(t *testing.T) {

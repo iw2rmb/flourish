@@ -16,7 +16,7 @@ type ViewportState struct {
 
 // ViewportState returns the current host-facing viewport state.
 func (m Model) ViewportState() ViewportState {
-	top := m.viewport.YOffset
+	top := m.viewport.YOffset()
 	if top < 0 {
 		top = 0
 	}

@@ -3,8 +3,7 @@ package editor
 import (
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
-	overlay "github.com/rmhubbert/bubbletea-overlay"
+	"charm.land/lipgloss/v2"
 	"github.com/iw2rmb/flourish/buffer"
 )
 
@@ -46,11 +45,9 @@ func (m Model) renderScrollbarChrome(base string) string {
 		thumbCell := m.cfg.Style.ScrollbarThumb.Render(" ")
 		col := renderScrollbarAxisCells(metrics.contentHeight, metrics.vThumbPos, metrics.vThumbLen, trackCell, thumbCell, "\n")
 		if col != "" {
-			view = overlay.Composite(
+			view = compositeTopLeft(
 				col,
 				view,
-				overlay.Left,
-				overlay.Top,
 				leftFrame+metrics.innerWidth-1,
 				topFrame,
 			)
@@ -61,11 +58,9 @@ func (m Model) renderScrollbarChrome(base string) string {
 		clearCell := m.cfg.Style.Text.Render(" ")
 		row := renderScrollbarAxisCells(metrics.innerWidth, 0, 0, clearCell, clearCell, "")
 		if row != "" {
-			view = overlay.Composite(
+			view = compositeTopLeft(
 				row,
 				view,
-				overlay.Left,
-				overlay.Top,
 				leftFrame,
 				topFrame+metrics.innerHeight-1,
 			)
@@ -77,11 +72,9 @@ func (m Model) renderScrollbarChrome(base string) string {
 			hRow := renderScrollbarAxisCells(metrics.contentWidth, metrics.hThumbPos, metrics.hThumbLen, trackCell, thumbCell, "")
 			if hRow != "" {
 				gutterWidth := mm.resolvedGutterWidth(len(lines))
-				view = overlay.Composite(
+				view = compositeTopLeft(
 					hRow,
 					view,
-					overlay.Left,
-					overlay.Top,
 					leftFrame+gutterWidth,
 					topFrame+metrics.innerHeight-1,
 				)
@@ -91,11 +84,9 @@ func (m Model) renderScrollbarChrome(base string) string {
 
 	if metrics.showV && metrics.showH {
 		corner := m.cfg.Style.ScrollbarCorner.Render(" ")
-		view = overlay.Composite(
+		view = compositeTopLeft(
 			corner,
 			view,
-			overlay.Left,
-			overlay.Top,
 			leftFrame+metrics.innerWidth-1,
 			topFrame+metrics.innerHeight-1,
 		)

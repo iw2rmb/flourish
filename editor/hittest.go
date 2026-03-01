@@ -24,7 +24,7 @@ func (m *Model) screenToDocPos(x, y int) buffer.Pos {
 		return buffer.Pos{}
 	}
 
-	visualRow := layout.clampVisualRow(m.viewport.YOffset + y)
+	visualRow := layout.clampVisualRow(m.viewport.YOffset() + y)
 	row, line, seg, segIdx, ok := layout.lineAndSegmentAt(visualRow)
 	if !ok {
 		return buffer.Pos{}
@@ -105,7 +105,7 @@ func (m *Model) docToScreenPos(pos buffer.Pos) (x int, y int, ok bool) {
 
 	seg := line.segments[segIdx]
 	visualRow := line.firstVisualRow + segIdx
-	screenY := visualRow - m.viewport.YOffset
+	screenY := visualRow - m.viewport.YOffset()
 
 	screenX := 0
 	if m.cfg.WrapMode == WrapNone {
@@ -119,7 +119,7 @@ func (m *Model) docToScreenPos(pos buffer.Pos) (x int, y int, ok bool) {
 	if screenY < 0 || screenY >= visibleRows {
 		return screenX, screenY, false
 	}
-	if screenX < 0 || screenX >= m.viewport.Width {
+	if screenX < 0 || screenX >= m.viewport.Width() {
 		return screenX, screenY, false
 	}
 

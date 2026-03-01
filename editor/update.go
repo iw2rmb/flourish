@@ -3,8 +3,8 @@ package editor
 import (
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/iw2rmb/flourish/buffer"
 )
@@ -80,23 +80,11 @@ func (m *Model) buildIntentsFromKey(msg tea.KeyMsg, before EditorState) (IntentB
 		batch.Intents = append(batch.Intents, Intent{Kind: kind, Before: before, Payload: payload})
 	}
 
-	// Paste events should always insert literal text and never trigger shortcuts.
-	if msg.Type == tea.KeyRunes && msg.Paste && len(msg.Runes) > 0 {
-		if !m.cfg.ReadOnly {
-			text := string(msg.Runes)
-			appendIntent(IntentPaste, PasteIntentPayload{Text: text})
-			mutations = append(mutations, func(mm *Model) {
-				mm.buf.InsertText(text)
-			})
-		}
-		return batch, mutations
-	}
-
 	km := m.cfg.KeyMap
 	ga := normalizeGhostAccept(m.cfg.GhostAccept)
 
 	if m.cfg.GhostProvider != nil && !m.cfg.ReadOnly {
-		if ga.AcceptTab && msg.Type == tea.KeyTab {
+		if ga.AcceptTab && isTabKey(msg) {
 			if ghost, ok := m.ghostForCursor(); ok && len(ghost.Edits) > 0 {
 				edits := cloneTextEdits(ghost.Edits)
 				appendIntent(IntentInsert, InsertIntentPayload{Text: ghost.Text, Edits: edits})
@@ -226,14 +214,14 @@ func (m *Model) buildIntentsFromKey(msg tea.KeyMsg, before EditorState) (IntentB
 		}
 
 	default:
-		if msg.Type == tea.KeyTab {
+		if isTabKey(msg) {
 			if !m.cfg.ReadOnly {
 				appendIntent(IntentInsert, InsertIntentPayload{Text: "\t"})
 				mutations = append(mutations, func(mm *Model) { mm.buf.InsertGrapheme("\t") })
 			}
 			return batch, mutations
 		}
-		if msg.Type == tea.KeySpace && !msg.Alt {
+		if isSpaceKey(msg) && !hasAltMod(msg) {
 			if !m.cfg.ReadOnly {
 				appendIntent(IntentInsert, InsertIntentPayload{Text: " "})
 				mutations = append(mutations, func(mm *Model) { mm.buf.InsertGrapheme(" ") })
@@ -241,9 +229,9 @@ func (m *Model) buildIntentsFromKey(msg tea.KeyMsg, before EditorState) (IntentB
 			return batch, mutations
 		}
 
-		if msg.Type == tea.KeyRunes && len(msg.Runes) > 0 && !msg.Alt {
+		text := keyText(msg)
+		if text != "" && !hasAltMod(msg) {
 			if !m.cfg.ReadOnly {
-				text := string(msg.Runes)
 				appendIntent(IntentInsert, InsertIntentPayload{Text: text})
 				mutations = append(mutations, func(mm *Model) { mm.buf.InsertText(text) })
 			}
@@ -288,4 +276,48 @@ func (m *Model) pageMoveCount() int {
 		return 1
 	}
 	return count
+}
+
+func (m Model) updatePaste(msg tea.PasteMsg) (Model, tea.Cmd) {
+	if !m.focused || m.buf == nil {
+		return m, nil
+	}
+	if m.cfg.ReadOnly {
+		return m, nil
+	}
+	text := strings.ReplaceAll(msg.Content, "\r\n", "\n")
+	text = strings.ReplaceAll(text, "\r", "\n")
+	if text == "" {
+		return m, nil
+	}
+
+	before := editorStateFromBuffer(m.buf)
+	batch := IntentBatch{
+		Intents: []Intent{{
+			Kind:    IntentPaste,
+			Before:  before,
+			Payload: PasteIntentPayload{Text: text},
+		}},
+	}
+	if (&m).emitDocumentIntentsAndResolveApply(batch) {
+		m.buf.InsertText(text)
+	}
+	return m, nil
+}
+
+func isTabKey(msg tea.KeyMsg) bool {
+	return msg.Key().Code == tea.KeyTab
+}
+
+func isSpaceKey(msg tea.KeyMsg) bool {
+	k := msg.Key()
+	return k.Code == tea.KeySpace || k.Text == " "
+}
+
+func hasAltMod(msg tea.KeyMsg) bool {
+	return msg.Key().Mod&tea.ModAlt != 0
+}
+
+func keyText(msg tea.KeyMsg) string {
+	return msg.Key().Text
 }

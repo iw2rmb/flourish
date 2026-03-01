@@ -23,8 +23,8 @@ type scrollbarMetrics struct {
 
 func (m *Model) resolveScrollbarMetrics(lines []string, layout wrapLayoutCache) scrollbarMetrics {
 	metrics := scrollbarMetrics{
-		innerWidth:  m.viewport.Width - m.viewport.Style.GetHorizontalFrameSize(),
-		innerHeight: m.viewport.Height - m.viewport.Style.GetVerticalFrameSize(),
+		innerWidth:  m.viewport.Width() - m.viewport.Style.GetHorizontalFrameSize(),
+		innerHeight: m.viewport.Height() - m.viewport.Style.GetVerticalFrameSize(),
 	}
 	if metrics.innerWidth < 0 {
 		metrics.innerWidth = 0
@@ -107,7 +107,7 @@ func (m *Model) resolveScrollbarMetrics(lines []string, layout wrapLayoutCache) 
 	if metrics.contentHeight > 0 && metrics.totalRows > metrics.contentHeight {
 		maxYOffset = metrics.totalRows - metrics.contentHeight
 	}
-	metrics.yOffset = clampInt(m.viewport.YOffset, 0, maxYOffset)
+	metrics.yOffset = clampInt(m.viewport.YOffset(), 0, maxYOffset)
 
 	metrics.xOffset = 0
 	if m.cfg.WrapMode == WrapNone {

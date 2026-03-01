@@ -4,8 +4,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/iw2rmb/flourish/buffer"
 	"github.com/iw2rmb/flourish/internal/grapheme"
@@ -81,7 +81,7 @@ func (m *Model) buildCompletionIntentsFromKey(msg tea.KeyMsg, before EditorState
 		return result, true
 	}
 
-	if key.Matches(msg, ckm.Accept) || (msg.Type == tea.KeyTab && ckm.AcceptTab) {
+	if key.Matches(msg, ckm.Accept) || (isTabKey(msg) && ckm.AcceptTab) {
 		acceptPayload, ok := m.acceptCompletionPayload()
 		if !ok {
 			return result, true
@@ -133,7 +133,7 @@ func (m *Model) buildCompletionIntentsFromKey(msg tea.KeyMsg, before EditorState
 		})
 		return result, true
 	}
-	if msg.Type == tea.KeySpace && !msg.Alt {
+	if isSpaceKey(msg) && !hasAltMod(msg) {
 		query, ok := m.nextCompletionQueryForMutateDocumentKey(msg)
 		if !ok {
 			query = m.completionState.Query
@@ -146,8 +146,8 @@ func (m *Model) buildCompletionIntentsFromKey(msg tea.KeyMsg, before EditorState
 		})
 		return result, true
 	}
-	if msg.Type == tea.KeyRunes && len(msg.Runes) > 0 && !msg.Alt && !msg.Paste {
-		text := string(msg.Runes)
+	text := keyText(msg)
+	if text != "" && !hasAltMod(msg) {
 		query, ok := m.nextCompletionQueryForMutateDocumentKey(msg)
 		if !ok {
 			query = m.completionState.Query
@@ -247,11 +247,12 @@ func (m *Model) nextCompletionQueryFromKey(msg tea.KeyMsg) (string, bool) {
 		}
 		return grapheme.Join(parts[:len(parts)-1]), true
 	}
-	if msg.Type == tea.KeySpace && !msg.Alt {
+	if isSpaceKey(msg) && !hasAltMod(msg) {
 		return m.completionState.Query + " ", true
 	}
-	if msg.Type == tea.KeyRunes && len(msg.Runes) > 0 && !msg.Alt {
-		return m.completionState.Query + string(msg.Runes), true
+	text := keyText(msg)
+	if text != "" && !hasAltMod(msg) {
+		return m.completionState.Query + text, true
 	}
 	return "", false
 }
@@ -306,11 +307,11 @@ func (m *Model) nextCompletionQueryForMutateDocumentKey(msg tea.KeyMsg) (string,
 			End:   buffer.Pos{Row: cursor.Row, GraphemeCol: newCol},
 		}), true
 
-	case msg.Type == tea.KeySpace && !msg.Alt:
+	case isSpaceKey(msg) && !hasAltMod(msg):
 		return predictInsert(" ")
 
-	case msg.Type == tea.KeyRunes && len(msg.Runes) > 0 && !msg.Alt && !msg.Paste:
-		return predictInsert(string(msg.Runes))
+	case keyText(msg) != "" && !hasAltMod(msg):
+		return predictInsert(keyText(msg))
 
 	default:
 		return "", false

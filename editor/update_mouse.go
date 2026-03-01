@@ -1,7 +1,7 @@
 package editor
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/iw2rmb/flourish/buffer"
 )
@@ -10,6 +10,7 @@ func (m Model) updateMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 	if handled := m.handleScrollbarMouse(msg, m.cfg.ScrollPolicy == ScrollAllowManual); handled {
 		return m, nil
 	}
+	mouse := msg.Mouse()
 
 	var cmd tea.Cmd
 	if m.cfg.ScrollPolicy == ScrollAllowManual || !isManualScrollMouse(msg) {
@@ -17,16 +18,16 @@ func (m Model) updateMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 	}
 
 	if !m.focused || m.buf == nil {
-		if msg.Action == tea.MouseActionRelease {
+		if _, ok := msg.(tea.MouseReleaseMsg); ok {
 			m.mouseDragging = false
 		}
 		return m, cmd
 	}
 
 	// Only handle selection/cursor changes for left button interactions.
-	switch msg.Action { //nolint:exhaustive
-	case tea.MouseActionPress:
-		if msg.Button != tea.MouseButtonLeft {
+	switch msg := msg.(type) { //nolint:exhaustive
+	case tea.MouseClickMsg:
+		if msg.Button != tea.MouseLeft {
 			return m, cmd
 		}
 		if !m.mouseInBounds(msg.X, msg.Y) {
@@ -34,7 +35,7 @@ func (m Model) updateMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 		}
 
 		p := m.screenToDocPos(msg.X, msg.Y)
-		if msg.Shift {
+		if msg.Mod&tea.ModShift != 0 {
 			anchor := m.buf.Cursor()
 			if raw, ok := m.buf.SelectionRaw(); ok {
 				anchor = raw.Start
@@ -49,7 +50,7 @@ func (m Model) updateMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 		}
 		m.mouseDragging = true
 
-	case tea.MouseActionMotion:
+	case tea.MouseMotionMsg:
 		if !m.mouseDragging {
 			return m, cmd
 		}
@@ -59,7 +60,8 @@ func (m Model) updateMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 		m.buf.SetCursor(p)
 		m.buf.SetSelection(buffer.Range{Start: m.mouseAnchor, End: p})
 
-	case tea.MouseActionRelease:
+	case tea.MouseReleaseMsg:
+		_ = mouse
 		m.mouseDragging = false
 		m.clearScrollbarDrag()
 	}
@@ -92,9 +94,10 @@ func (m *Model) handleScrollbarMouse(msg tea.MouseMsg, allowManual bool) bool {
 	metrics := m.resolveScrollbarMetrics(lines, layout)
 	gutterWidth := m.resolvedGutterWidth(len(lines))
 
-	switch msg.Action { //nolint:exhaustive
-	case tea.MouseActionPress:
-		if msg.Button != tea.MouseButtonLeft || !m.mouseInBounds(msg.X, msg.Y) {
+	mouse := msg.Mouse()
+	switch msg := msg.(type) { //nolint:exhaustive
+	case tea.MouseClickMsg:
+		if msg.Button != tea.MouseLeft || !m.mouseInBounds(msg.X, msg.Y) {
 			return false
 		}
 		hit, ok := resolveScrollbarHit(msg.X, msg.Y, metrics, gutterWidth)
@@ -107,7 +110,7 @@ func (m *Model) handleScrollbarMouse(msg tea.MouseMsg, allowManual bool) bool {
 		m.applyScrollbarPress(hit, metrics)
 		return true
 
-	case tea.MouseActionMotion:
+	case tea.MouseMotionMsg:
 		if m.scrollbarDragAxis == dragNone {
 			return false
 		}
@@ -129,7 +132,8 @@ func (m *Model) handleScrollbarMouse(msg tea.MouseMsg, allowManual bool) bool {
 		}
 		return true
 
-	case tea.MouseActionRelease:
+	case tea.MouseReleaseMsg:
+		_ = mouse
 		if m.scrollbarDragAxis != dragNone {
 			m.clearScrollbarDrag()
 			return true
@@ -224,7 +228,7 @@ func (m *Model) clearScrollbarDrag() {
 func (m *Model) pageVerticalScrollbar(delta int, metrics scrollbarMetrics) {
 	maxYOffset := max(metrics.totalRows-metrics.contentHeight, 0)
 	next := clampInt(metrics.yOffset+delta, 0, maxYOffset)
-	if next != m.viewport.YOffset {
+	if next != m.viewport.YOffset() {
 		m.viewport.SetYOffset(next)
 	}
 }
@@ -248,7 +252,7 @@ func (m *Model) applyVerticalScrollbarDrag(pointerCell int, metrics scrollbarMet
 		maxYOffset,
 	)
 	next = clampInt(next, 0, maxYOffset)
-	if next != m.viewport.YOffset {
+	if next != m.viewport.YOffset() {
 		m.viewport.SetYOffset(next)
 	}
 }
@@ -292,35 +296,38 @@ func roundDiv(n, d int) int {
 }
 
 func isManualScrollMouse(msg tea.MouseMsg) bool {
-	return msg.Action == tea.MouseActionPress &&
-		(msg.Button == tea.MouseButtonWheelUp ||
-			msg.Button == tea.MouseButtonWheelDown ||
-			msg.Button == tea.MouseButtonWheelLeft ||
-			msg.Button == tea.MouseButtonWheelRight)
+	wheel, ok := msg.(tea.MouseWheelMsg)
+	if !ok {
+		return false
+	}
+	return wheel.Button == tea.MouseWheelUp ||
+		wheel.Button == tea.MouseWheelDown ||
+		wheel.Button == tea.MouseWheelLeft ||
+		wheel.Button == tea.MouseWheelRight
 }
 
 func (m Model) mouseInBounds(x, y int) bool {
-	if m.viewport.Width <= 0 || m.viewport.Height <= 0 {
+	if m.viewport.Width() <= 0 || m.viewport.Height() <= 0 {
 		return false
 	}
-	return x >= 0 && x < m.viewport.Width && y >= 0 && y < m.viewport.Height
+	return x >= 0 && x < m.viewport.Width() && y >= 0 && y < m.viewport.Height()
 }
 
 func (m Model) clampMouseToBounds(x, y int) (int, int) {
-	if m.viewport.Width > 0 {
+	if m.viewport.Width() > 0 {
 		if x < 0 {
 			x = 0
 		}
-		if x >= m.viewport.Width {
-			x = m.viewport.Width - 1
+		if x >= m.viewport.Width() {
+			x = m.viewport.Width() - 1
 		}
 	}
-	if m.viewport.Height > 0 {
+	if m.viewport.Height() > 0 {
 		if y < 0 {
 			y = 0
 		}
-		if y >= m.viewport.Height {
-			y = m.viewport.Height - 1
+		if y >= m.viewport.Height() {
+			y = m.viewport.Height() - 1
 		}
 	}
 	return x, y

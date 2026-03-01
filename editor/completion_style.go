@@ -3,7 +3,7 @@ package editor
 import (
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	graphemeutil "github.com/iw2rmb/flourish/internal/grapheme"
 )
 
@@ -80,4 +80,3 @@ func truncateCompletionSegments(segments []CompletionSegment, width int) []Compl
 
 	return out
 }
-

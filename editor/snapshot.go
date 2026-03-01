@@ -78,11 +78,11 @@ func providerPtr(v any) uintptr {
 
 func (m *Model) currentSnapshotSignature() snapshotSignature {
 	sig := snapshotSignature{
-		viewportWidth:             m.viewport.Width,
-		viewportHeight:            m.viewport.Height,
+		viewportWidth:             m.viewport.Width(),
+		viewportHeight:            m.viewport.Height(),
 		viewportStyleH:            m.viewport.Style.GetHorizontalFrameSize(),
 		viewportStyleV:            m.viewport.Style.GetVerticalFrameSize(),
-		viewportYOffset:           m.viewport.YOffset,
+		viewportYOffset:           m.viewport.YOffset(),
 		xOffset:                   m.xOffset,
 		wrapMode:                  m.cfg.WrapMode,
 		scrollbarVMode:            m.cfg.Scrollbar.Vertical,

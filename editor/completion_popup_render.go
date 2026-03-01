@@ -2,8 +2,6 @@ package editor
 
 import (
 	"strings"
-
-	overlay "github.com/rmhubbert/bubbletea-overlay"
 )
 
 type completionPopupRender struct {
@@ -129,11 +127,9 @@ func (m Model) completionPopupRender(base string) (completionPopupRender, bool) 
 	topFrame := m.viewport.Style.GetMarginTop() + m.viewport.Style.GetBorderTopSize() + m.viewport.Style.GetPaddingTop()
 
 	return completionPopupRender{
-		View: overlay.Composite(
+		View: compositeTopLeft(
 			strings.Join(rendered, "\n"),
 			base,
-			overlay.Left,
-			overlay.Top,
 			leftFrame+x,
 			topFrame+y,
 		),

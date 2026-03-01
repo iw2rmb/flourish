@@ -3,7 +3,7 @@ package editor
 import (
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 func TestStyleIsZero_ScrollbarFieldsAffectZeroCheck(t *testing.T) {

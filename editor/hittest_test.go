@@ -8,7 +8,7 @@ import (
 
 func TestHitTest_NoGutter_ClampsAndYOffset(t *testing.T) {
 	m := New(Config{Text: "abc\ndef\nghi"})
-	m.viewport.YOffset = 1
+	m.viewport.SetYOffset(1)
 
 	if got := m.screenToDocPos(2, 0); got != (buffer.Pos{Row: 1, GraphemeCol: 2}) {
 		t.Fatalf("pos at (2,0) with yoffset=1: got %v, want %v", got, buffer.Pos{Row: 1, GraphemeCol: 2})
@@ -176,7 +176,7 @@ func TestHitTest_SoftWrap_UsesWrappedSegmentsAndViewportYOffset(t *testing.T) {
 	}
 
 	// Scroll by visual rows: Y offset 2 starts at line 1, first wrapped segment.
-	m.viewport.YOffset = 2
+	m.viewport.SetYOffset(2)
 	if got := m.screenToDocPos(1, 0); got != (buffer.Pos{Row: 1, GraphemeCol: 1}) {
 		t.Fatalf("wrapped yoffset mapping x=1,y=0,yoffset=2: got %v, want %v", got, buffer.Pos{Row: 1, GraphemeCol: 1})
 	}

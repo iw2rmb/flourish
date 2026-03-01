@@ -3,8 +3,8 @@ package editor
 import (
 	"strings"
 
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/iw2rmb/flourish/buffer"
 	graphemeutil "github.com/iw2rmb/flourish/internal/grapheme"
@@ -85,7 +85,7 @@ func New(cfg Config) Model {
 		cfg:      cfg,
 		buf:      buffer.New(cfg.Text, buffer.Options{HistoryLimit: cfg.HistoryLimit}),
 		focused:  true,
-		viewport: viewport.New(0, 0),
+		viewport: viewport.New(viewport.WithWidth(0), viewport.WithHeight(0)),
 	}
 	m.lastBufVersion = m.buf.Version()
 	m.lastTextVersion = m.buf.TextVersion()
@@ -130,11 +130,11 @@ func (m Model) SetSize(width, height int) Model {
 	if height < 0 {
 		height = 0
 	}
-	if m.viewport.Width == width && m.viewport.Height == height {
+	if m.viewport.Width() == width && m.viewport.Height() == height {
 		return m
 	}
-	m.viewport.Width = width
-	m.viewport.Height = height
+	m.viewport.SetWidth(width)
+	m.viewport.SetHeight(height)
 
 	m.rebuildContent()
 	m.followCursorWithForce(true)
@@ -192,7 +192,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		if m.buf != nil {
 			beforeVer = m.buf.Version()
 		}
-		beforeYOffset := m.viewport.YOffset
+		beforeYOffset := m.viewport.YOffset()
 
 		var cmd tea.Cmd
 		m, cmd = m.updateMouse(msg)
@@ -201,7 +201,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		if cursorChanged || versionChanged {
 			m.followCursorWithForce(false)
 		}
-		if m.cfg.Highlighter != nil && m.viewport.YOffset != beforeYOffset {
+		if m.cfg.Highlighter != nil && m.viewport.YOffset() != beforeYOffset {
 			m.rebuildContent()
 		}
 		if m.cfg.OnChange != nil && m.buf != nil && m.buf.Version() != beforeVer {
@@ -212,13 +212,30 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		// Don't force-follow cursor here; mouse scroll behavior is controlled by
 		// ScrollPolicy.
 		return m, cmd
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		beforeVer := uint64(0)
 		if m.buf != nil {
 			beforeVer = m.buf.Version()
 		}
 
 		m, cmd := m.updateKey(msg)
+		cursorChanged, versionChanged := m.syncFromBuffer()
+		if m.cfg.OnChange != nil && m.buf != nil && m.buf.Version() != beforeVer {
+			if ch, ok := m.buf.LastChange(); ok {
+				m.cfg.OnChange(ch)
+			}
+		}
+		if cursorChanged || versionChanged {
+			m.followCursorWithForce(false)
+		}
+		return m, cmd
+	case tea.PasteMsg:
+		beforeVer := uint64(0)
+		if m.buf != nil {
+			beforeVer = m.buf.Version()
+		}
+
+		m, cmd := m.updatePaste(msg)
 		cursorChanged, versionChanged := m.syncFromBuffer()
 		if m.cfg.OnChange != nil && m.buf != nil && m.buf.Version() != beforeVer {
 			if ch, ok := m.buf.LastChange(); ok {
@@ -560,7 +577,7 @@ func (m *Model) followCursorWithForce(force bool) {
 	layout := m.ensureLayoutCache(lines)
 	metrics := m.resolveScrollbarMetrics(lines, layout)
 
-	beforeYOffset := m.viewport.YOffset
+	beforeYOffset := m.viewport.YOffset()
 	newYOffset := metrics.yOffset
 	if metrics.contentHeight > 0 {
 		cursorVisualRow := cur.Row

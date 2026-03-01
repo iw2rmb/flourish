@@ -3,7 +3,7 @@ package editor
 import (
 	"sort"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	graphemeutil "github.com/iw2rmb/flourish/internal/grapheme"
 )
 

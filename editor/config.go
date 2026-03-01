@@ -1,7 +1,7 @@
 package editor
 
 import (
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 
 	"github.com/iw2rmb/flourish/buffer"
 )

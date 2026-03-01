@@ -47,7 +47,7 @@ func TestCompletionPopupRender_HidesWhenAnchorIsOffscreen(t *testing.T) {
 	m := New(Config{Text: "000000\n111111\n222222\n333333"})
 	m = m.Blur()
 	m = m.SetSize(6, 2)
-	m.viewport.YOffset = 2
+	m.viewport.SetYOffset(2)
 
 	base := stripANSI(m.View())
 
