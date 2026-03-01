@@ -561,10 +561,10 @@ func TestView_ScrollbarChrome_VerticalOnly(t *testing.T) {
 	if gotPlain, wantPlain := stripANSI(got), "abc \ndef "; gotPlain != wantPlain {
 		t.Fatalf("vertical scrollbar render:\n got: %q\nwant: %q", got, wantPlain)
 	}
-	if !strings.Contains(got, st.ScrollbarThumb.Render(" ")) {
+	if !containsBackgroundSGR(got, "22") {
 		t.Fatalf("vertical scrollbar render: expected thumb style sequence in output")
 	}
-	if !strings.Contains(got, st.ScrollbarTrack.Render(" ")) {
+	if !containsBackgroundSGR(got, "52") {
 		t.Fatalf("vertical scrollbar render: expected track style sequence in output")
 	}
 }
@@ -582,10 +582,10 @@ func TestView_ScrollbarChrome_HorizontalOnlyWrapNone(t *testing.T) {
 	if gotPlain, wantPlain := stripANSI(got), "abcde\n     "; gotPlain != wantPlain {
 		t.Fatalf("horizontal scrollbar render:\n got: %q\nwant: %q", got, wantPlain)
 	}
-	if !strings.Contains(got, st.ScrollbarThumb.Render(" ")) {
+	if !containsBackgroundSGR(got, "22") {
 		t.Fatalf("horizontal scrollbar render: expected thumb style sequence in output")
 	}
-	if !strings.Contains(got, st.ScrollbarTrack.Render(" ")) {
+	if !containsBackgroundSGR(got, "52") {
 		t.Fatalf("horizontal scrollbar render: expected track style sequence in output")
 	}
 }
@@ -603,15 +603,19 @@ func TestView_ScrollbarChrome_BothAxesAndCorner(t *testing.T) {
 	if gotPlain, wantPlain := stripANSI(got), "1234 \n     "; gotPlain != wantPlain {
 		t.Fatalf("both-axis scrollbar render:\n got: %q\nwant: %q", got, wantPlain)
 	}
-	if !strings.Contains(got, st.ScrollbarThumb.Render(" ")) {
+	if !containsBackgroundSGR(got, "22") {
 		t.Fatalf("both-axis scrollbar render: expected thumb style sequence in output")
 	}
-	if !strings.Contains(got, st.ScrollbarTrack.Render(" ")) {
+	if !containsBackgroundSGR(got, "52") {
 		t.Fatalf("both-axis scrollbar render: expected track style sequence in output")
 	}
-	if !strings.Contains(got, st.ScrollbarCorner.Render(" ")) {
+	if !containsBackgroundSGR(got, "17") {
 		t.Fatalf("both-axis scrollbar render: expected corner style sequence in output")
 	}
+}
+
+func containsBackgroundSGR(s, color string) bool {
+	return strings.Contains(s, "[48;5;"+color+"m")
 }
 
 func scrollbarStyleForViewTest() Style {

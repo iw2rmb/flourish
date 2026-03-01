@@ -180,7 +180,7 @@ Completion filtering and item styling (Phase 3):
 
 Completion popup rendering and placement (Phase 4):
 - `Model.View()` renders completion popup rows as an editor-owned overlay on top of the viewport output.
-- overlay composition uses the editor-owned compositor helper (`compositeTopLeft`) directly (no overlay model ownership).
+- overlay composition uses the editor-owned helper (`compositeTopLeft`) backed by Lip Gloss v2 layers/compositor.
 - popup anchor uses `CompletionState.Anchor` projected through `DocToScreen`.
 - vertical placement prefers below the anchor row, then flips above when below-space is insufficient.
 - when anchor is offscreen (`DocToScreen` not visible), popup render is suppressed while completion state remains intact.
