@@ -4,8 +4,8 @@ import "testing"
 
 func remoteOpts(base uint64) ApplyRemoteOptions {
 	return ApplyRemoteOptions{
-		BaseVersion: base,
-		ClampPolicy: ConvertPolicy{ClampMode: OffsetClamp},
+		BaseVersion:         base,
+		ClampPolicy:         ConvertPolicy{ClampMode: OffsetClamp},
 		VersionMismatchMode: VersionMismatchReject,
 	}
 }

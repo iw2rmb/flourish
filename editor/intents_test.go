@@ -91,17 +91,12 @@ func TestIntentMode_EmitIntentsAndMutate_DecisionFalseSkipsApplyAndOnChange(t *t
 }
 
 func TestIntentMode_ParityMutateVsEmitAndMutateApplyTrue(t *testing.T) {
-	cbA := &memClipboard{t: t, s: "Z"}
-	cbB := &memClipboard{t: t, s: "Z"}
-
 	a := New(Config{
-		Text:      "hello",
-		Clipboard: cbA,
+		Text: "hello",
 	})
 	var gotBatches []IntentBatch
 	b := New(Config{
 		Text:         "hello",
-		Clipboard:    cbB,
 		MutationMode: EmitIntentsAndMutate,
 		OnIntent: func(batch IntentBatch) IntentDecision {
 			gotBatches = append(gotBatches, batch)
@@ -113,7 +108,7 @@ func TestIntentMode_ParityMutateVsEmitAndMutateApplyTrue(t *testing.T) {
 		testKeyCode(tea.KeyRight),
 		testKeyCode(tea.KeyRight),
 		testKeyCode(tea.KeyRight, tea.ModShift),
-		testKeyCode('v', tea.ModCtrl),
+		testKeyText("Z"),
 		testKeyCode(tea.KeyRight),
 		testKeyCode(tea.KeyBackspace),
 		testKeyCode('z', tea.ModCtrl),
@@ -141,7 +136,7 @@ func TestIntentMode_ParityMutateVsEmitAndMutateApplyTrue(t *testing.T) {
 	}
 }
 
-func TestIntentEmission_KeyKindsAndSelectionAwareDeleteAndPaste(t *testing.T) {
+func TestIntentEmission_KeyKindsAndSelectionAwareDelete(t *testing.T) {
 	cases := []struct {
 		name    string
 		cfg     Config
@@ -238,26 +233,6 @@ func TestIntentEmission_KeyKindsAndSelectionAwareDeleteAndPaste(t *testing.T) {
 			msg:  testKeyCode('y', tea.ModCtrl),
 			want: IntentRedo,
 		},
-		{
-			name: "paste",
-			cfg: Config{
-				Text:         "ab",
-				Clipboard:    &memClipboard{t: t, s: "X\r\nY\rZ"},
-				MutationMode: EmitIntentsOnly,
-			},
-			msg:  testKeyCode('v', tea.ModCtrl),
-			want: IntentPaste,
-			checkFn: func(t *testing.T, in Intent) {
-				t.Helper()
-				p, ok := in.Payload.(PasteIntentPayload)
-				if !ok {
-					t.Fatalf("paste payload type: got %T", in.Payload)
-				}
-				if got, want := p.Text, "X\nY\nZ"; got != want {
-					t.Fatalf("paste payload text: got %q, want %q", got, want)
-				}
-			},
-		},
 	}
 
 	for _, tc := range cases {
@@ -293,7 +268,6 @@ func TestIntentMode_ReadOnlyBlocksMutationIntents(t *testing.T) {
 	m := New(Config{
 		Text:         "ab",
 		ReadOnly:     true,
-		Clipboard:    &memClipboard{t: t, s: "P"},
 		MutationMode: EmitIntentsOnly,
 		OnIntent: func(batch IntentBatch) IntentDecision {
 			intents = append(intents, batch.Intents...)
@@ -303,7 +277,6 @@ func TestIntentMode_ReadOnlyBlocksMutationIntents(t *testing.T) {
 
 	m, _ = m.Update(testKeyText("X"))
 	m, _ = m.Update(testKeyCode(tea.KeyBackspace))
-	m, _ = m.Update(testKeyCode('v', tea.ModCtrl))
 	m, _ = m.Update(testKeyCode('z', tea.ModCtrl))
 	m, _ = m.Update(testKeyCode(tea.KeyRight))
 	m, _ = m.Update(testKeyCode(tea.KeyRight, tea.ModShift))

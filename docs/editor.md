@@ -54,10 +54,10 @@ Primary API:
 
 Keyboard:
 - Bubble Tea v2 key input is handled via `tea.KeyPressMsg`.
-- movement, selection extension, editing, undo/redo, clipboard shortcuts.
+- movement, selection extension, editing, and undo/redo shortcuts.
 - default `pgup`/`pgdown` move by the current visible row count.
 - `ReadOnly=true` blocks text mutation, keeps movement/selection enabled.
-- text mutation shortcuts include typing, enter, delete/backspace, cut, paste, undo/redo.
+- text mutation shortcuts include typing, enter, delete/backspace, undo/redo.
 
 Mouse:
 - Bubble Tea v2 typed mouse messages are handled via `tea.MouseClickMsg`, `tea.MouseMotionMsg`, `tea.MouseReleaseMsg`, and `tea.MouseWheelMsg`.
@@ -276,7 +276,7 @@ Intent mode lets hosts reuse editor key semantics while choosing mutation strate
 
 Types:
 - `MutationMode`: `MutateInEditor`, `EmitIntentsOnly`, `EmitIntentsAndMutate`.
-- `IntentKind`: `IntentInsert`, `IntentDelete`, `IntentMove`, `IntentSelect`, `IntentUndo`, `IntentRedo`, `IntentPaste`.
+- `IntentKind`: `IntentInsert`, `IntentDelete`, `IntentMove`, `IntentSelect`, `IntentUndo`, `IntentRedo`.
 - `Intent`: `{ Kind, Before, Payload }`.
 - `IntentBatch`: one or more intents produced from one key input.
 - `IntentDecision`: `{ ApplyLocally bool }`.
@@ -294,17 +294,17 @@ Mode behavior:
 
 Read-only behavior:
 - `ReadOnly=true` still allows move/select intents.
-- mutation intents (`insert/delete/undo/redo/paste`) are suppressed.
+- mutation intents (`insert/delete/undo/redo`) are suppressed.
 
 Move/select payloads:
 - `MoveIntentPayload.Move.Count` and `SelectIntentPayload.Move.Count` repeat the move operation.
 - default arrow/word/home/end moves use `Count=1` (zero value also means `1`).
 - default `pgup`/`pgdown` emit `MoveLine` with `Count=visible row count`.
 
-Clipboard behavior:
-- copy remains local-only.
-- cut emits delete intent semantics (no dedicated cut intent kind).
-- paste emits `IntentPaste` with normalized newline text.
+Host paste behavior:
+- editor no longer owns clipboard mechanics (`ctrl+c`/`ctrl+x`/`ctrl+v` are not editor bindings).
+- handle `tea.PasteMsg` in the host model and choose the mutation path (local buffer apply, remote transport, or both).
+- normalize line endings from paste payloads before apply when needed.
 
 Minimal callback example:
 
@@ -315,7 +315,7 @@ cfg := editor.Config{
     OnIntent: func(batch editor.IntentBatch) editor.IntentDecision {
         for _, in := range batch.Intents {
             // Example host transport hook for text intents.
-            if in.Kind == editor.IntentInsert || in.Kind == editor.IntentDelete || in.Kind == editor.IntentPaste {
+            if in.Kind == editor.IntentInsert || in.Kind == editor.IntentDelete {
                 sendToRemote(in)
             }
         }

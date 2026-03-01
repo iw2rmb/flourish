@@ -15,7 +15,7 @@ It provides a pure document buffer package and an editor component package.
 - host-facing viewport state and doc<->screen coordinate mapping APIs.
 - soft wrap (`WrapWord`, `WrapGrapheme`) and no-wrap horizontal scrolling.
 - mouse hit-testing and drag selection in terminal cell coordinates.
-- optional clipboard integration.
+- host-controlled paste handling via Bubble Tea v2 `tea.PasteMsg`.
 - optional virtual text, highlighting, ghost suggestions, and change events.
 - semver-enabled runtime version API via `flourish.Version()`.
 - semver release flow with `vMAJOR.MINOR.PATCH` git tags.

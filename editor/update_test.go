@@ -1,21 +1,12 @@
 package editor
 
 import (
-	"errors"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/iw2rmb/flourish/buffer"
 )
-
-type memClipboard struct {
-	t *testing.T
-	s string
-}
-
-func (c *memClipboard) ReadText() (string, error) { return c.s, nil }
-func (c *memClipboard) WriteText(s string) error  { c.s = s; return nil }
 
 func TestUpdate_TypingMovementAndDelete(t *testing.T) {
 	m := New(Config{
@@ -153,90 +144,11 @@ func TestUpdate_OptShiftLeftRight_ExtendsAndDeselection(t *testing.T) {
 	}
 }
 
-func TestUpdate_CopyCutPaste(t *testing.T) {
-	cb := &memClipboard{t: t}
-	m := New(Config{
-		Text:      "hello",
-		Clipboard: cb,
-	})
-
-	m, _ = m.Update(testKeyCode(tea.KeyRight, tea.ModShift))
-	m, _ = m.Update(testKeyCode(tea.KeyRight, tea.ModShift))
-
-	m, _ = m.Update(testKeyCode('c', tea.ModCtrl))
-	if got := cb.s; got != "he" {
-		t.Fatalf("clipboard after copy: got %q, want %q", got, "he")
-	}
-
-	m, _ = m.Update(testKeyCode('x', tea.ModCtrl))
-	if got := m.buf.Text(); got != "llo" {
-		t.Fatalf("text after cut: got %q, want %q", got, "llo")
-	}
-	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, GraphemeCol: 0}) {
-		t.Fatalf("cursor after cut: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 0})
-	}
-
-	m, _ = m.Update(testKeyCode('v', tea.ModCtrl))
-	if got := m.buf.Text(); got != "hello" {
-		t.Fatalf("text after paste: got %q, want %q", got, "hello")
-	}
-}
-
-func TestUpdate_Copy_SelectionUsesGraphemeColumns(t *testing.T) {
-	cb := &memClipboard{t: t}
-	m := New(Config{
-		Text:      "e\u0301x",
-		Clipboard: cb,
-	})
-
-	m.buf.SetSelection(buffer.Range{
-		Start: buffer.Pos{Row: 0, GraphemeCol: 0},
-		End:   buffer.Pos{Row: 0, GraphemeCol: 1},
-	})
-
-	m, _ = m.Update(testKeyCode('c', tea.ModCtrl))
-	if got, want := cb.s, "e\u0301"; got != want {
-		t.Fatalf("clipboard after grapheme copy: got %q, want %q", got, want)
-	}
-}
-
-func TestUpdate_Paste_ReplacesSelection(t *testing.T) {
-	cb := &memClipboard{t: t, s: "X"}
-	m := New(Config{
-		Text:      "hello",
-		Clipboard: cb,
-	})
-
-	m.buf.SetSelection(buffer.Range{
-		Start: buffer.Pos{Row: 0, GraphemeCol: 1}, // "ell"
-		End:   buffer.Pos{Row: 0, GraphemeCol: 4},
-	})
-
-	m, _ = m.Update(testKeyCode('v', tea.ModCtrl))
-	if got := m.buf.Text(); got != "hXo" {
-		t.Fatalf("text after paste replacing selection: got %q, want %q", got, "hXo")
-	}
-}
-
-type errClipboard struct{}
-
-func (c *errClipboard) ReadText() (string, error) { return "", errors.New("clipboard read error") }
-func (c *errClipboard) WriteText(string) error    { return errors.New("clipboard write error") }
-
-func TestUpdate_ClipboardErrorsIgnored(t *testing.T) {
-	m := New(Config{
-		Text:      "hello",
-		Clipboard: &errClipboard{},
-	})
-
-	// With no selection, copy/cut are no-ops (and must not panic).
-	m, _ = m.Update(testKeyCode('c', tea.ModCtrl))
-	m, _ = m.Update(testKeyCode('x', tea.ModCtrl))
-
-	// Paste read error must be ignored.
-	m, _ = m.Update(testKeyCode('v', tea.ModCtrl))
-	if got := m.buf.Text(); got != "hello" {
-		t.Fatalf("text after paste with clipboard error: got %q, want %q", got, "hello")
+func TestUpdate_PasteMsgIgnoredByEditor(t *testing.T) {
+	m := New(Config{Text: "hello"})
+	m, _ = m.Update(tea.PasteMsg{Content: "X"})
+	if got, want := m.buf.Text(), "hello"; got != want {
+		t.Fatalf("text after paste msg: got %q, want %q", got, want)
 	}
 }
 

@@ -1,8 +1,6 @@
 package editor
 
 import (
-	"strings"
-
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
@@ -193,26 +191,6 @@ func (m *Model) buildIntentsFromKey(msg tea.KeyPressMsg, before EditorState) (In
 			}
 		}
 
-	case key.Matches(msg, km.Copy):
-		m.copySelection()
-	case key.Matches(msg, km.Cut):
-		if m.cfg.ReadOnly {
-			m.copySelection()
-			return batch, mutations
-		}
-		m.copySelection()
-		if _, ok := m.buf.Selection(); ok {
-			appendIntent(IntentDelete, DeleteIntentPayload{Direction: DeleteSelection})
-			mutations = append(mutations, func(mm *Model) { mm.buf.DeleteSelection() })
-		}
-	case key.Matches(msg, km.Paste):
-		if !m.cfg.ReadOnly {
-			if text, ok := m.readClipboardText(); ok {
-				appendIntent(IntentPaste, PasteIntentPayload{Text: text})
-				mutations = append(mutations, func(mm *Model) { mm.buf.InsertText(text) })
-			}
-		}
-
 	default:
 		if isTabKey(msg) {
 			if !m.cfg.ReadOnly {
@@ -241,68 +219,12 @@ func (m *Model) buildIntentsFromKey(msg tea.KeyPressMsg, before EditorState) (In
 	return batch, mutations
 }
 
-func (m Model) copySelection() {
-	if m.cfg.Clipboard == nil || m.buf == nil {
-		return
-	}
-	r, ok := m.buf.Selection()
-	if !ok {
-		return
-	}
-	s := m.buf.TextInRange(r)
-	if s == "" {
-		return
-	}
-	_ = m.cfg.Clipboard.WriteText(s)
-}
-
-func (m Model) readClipboardText() (string, bool) {
-	if m.cfg.Clipboard == nil || m.buf == nil {
-		return "", false
-	}
-	s, err := m.cfg.Clipboard.ReadText()
-	if err != nil || s == "" {
-		return "", false
-	}
-	// Normalize newlines from external sources.
-	s = strings.ReplaceAll(s, "\r\n", "\n")
-	s = strings.ReplaceAll(s, "\r", "\n")
-	return s, true
-}
-
 func (m *Model) pageMoveCount() int {
 	count := m.visibleRowCount()
 	if count <= 0 {
 		return 1
 	}
 	return count
-}
-
-func (m Model) updatePaste(msg tea.PasteMsg) (Model, tea.Cmd) {
-	if !m.focused || m.buf == nil {
-		return m, nil
-	}
-	if m.cfg.ReadOnly {
-		return m, nil
-	}
-	text := strings.ReplaceAll(msg.Content, "\r\n", "\n")
-	text = strings.ReplaceAll(text, "\r", "\n")
-	if text == "" {
-		return m, nil
-	}
-
-	before := editorStateFromBuffer(m.buf)
-	batch := IntentBatch{
-		Intents: []Intent{{
-			Kind:    IntentPaste,
-			Before:  before,
-			Payload: PasteIntentPayload{Text: text},
-		}},
-	}
-	if (&m).emitDocumentIntentsAndResolveApply(batch) {
-		m.buf.InsertText(text)
-	}
-	return m, nil
 }
 
 func isTabKey(msg tea.KeyPressMsg) bool {

@@ -218,4 +218,3 @@ func nextWordBoundary(line []string, col int) int {
 	}
 	return i
 }
-

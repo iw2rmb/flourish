@@ -30,7 +30,6 @@ const (
 	IntentSelect
 	IntentUndo
 	IntentRedo
-	IntentPaste
 )
 
 // EditorState captures buffer-local state before an intent is executed.
@@ -95,11 +94,6 @@ type UndoIntentPayload struct{}
 
 // RedoIntentPayload marks a redo request.
 type RedoIntentPayload struct{}
-
-// PasteIntentPayload describes a paste request.
-type PasteIntentPayload struct {
-	Text string
-}
 
 func editorStateFromBuffer(b *buffer.Buffer) EditorState {
 	if b == nil {

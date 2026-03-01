@@ -16,8 +16,7 @@ type KeyMap struct {
 	Backspace, Delete key.Binding
 	Enter             key.Binding
 
-	Undo, Redo       key.Binding
-	Copy, Cut, Paste key.Binding
+	Undo, Redo key.Binding
 }
 
 // bindings returns all key bindings as a slice.
@@ -30,7 +29,6 @@ func (km KeyMap) bindings() []key.Binding {
 		km.Home, km.End,
 		km.Backspace, km.Delete, km.Enter,
 		km.Undo, km.Redo,
-		km.Copy, km.Cut, km.Paste,
 	}
 }
 
@@ -77,9 +75,5 @@ func DefaultKeyMap() KeyMap {
 
 		Undo: key.NewBinding(key.WithKeys("ctrl+z"), key.WithHelp("ctrl+z", "undo")),
 		Redo: key.NewBinding(key.WithKeys("ctrl+y", "ctrl+shift+z"), key.WithHelp("ctrl+y", "redo")),
-
-		Copy:  key.NewBinding(key.WithKeys("ctrl+c"), key.WithHelp("ctrl+c", "copy")),
-		Cut:   key.NewBinding(key.WithKeys("ctrl+x"), key.WithHelp("ctrl+x", "cut")),
-		Paste: key.NewBinding(key.WithKeys("ctrl+v"), key.WithHelp("ctrl+v", "paste")),
 	}
 }

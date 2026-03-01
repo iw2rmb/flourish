@@ -146,8 +146,8 @@ func buildApplyRemoteFuzzOptions(tc applyRemoteFuzzCase, baseVersion uint64) App
 	}
 
 	return ApplyRemoteOptions{
-		BaseVersion: base,
-		ClampPolicy: ConvertPolicy{ClampMode: tc.clampMode},
+		BaseVersion:         base,
+		ClampPolicy:         ConvertPolicy{ClampMode: tc.clampMode},
 		VersionMismatchMode: tc.versionMismatchMode,
 	}
 }

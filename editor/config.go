@@ -65,9 +65,6 @@ type Config struct {
 	// KeyMap controls default keybindings. Zero value uses DefaultKeyMap().
 	KeyMap KeyMap
 
-	// Clipboard is optional. If nil, copy/cut/paste are disabled.
-	Clipboard Clipboard
-
 	// Forwarded to buffer.Options.
 	HistoryLimit int
 

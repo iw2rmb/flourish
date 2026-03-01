@@ -31,7 +31,7 @@ func (s *intentState) handleIntent(batch editor.IntentBatch) editor.IntentDecisi
 	applyLocally := true
 	for _, in := range batch.Intents {
 		switch in.Kind {
-		case editor.IntentInsert, editor.IntentDelete, editor.IntentUndo, editor.IntentRedo, editor.IntentPaste:
+		case editor.IntentInsert, editor.IntentDelete, editor.IntentUndo, editor.IntentRedo:
 			applyLocally = false
 		}
 	}
@@ -53,7 +53,8 @@ func newModel() model {
 		Text: strings.Join([]string{
 			"Intent mode example",
 			"Navigation/select updates apply locally.",
-			"Typing/deletes/paste are emitted and not applied locally.",
+			"Typing/deletes are emitted and not applied locally.",
+			"Paste is host-controlled via tea.PasteMsg.",
 			"Ctrl+Q quits.",
 		}, "\n"),
 		Gutter:       editor.LineNumberGutter(),
@@ -71,6 +72,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.editor = m.editor.SetSize(msg.Width, editorHeight(msg.Height))
+		return m, nil
+	case tea.PasteMsg:
+		text := strings.ReplaceAll(msg.Content, "\r\n", "\n")
+		text = strings.ReplaceAll(text, "\r", "\n")
+		if text != "" {
+			m.editor.Buffer().InsertText(text)
+		}
 		return m, nil
 	case tea.KeyPressMsg:
 		if msg.String() == "ctrl+q" {
@@ -117,8 +125,6 @@ func intentKindString(kind editor.IntentKind) string {
 		return "undo"
 	case editor.IntentRedo:
 		return "redo"
-	case editor.IntentPaste:
-		return "paste"
 	default:
 		return "unknown"
 	}
@@ -134,8 +140,6 @@ func summarizePayload(in editor.Intent) string {
 		return fmt.Sprintf("move=(unit=%d dir=%d extend=%v)", p.Move.Unit, p.Move.Dir, p.Move.Extend)
 	case editor.SelectIntentPayload:
 		return fmt.Sprintf("move=(unit=%d dir=%d extend=%v)", p.Move.Unit, p.Move.Dir, p.Move.Extend)
-	case editor.PasteIntentPayload:
-		return fmt.Sprintf("text=%q", p.Text)
 	default:
 		return "-"
 	}

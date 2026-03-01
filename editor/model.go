@@ -229,23 +229,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.followCursorWithForce(false)
 		}
 		return m, cmd
-	case tea.PasteMsg:
-		beforeVer := uint64(0)
-		if m.buf != nil {
-			beforeVer = m.buf.Version()
-		}
-
-		m, cmd := m.updatePaste(msg)
-		cursorChanged, versionChanged := m.syncFromBuffer()
-		if m.cfg.OnChange != nil && m.buf != nil && m.buf.Version() != beforeVer {
-			if ch, ok := m.buf.LastChange(); ok {
-				m.cfg.OnChange(ch)
-			}
-		}
-		if cursorChanged || versionChanged {
-			m.followCursorWithForce(false)
-		}
-		return m, cmd
 	default:
 		cursorChanged, versionChanged := m.syncFromBuffer()
 		if cursorChanged || versionChanged {
