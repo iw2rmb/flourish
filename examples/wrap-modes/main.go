@@ -64,9 +64,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	status := fmt.Sprintf("Mode: %s | ctrl+n none, ctrl+w word, ctrl+g grapheme | ctrl+q quit", wrapLabel(m.wrapMode))
-	return status + "\n" + m.editor.View()
+	return tea.NewView(status + "\n" + m.editor.View().Content)
 }
 
 func (m model) setWrapMode(mode editor.WrapMode) model {

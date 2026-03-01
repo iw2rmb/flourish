@@ -71,7 +71,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) View() string { return m.editor.View() }
+func (m model) View() tea.View { return m.editor.View() }
 
 func wordSpans(line, word string, style lipgloss.Style) []editor.HighlightSpan {
 	if line == "" || word == "" {

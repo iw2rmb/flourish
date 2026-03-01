@@ -64,7 +64,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	statusLines := []string{
 		"",
 		"OnChange status:",
@@ -110,7 +110,7 @@ func (m model) View() string {
 
 	status := strings.Join(statusLines, "\n")
 
-	return m.editor.View() + status
+	return tea.NewView(m.editor.View().Content + status)
 }
 
 func editorHeight(total int) int {

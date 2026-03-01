@@ -62,9 +62,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	help := "Scrollbar demo: drag thumb, click track to page, wheel to scroll, ctrl+q quit."
-	return help + "\n" + m.editor.View()
+	return tea.NewView(help + "\n" + m.editor.View().Content)
 }
 
 func editorHeight(total int) int {

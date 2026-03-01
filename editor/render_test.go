@@ -28,7 +28,7 @@ func TestRender_LineNumberAlignment_1To120(t *testing.T) {
 	m = m.Blur()
 	m = m.SetSize(10, 120)
 
-	lines := strings.Split(m.View(), "\n")
+	lines := strings.Split(m.View().Content, "\n")
 	if len(lines) != 120 {
 		t.Fatalf("expected 120 lines, got %d", len(lines))
 	}
@@ -583,7 +583,7 @@ func TestView_ScrollbarChrome_VerticalOnly(t *testing.T) {
 	m = m.Blur()
 	m = m.SetSize(4, 2)
 
-	got := m.View()
+	got := m.View().Content
 	if gotPlain, wantPlain := stripANSI(got), "abc \ndef "; gotPlain != wantPlain {
 		t.Fatalf("vertical scrollbar render:\n got: %q\nwant: %q", got, wantPlain)
 	}
@@ -604,7 +604,7 @@ func TestView_ScrollbarChrome_HorizontalOnlyWrapNone(t *testing.T) {
 	m = m.Blur()
 	m = m.SetSize(5, 2)
 
-	got := m.View()
+	got := m.View().Content
 	if gotPlain, wantPlain := stripANSI(got), "abcde\n     "; gotPlain != wantPlain {
 		t.Fatalf("horizontal scrollbar render:\n got: %q\nwant: %q", got, wantPlain)
 	}
@@ -625,7 +625,7 @@ func TestView_ScrollbarChrome_BothAxesAndCorner(t *testing.T) {
 	m = m.Blur()
 	m = m.SetSize(5, 2)
 
-	got := m.View()
+	got := m.View().Content
 	if gotPlain, wantPlain := stripANSI(got), "1234 \n     "; gotPlain != wantPlain {
 		t.Fatalf("both-axis scrollbar render:\n got: %q\nwant: %q", got, wantPlain)
 	}

@@ -16,12 +16,12 @@ func TestModel_SetSizeAffectsViewHeight(t *testing.T) {
 	m = m.Blur()
 
 	m = m.SetSize(20, 2)
-	if got := lipgloss.Height(m.View()); got != 2 {
+	if got := lipgloss.Height(m.View().Content); got != 2 {
 		t.Fatalf("height after SetSize(20,2): got %d, want %d", got, 2)
 	}
 
 	m = m.SetSize(20, 4)
-	if got := lipgloss.Height(m.View()); got != 4 {
+	if got := lipgloss.Height(m.View().Content); got != 4 {
 		t.Fatalf("height after SetSize(20,4): got %d, want %d", got, 4)
 	}
 }
@@ -34,7 +34,7 @@ func TestView_SnapshotFixedSize(t *testing.T) {
 	m = m.Blur()
 	m = m.SetSize(8, 3)
 
-	got := strings.Split(m.View(), "\n")
+	got := strings.Split(m.View().Content, "\n")
 	if len(got) != 3 {
 		t.Fatalf("expected 3 lines, got %d", len(got))
 	}
@@ -119,13 +119,13 @@ func TestModel_InvalidateGutter_RebuildsFromExternalState(t *testing.T) {
 	m = m.Blur()
 	m = m.SetSize(4, 1)
 
-	if got := strings.TrimRight(stripANSI(m.View()), " "); got != "A x" {
+	if got := strings.TrimRight(stripANSI(m.View().Content), " "); got != "A x" {
 		t.Fatalf("initial gutter render: got %q, want %q", got, "A x")
 	}
 
 	label = "B"
 	m = m.InvalidateGutter()
-	if got := strings.TrimRight(stripANSI(m.View()), " "); got != "B x" {
+	if got := strings.TrimRight(stripANSI(m.View().Content), " "); got != "B x" {
 		t.Fatalf("gutter render after invalidate: got %q, want %q", got, "B x")
 	}
 }

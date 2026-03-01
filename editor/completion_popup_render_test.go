@@ -20,7 +20,7 @@ func TestCompletionPopupRender_BelowAnchor(t *testing.T) {
 		},
 	})
 
-	got := strings.Split(stripANSI(m.View()), "\n")
+	got := strings.Split(stripANSI(m.View().Content), "\n")
 	want := []string{"000000", "1abc11", "2xyz22"}
 	assertLines(t, got, want)
 }
@@ -38,7 +38,7 @@ func TestCompletionPopupRender_FlipsAboveWhenNoSpaceBelow(t *testing.T) {
 		},
 	})
 
-	got := strings.Split(stripANSI(m.View()), "\n")
+	got := strings.Split(stripANSI(m.View().Content), "\n")
 	want := []string{"00ab00", "11cd11", "222222"}
 	assertLines(t, got, want)
 }
@@ -49,7 +49,7 @@ func TestCompletionPopupRender_HidesWhenAnchorIsOffscreen(t *testing.T) {
 	m = m.SetSize(6, 2)
 	m.viewport.SetYOffset(2)
 
-	base := stripANSI(m.View())
+	base := stripANSI(m.View().Content)
 
 	m = m.SetCompletionState(CompletionState{
 		Visible: true,
@@ -59,7 +59,7 @@ func TestCompletionPopupRender_HidesWhenAnchorIsOffscreen(t *testing.T) {
 		},
 	})
 
-	if got := stripANSI(m.View()); got != base {
+	if got := stripANSI(m.View().Content); got != base {
 		t.Fatalf("offscreen anchor popup should not render:\n got: %q\nwant: %q", got, base)
 	}
 }
@@ -82,7 +82,7 @@ func TestCompletionPopupRender_ClampWidthAndRows(t *testing.T) {
 		},
 	})
 
-	got := strings.Split(stripANSI(m.View()), "\n")
+	got := strings.Split(stripANSI(m.View().Content), "\n")
 	want := []string{"000000", "11abcd", "22ghij", "333333"}
 	assertLines(t, got, want)
 }
@@ -104,7 +104,7 @@ func TestCompletionPopupRender_DefaultLimitsClampToSmallViewport(t *testing.T) {
 		},
 	})
 
-	got := strings.Split(stripANSI(m.View()), "\n")
+	got := strings.Split(stripANSI(m.View().Content), "\n")
 	want := []string{"000", "abc"}
 	assertLines(t, got, want)
 }
@@ -129,7 +129,7 @@ func TestCompletionPopupRender_ScrollsWindowToSelectedItem(t *testing.T) {
 	})
 	m.completionState.Selected = 3
 
-	got := strings.Split(stripANSI(m.View()), "\n")
+	got := strings.Split(stripANSI(m.View().Content), "\n")
 	want := []string{"000000", "cc1111", "dd2222", "333333"}
 	assertLines(t, got, want)
 }
@@ -149,7 +149,7 @@ func TestCompletionPopupRender_WrapPlacementUsesProjectedAnchor(t *testing.T) {
 		},
 	})
 
-	got := strings.Split(stripANSI(m.View()), "\n")
+	got := strings.Split(stripANSI(m.View().Content), "\n")
 	want := []string{"abc", "def", "gXY", "jkl"}
 	assertLines(t, got, want)
 }
@@ -175,7 +175,7 @@ func TestCompletionPopupRender_WrapNonePlacementRespectsXOffset(t *testing.T) {
 		},
 	})
 
-	got := strings.Split(stripANSI(m.View()), "\n")
+	got := strings.Split(stripANSI(m.View().Content), "\n")
 	want := []string{"efghi", "56zz9"}
 	assertLines(t, got, want)
 }
@@ -195,7 +195,7 @@ func TestCompletionPopupRender_ClampsToContentAreaWhenBothScrollbarsVisible(t *t
 		},
 	})
 
-	got := strings.Split(stripANSI(m.View()), "\n")
+	got := strings.Split(stripANSI(m.View().Content), "\n")
 	want := []string{"aaaa ", "WXYZ ", "     "}
 	assertLines(t, got, want)
 }
@@ -215,7 +215,7 @@ func TestCompletionPopupRender_ClampsWidthToContentAreaWhenVerticalScrollbarVisi
 		},
 	})
 
-	got := strings.Split(stripANSI(m.View()), "\n")
+	got := strings.Split(stripANSI(m.View().Content), "\n")
 	want := []string{"0000 ", "ABCD "}
 	assertLines(t, got, want)
 }

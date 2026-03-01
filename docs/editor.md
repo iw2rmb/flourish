@@ -18,7 +18,7 @@ Primary API:
 - `SetCompletionState(state)`
 - `ClearCompletion()`
 - `Update(msg tea.Msg)`
-- `View()`
+- `View() tea.View`
 - `Buffer()`
 - `ViewportState()`
 - `ScreenToDoc(x, y)`
@@ -77,6 +77,7 @@ Viewport integration:
 - `LinkAt` and `LinkAtScreen` resolve configured hyperlink spans to host-facing targets.
 - `ScrollAllowManual` keeps wheel/manual viewport scrolling enabled.
 - `ScrollFollowCursorOnly` ignores manual viewport scrolling and keeps viewport movement cursor-driven.
+- `View()` returns Bubble Tea v2 `tea.View`; host models can either return `m.editor.View()` directly or compose with `tea.NewView(...)` using `m.editor.View().Content`.
 
 ## Extension Points
 

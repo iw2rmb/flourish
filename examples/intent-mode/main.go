@@ -83,7 +83,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	lines := []string{
 		"",
 		"Intent status:",
@@ -92,7 +92,7 @@ func (m model) View() string {
 		fmt.Sprintf("last intent: %s", noneIfEmpty(m.intents.lastIntent)),
 		fmt.Sprintf("last payload: %s", noneIfEmpty(m.intents.lastPayload)),
 	}
-	return m.editor.View() + strings.Join(lines, "\n")
+	return tea.NewView(m.editor.View().Content + strings.Join(lines, "\n"))
 }
 
 func editorHeight(total int) int {

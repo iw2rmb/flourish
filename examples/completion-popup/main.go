@@ -94,18 +94,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	state := m.editor.CompletionState()
 	status := "completion hidden"
 	if state.Visible {
 		status = fmt.Sprintf("completion visible | query=%q | selected=%d", state.Query, state.Selected)
 	}
-	return strings.Join([]string{
+	return tea.NewView(strings.Join([]string{
 		"Completion popup example",
 		status,
 		"last completion intent: " + noneIfEmpty(m.host.lastCompletion),
-		m.editor.View(),
-	}, "\n")
+		m.editor.View().Content,
+	}, "\n"))
 }
 
 func (m *model) syncCompletionItems() {

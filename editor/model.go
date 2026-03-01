@@ -255,13 +255,13 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 }
 
-func (m Model) View() string {
+func (m Model) View() tea.View {
 	base := m.viewport.View()
 	base = m.renderScrollbarChrome(base)
 	if popup, ok := m.completionPopupRender(base); ok {
-		return popup.View
+		return tea.NewView(popup.View)
 	}
-	return base
+	return tea.NewView(base)
 }
 
 func (m *Model) syncFromBuffer() (cursorChanged bool, versionChanged bool) {
