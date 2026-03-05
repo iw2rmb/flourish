@@ -174,6 +174,33 @@ func TestUpdate_GhostAccept_RightAppliesEdits_NonEOL(t *testing.T) {
 	}
 }
 
+func TestUpdate_GhostAccept_RightDoesNotApplyPreCursorDeletionEdits(t *testing.T) {
+	m := New(Config{
+		Text: "ab",
+		GhostProvider: func(ctx GhostContext) (Ghost, bool) {
+			return Ghost{
+				Text: "ab",
+				Edits: []buffer.TextEdit{{
+					Range: buffer.Range{
+						Start: buffer.Pos{Row: 0, GraphemeCol: 0},
+						End:   buffer.Pos{Row: 0, GraphemeCol: 1},
+					},
+					Text: "",
+				}},
+			}, true
+		},
+	})
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 1})
+
+	m, _ = m.Update(testKeyCode(tea.KeyRight))
+	if got, want := m.buf.Text(), "ab"; got != want {
+		t.Fatalf("text after Right fallback: got %q, want %q", got, want)
+	}
+	if got, want := m.buf.Cursor(), (buffer.Pos{Row: 0, GraphemeCol: 2}); got != want {
+		t.Fatalf("cursor after Right fallback: got %v, want %v", got, want)
+	}
+}
+
 func TestUpdate_GhostAccept_EmptyEditsFallbacks(t *testing.T) {
 	t.Run("RightFallsThroughToMovement", func(t *testing.T) {
 		m := New(Config{

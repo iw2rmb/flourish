@@ -93,7 +93,7 @@ func (m *Model) buildIntentsFromKey(msg tea.KeyPressMsg, before EditorState) (In
 			}
 		}
 		if ga.AcceptRight && key.Matches(msg, km.Right) {
-			if ghost, ok := m.ghostForCursor(); ok && len(ghost.Edits) > 0 {
+			if ghost, ok := m.ghostForCursor(); ok && ghostRightAcceptEligible(ghost.Edits, m.buf.Cursor()) {
 				edits := cloneTextEdits(ghost.Edits)
 				appendIntent(IntentInsert, InsertIntentPayload{Text: ghost.Text, Edits: edits})
 				mutations = append(mutations, func(mm *Model) {
@@ -242,4 +242,19 @@ func hasAltMod(msg tea.KeyPressMsg) bool {
 
 func keyText(msg tea.KeyPressMsg) string {
 	return msg.Key().Text
+}
+
+func ghostRightAcceptEligible(edits []buffer.TextEdit, cursor buffer.Pos) bool {
+	if len(edits) == 0 {
+		return false
+	}
+	for _, edit := range edits {
+		if edit.Range.Start != cursor || edit.Range.End != cursor {
+			return false
+		}
+		if edit.Text == "" {
+			return false
+		}
+	}
+	return true
 }
