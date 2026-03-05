@@ -8,7 +8,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"github.com/iw2rmb/flourish/buffer"
 	"github.com/iw2rmb/flourish/editor"
 )
 
@@ -16,6 +15,7 @@ type model struct {
 	editor      editor.Model
 	store       *rowMarkStore
 	lastVersion uint64
+	baseLines   []string
 }
 
 type rowMarkStore struct {
@@ -24,6 +24,15 @@ type rowMarkStore struct {
 
 func newModel() model {
 	store := &rowMarkStore{marks: map[int]editor.RowMarkState{}}
+	initialText := strings.Join([]string{
+		"Row marks example",
+		"Edit normally to produce marks from local changes.",
+		"Host controls colors/symbols and mark state via provider.",
+		"",
+		"Inserted rows get I, updated rows get U.",
+		"Deleted-row anchors use v (above) or ^ (below).",
+		"Ctrl+Q quits.",
+	}, "\n")
 
 	st := editor.DefaultStyle()
 	st.RowMarkInserted = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Bold(true)
@@ -31,15 +40,7 @@ func newModel() model {
 	st.RowMarkDeleted = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)
 
 	cfg := editor.Config{
-		Text: strings.Join([]string{
-			"Row marks example",
-			"Edit normally to produce marks from local changes.",
-			"Host controls colors/symbols and mark state via provider.",
-			"",
-			"Inserted rows get I, updated rows get U.",
-			"Deleted-row anchors use v (above) or ^ (below).",
-			"Ctrl+Q quits.",
-		}, "\n"),
+		Text:     initialText,
 		Gutter:   editor.LineNumberGutter(),
 		Style:    st,
 		WrapMode: editor.WrapWord,
@@ -63,6 +64,7 @@ func newModel() model {
 		editor:      ed,
 		store:       store,
 		lastVersion: ed.Buffer().Version(),
+		baseLines:   strings.Split(initialText, "\n"),
 	}
 }
 
@@ -90,7 +92,7 @@ func (m model) View() tea.View {
 	cursorRow := m.editor.Buffer().Cursor().Row
 	current := m.store.marks[cursorRow]
 	status := fmt.Sprintf(
-		"normal editing updates marks | ctrl+q quit | row=%d mark=%+v",
+		"marks are relative to initial snapshot | ctrl+q quit | row=%d mark=%+v",
 		cursorRow+1,
 		current,
 	)
@@ -116,106 +118,120 @@ func (m *model) processLatestChange() {
 		return
 	}
 
-	lineCount := buf.LineCount()
-	for _, edit := range ch.AppliedEdits {
-		m.applyEditMark(edit, lineCount)
-	}
-	m.pruneMarks(lineCount)
+	m.store.marks = computeRowMarks(m.baseLines, buf.RawLines())
 	m.lastVersion = ch.VersionAfter
 	m.editor = m.editor.InvalidateGutter()
 }
 
-func (m *model) applyEditMark(edit buffer.AppliedEdit, lineCount int) {
-	before := edit.RangeBefore
-	after := edit.RangeAfter
-
-	beforeSpan := before.End.Row - before.Start.Row
-	afterSpan := after.End.Row - after.Start.Row
-	deltaRows := afterSpan - beforeSpan
-
-	m.remapMarks(before.Start.Row, before.End.Row, deltaRows)
-
-	// Always treat the edited start row as updated.
-	m.setMark(after.Start.Row, lineCount, editor.RowMarkState{Updated: true})
-
-	switch {
-	case deltaRows > 0:
-		// Mark net-new rows as inserted.
-		for row := after.Start.Row + 1; row <= after.Start.Row+deltaRows; row++ {
-			m.setMark(row, lineCount, editor.RowMarkState{Inserted: true})
-		}
-	case deltaRows < 0:
-		// Anchor deleted rows at the surviving boundary row.
-		anchor := clampRow(after.Start.Row, lineCount)
-		if anchor >= 0 {
-			m.setMark(anchor, lineCount, editor.RowMarkState{DeletedAbove: true})
-		}
-	default:
-		end := clampRow(after.End.Row, lineCount)
-		start := clampRow(after.Start.Row, lineCount)
-		if start >= 0 && end >= 0 && end >= start {
-			for row := start; row <= end; row++ {
-				m.setMark(row, lineCount, editor.RowMarkState{Updated: true})
+func computeRowMarks(baseLines, curLines []string) map[int]editor.RowMarkState {
+	n, m := len(baseLines), len(curLines)
+	lcs := make([][]int, n+1)
+	for i := range lcs {
+		lcs[i] = make([]int, m+1)
+	}
+	for i := n - 1; i >= 0; i-- {
+		for j := m - 1; j >= 0; j-- {
+			if baseLines[i] == curLines[j] {
+				lcs[i][j] = lcs[i+1][j+1] + 1
+				continue
+			}
+			if lcs[i+1][j] >= lcs[i][j+1] {
+				lcs[i][j] = lcs[i+1][j]
+			} else {
+				lcs[i][j] = lcs[i][j+1]
 			}
 		}
 	}
-}
 
-func (m *model) remapMarks(startRow, endRow, deltaRows int) {
-	if len(m.store.marks) == 0 {
-		return
-	}
+	type diffKind uint8
+	const (
+		diffEqual diffKind = iota
+		diffDelete
+		diffInsert
+	)
+	type diffOp struct{ kind diffKind }
 
-	next := make(map[int]editor.RowMarkState, len(m.store.marks))
-	for row, state := range m.store.marks {
-		switch {
-		case row < startRow:
-			next[row] = state
-		case row > endRow:
-			next[row+deltaRows] = state
-		default:
-			// Drop marks for touched rows and let this change re-apply fresh marks.
-		}
-	}
-	m.store.marks = next
-}
-
-func (m *model) setMark(row, lineCount int, add editor.RowMarkState) {
-	row = clampRow(row, lineCount)
-	if row < 0 {
-		return
-	}
-	cur := m.store.marks[row]
-	cur.Inserted = cur.Inserted || add.Inserted
-	cur.Updated = cur.Updated || add.Updated
-	cur.DeletedAbove = cur.DeletedAbove || add.DeletedAbove
-	cur.DeletedBelow = cur.DeletedBelow || add.DeletedBelow
-	m.store.marks[row] = cur
-}
-
-func (m *model) pruneMarks(lineCount int) {
-	for row, st := range m.store.marks {
-		if row < 0 || row >= lineCount {
-			delete(m.store.marks, row)
+	ops := make([]diffOp, 0, n+m)
+	i, j := 0, 0
+	for i < n && j < m {
+		if baseLines[i] == curLines[j] {
+			ops = append(ops, diffOp{kind: diffEqual})
+			i++
+			j++
 			continue
 		}
-		if !st.Inserted && !st.Updated && !st.DeletedAbove && !st.DeletedBelow {
-			delete(m.store.marks, row)
+		if lcs[i+1][j] >= lcs[i][j+1] {
+			ops = append(ops, diffOp{kind: diffDelete})
+			i++
+			continue
+		}
+		ops = append(ops, diffOp{kind: diffInsert})
+		j++
+	}
+	for ; i < n; i++ {
+		ops = append(ops, diffOp{kind: diffDelete})
+	}
+	for ; j < m; j++ {
+		ops = append(ops, diffOp{kind: diffInsert})
+	}
+
+	marks := map[int]editor.RowMarkState{}
+	setMark := func(row int, f func(*editor.RowMarkState)) {
+		if row < 0 || row >= len(curLines) {
+			return
+		}
+		state := marks[row]
+		f(&state)
+		marks[row] = state
+	}
+
+	newRow := 0
+	for idx := 0; idx < len(ops); {
+		if ops[idx].kind == diffEqual {
+			newRow++
+			idx++
+			continue
+		}
+
+		startNewRow := newRow
+		delCount, insCount := 0, 0
+		for idx < len(ops) && ops[idx].kind != diffEqual {
+			switch ops[idx].kind {
+			case diffDelete:
+				delCount++
+			case diffInsert:
+				insCount++
+				newRow++
+			}
+			idx++
+		}
+
+		common := delCount
+		if insCount < common {
+			common = insCount
+		}
+		for r := 0; r < common; r++ {
+			row := startNewRow + r
+			setMark(row, func(s *editor.RowMarkState) { s.Updated = true })
+		}
+		for r := common; r < insCount; r++ {
+			row := startNewRow + r
+			setMark(row, func(s *editor.RowMarkState) { s.Inserted = true })
+		}
+
+		if delCount > common {
+			anchor := startNewRow + common
+			switch {
+			case len(curLines) == 0:
+				// No rows to attach a deleted marker to.
+			case anchor < len(curLines):
+				setMark(anchor, func(s *editor.RowMarkState) { s.DeletedAbove = true })
+			default:
+				setMark(len(curLines)-1, func(s *editor.RowMarkState) { s.DeletedBelow = true })
+			}
 		}
 	}
-}
-
-func clampRow(row, lineCount int) int {
-	if lineCount <= 0 {
-		return -1
-	}
-	if row < 0 {
-		return 0
-	}
-	if row >= lineCount {
-		return lineCount - 1
-	}
-	return row
+	return marks
 }
 
 func editorHeight(total int) int {
