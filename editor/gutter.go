@@ -17,6 +17,40 @@ type Gutter struct {
 	Cell  func(ctx GutterCellContext) GutterCell
 }
 
+// RowMarkProvider resolves inserted/updated/deleted markers for one rendered row.
+type RowMarkProvider func(ctx RowMarkContext) RowMarkState
+
+// RowMarkContext describes a rendered visual row for marker resolution.
+type RowMarkContext struct {
+	Row          int
+	SegmentIndex int
+	// LineText is raw document line text (unwrapped, before virtual transforms).
+	LineText    string
+	IsCursorRow bool
+	Focused     bool
+	DocID       string
+	DocVersion  uint64
+}
+
+// RowMarkState describes change markers to render for a row.
+//
+// Deleted markers are rendered only on segment index 0.
+// Inserted/Updated markers are rendered on all visual segments of a wrapped row.
+type RowMarkState struct {
+	Inserted     bool
+	Updated      bool
+	DeletedAbove bool
+	DeletedBelow bool
+}
+
+// RowMarkSymbols configures default marker glyphs.
+type RowMarkSymbols struct {
+	Inserted     string // default: "▎"
+	Updated      string // default: "▎"
+	DeletedAbove string // default: "▼"
+	DeletedBelow string // default: "▲"
+}
+
 type GutterWidthContext struct {
 	LineCount  int
 	WrapMode   WrapMode
@@ -115,7 +149,33 @@ func gutterDigits(lineCount int) int {
 	return len(fmt.Sprintf("%d", lineCount))
 }
 
-func (m Model) resolvedGutterWidth(lineCount int) int {
+func defaultRowMarkSymbols() RowMarkSymbols {
+	return RowMarkSymbols{
+		Inserted:     "▎",
+		Updated:      "▎",
+		DeletedAbove: "▼",
+		DeletedBelow: "▲",
+	}
+}
+
+func normalizeRowMarkSymbols(s RowMarkSymbols) RowMarkSymbols {
+	def := defaultRowMarkSymbols()
+	if s.Inserted == "" {
+		s.Inserted = def.Inserted
+	}
+	if s.Updated == "" {
+		s.Updated = def.Updated
+	}
+	if s.DeletedAbove == "" {
+		s.DeletedAbove = def.DeletedAbove
+	}
+	if s.DeletedBelow == "" {
+		s.DeletedBelow = def.DeletedBelow
+	}
+	return s
+}
+
+func (m Model) resolvedBaseGutterWidth(lineCount int) int {
 	if m.cfg.Gutter.Width == nil {
 		return 0
 	}
@@ -133,6 +193,20 @@ func (m Model) resolvedGutterWidth(lineCount int) int {
 		return 0
 	}
 	return w
+}
+
+func (m Model) resolvedRowMarkWidth() int {
+	if m.cfg.RowMarkProvider == nil {
+		return 0
+	}
+	if m.cfg.RowMarkWidth <= 0 {
+		return 1
+	}
+	return m.cfg.RowMarkWidth
+}
+
+func (m Model) resolvedGutterWidth(lineCount int) int {
+	return m.resolvedBaseGutterWidth(lineCount) + m.resolvedRowMarkWidth()
 }
 
 func (m Model) resolveGutterCell(row, segmentIndex int, lineText string, lineCount, width int, isCursorRow bool) GutterCell {
@@ -159,6 +233,57 @@ func (m Model) resolveGutterCell(row, segmentIndex int, lineText string, lineCou
 		cell.ClickCol = 0
 	}
 	return cell
+}
+
+func (m Model) resolveRowMarkCell(row, segmentIndex int, lineText string, width int, isCursorRow bool) GutterCell {
+	if width <= 0 {
+		return GutterCell{}
+	}
+
+	state := RowMarkState{}
+	if m.cfg.RowMarkProvider != nil {
+		state = m.cfg.RowMarkProvider(RowMarkContext{
+			Row:          row,
+			SegmentIndex: segmentIndex,
+			LineText:     lineText,
+			IsCursorRow:  isCursorRow,
+			Focused:      m.focused,
+			DocID:        m.cfg.DocID,
+			DocVersion:   m.docVersion(),
+		})
+	}
+
+	symbol, style, ok := m.rowMarkVisualForState(state, segmentIndex)
+	if !ok {
+		return GutterCell{
+			Segments: normalizeGutterSegments(nil, width),
+		}
+	}
+
+	seg := GutterSegment{Text: symbol}
+	segStyle := style
+	seg.Style = &segStyle
+	return GutterCell{
+		Segments: normalizeGutterSegments([]GutterSegment{seg}, width),
+	}
+}
+
+func (m Model) rowMarkVisualForState(state RowMarkState, segmentIndex int) (symbol string, style lipgloss.Style, ok bool) {
+	syms := m.cfg.RowMarkSymbols
+
+	if state.DeletedAbove && segmentIndex == 0 {
+		return syms.DeletedAbove, m.cfg.Style.RowMarkDeleted, true
+	}
+	if state.DeletedBelow && segmentIndex == 0 {
+		return syms.DeletedBelow, m.cfg.Style.RowMarkDeleted, true
+	}
+	if state.Inserted {
+		return syms.Inserted, m.cfg.Style.RowMarkInserted, true
+	}
+	if state.Updated {
+		return syms.Updated, m.cfg.Style.RowMarkUpdated, true
+	}
+	return "", lipgloss.Style{}, false
 }
 
 func normalizeGutterSegments(in []GutterSegment, width int) []GutterSegment {

@@ -130,7 +130,8 @@ func (m *Model) renderRows(
 	cursor := m.buf.Cursor()
 	sel, selOK := m.buf.Selection()
 	lineCount := len(lines)
-	gutterWidth := m.resolvedGutterWidth(lineCount)
+	baseGutterWidth := m.resolvedBaseGutterWidth(lineCount)
+	rowMarkWidth := m.resolvedRowMarkWidth()
 
 	nLines := len(layout.lines)
 	highlightVisible := m.highlightVisible
@@ -206,7 +207,8 @@ func (m *Model) renderRows(
 			ref,
 			lineCount,
 			contentWidth,
-			gutterWidth,
+			baseGutterWidth,
+			rowMarkWidth,
 			cursor,
 			sel,
 			selOK,
@@ -228,7 +230,7 @@ func (m *Model) renderRows(
 func (m *Model) renderLayoutRow(
 	layout wrapLayoutCache,
 	ref wrapLayoutRow,
-	lineCount, contentWidth, gutterWidth int,
+	lineCount, contentWidth, baseGutterWidth, rowMarkWidth int,
 	cursor buffer.Pos,
 	sel buffer.Range,
 	selOK bool,
@@ -255,9 +257,13 @@ func (m *Model) renderLayoutRow(
 	seg := line.segments[ref.segmentIndex]
 
 	var sb strings.Builder
-	if gutterWidth > 0 {
-		cell := m.resolveGutterCell(row, ref.segmentIndex, line.rawLine, lineCount, gutterWidth, row == cursor.Row)
+	if baseGutterWidth > 0 {
+		cell := m.resolveGutterCell(row, ref.segmentIndex, line.rawLine, lineCount, baseGutterWidth, row == cursor.Row)
 		sb.WriteString(renderGutterCell(m.cfg.Style.Gutter, m.cfg.GutterStyleForKey, cell))
+	}
+	if rowMarkWidth > 0 {
+		cell := m.resolveRowMarkCell(row, ref.segmentIndex, line.rawLine, rowMarkWidth, row == cursor.Row)
+		sb.WriteString(renderGutterCell(m.cfg.Style.Gutter, nil, cell))
 	}
 
 	left := leftNoWrap

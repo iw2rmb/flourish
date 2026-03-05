@@ -176,6 +176,95 @@ func TestModel_InvalidateGutterRows_RerendersOnlyTargetRows(t *testing.T) {
 	}
 }
 
+func TestView_RowMarks_RenderWithoutGutterAndWithCustomSymbols(t *testing.T) {
+	m := New(Config{
+		Text: "foo\nbar",
+		RowMarkSymbols: RowMarkSymbols{
+			Inserted: "I",
+			Updated:  "U",
+		},
+		RowMarkProvider: func(ctx RowMarkContext) RowMarkState {
+			switch ctx.Row {
+			case 0:
+				return RowMarkState{Inserted: true}
+			case 1:
+				return RowMarkState{Updated: true}
+			default:
+				return RowMarkState{}
+			}
+		},
+	})
+	m = m.Blur()
+	m = m.SetSize(8, 2)
+
+	got := strings.Split(m.View().Content, "\n")
+	for i := range got {
+		got[i] = strings.TrimRight(stripANSI(got[i]), " ")
+	}
+	want := []string{"Ifoo", "Ubar"}
+	if fmt.Sprintf("%q", got) != fmt.Sprintf("%q", want) {
+		t.Fatalf("unexpected row mark render:\n got: %q\nwant: %q", got, want)
+	}
+}
+
+func TestView_RowMarks_ComposeWithLineNumberGutter(t *testing.T) {
+	m := New(Config{
+		Text:   "foo\nbar",
+		Gutter: LineNumberGutter(),
+		RowMarkSymbols: RowMarkSymbols{
+			DeletedBelow: "^",
+			DeletedAbove: "v",
+		},
+		RowMarkProvider: func(ctx RowMarkContext) RowMarkState {
+			if ctx.Row == 0 {
+				return RowMarkState{DeletedBelow: true}
+			}
+			return RowMarkState{DeletedAbove: true}
+		},
+	})
+	m = m.Blur()
+	m = m.SetSize(12, 2)
+
+	got := strings.Split(m.View().Content, "\n")
+	for i := range got {
+		got[i] = strings.TrimRight(stripANSI(got[i]), " ")
+	}
+	want := []string{"1 ^foo", "2 vbar"}
+	if fmt.Sprintf("%q", got) != fmt.Sprintf("%q", want) {
+		t.Fatalf("unexpected row mark + line number render:\n got: %q\nwant: %q", got, want)
+	}
+}
+
+func TestView_RowMarks_DeletedMarkersRenderOnlyOnFirstWrappedSegment(t *testing.T) {
+	m := New(Config{
+		Text:     "abcdef",
+		WrapMode: WrapGrapheme,
+		RowMarkSymbols: RowMarkSymbols{
+			DeletedAbove: "v",
+		},
+		RowMarkProvider: func(ctx RowMarkContext) RowMarkState {
+			return RowMarkState{DeletedAbove: true}
+		},
+		Scrollbar: ScrollbarConfig{
+			Vertical:   ScrollbarNever,
+			Horizontal: ScrollbarNever,
+		},
+	})
+	m = m.Blur()
+	m = m.SetSize(4, 2)
+
+	got := strings.Split(stripANSI(m.View().Content), "\n")
+	if len(got) != 2 {
+		t.Fatalf("unexpected row count: got %d, want 2", len(got))
+	}
+	if got[0] == "" || got[0][0] != 'v' {
+		t.Fatalf("first wrapped segment marker: got %q, want prefix %q", got[0], "v")
+	}
+	if got[1] == "" || got[1][0] != ' ' {
+		t.Fatalf("second wrapped segment marker should be blank: got %q", got[1])
+	}
+}
+
 func TestUpdate_CursorMove_RecomputesVirtualTextOnlyForDirtyRows(t *testing.T) {
 	const lineCount = 200
 	line := "abcdef"

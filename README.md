@@ -62,6 +62,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 - `go run ./examples/scrollbar`
 - `go run ./examples/inline-suggestions`
 - `go run ./examples/virtual-text`
+- `go run ./examples/row-marks`
 - `go run ./examples/highlighter`
 - `go run ./examples/conditional-styling`
 - `go run ./examples/on-change`

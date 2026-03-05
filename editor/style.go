@@ -5,6 +5,10 @@ import "charm.land/lipgloss/v2"
 // Style controls the editor's rendering.
 type Style struct {
 	Gutter lipgloss.Style
+	// Row marker styles for inserted/updated bars and deleted-row triangles.
+	RowMarkInserted lipgloss.Style
+	RowMarkUpdated  lipgloss.Style
+	RowMarkDeleted  lipgloss.Style
 
 	Text      lipgloss.Style
 	Selection lipgloss.Style
@@ -27,6 +31,9 @@ type Style struct {
 // render checks.
 func (s Style) isZero() bool {
 	return isLipglossZero(s.Gutter) &&
+		isLipglossZero(s.RowMarkInserted) &&
+		isLipglossZero(s.RowMarkUpdated) &&
+		isLipglossZero(s.RowMarkDeleted) &&
 		isLipglossZero(s.Text) &&
 		isLipglossZero(s.Selection) &&
 		isLipglossZero(s.Cursor) &&
@@ -47,7 +54,13 @@ func isLipglossZero(s lipgloss.Style) bool {
 func DefaultStyle() Style {
 	gutter := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	return Style{
-		Gutter:         gutter,
+		Gutter: gutter,
+		RowMarkInserted: lipgloss.NewStyle().
+			Foreground(lipgloss.Color("35")),
+		RowMarkUpdated: lipgloss.NewStyle().
+			Foreground(lipgloss.Color("214")),
+		RowMarkDeleted: lipgloss.NewStyle().
+			Foreground(lipgloss.Color("203")),
 		Text:           lipgloss.NewStyle(),
 		Selection:      lipgloss.NewStyle().Background(lipgloss.Color("237")),
 		Cursor:         lipgloss.NewStyle().Reverse(true),

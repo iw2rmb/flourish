@@ -53,6 +53,13 @@ type snapshotSignature struct {
 	gutterCellProvider  uintptr
 	gutterWidthSet      bool
 	gutterCellSet       bool
+	rowMarkProvider     uintptr
+	rowMarkProviderSet  bool
+	rowMarkWidth        int
+	rowMarkInsertedSym  string
+	rowMarkUpdatedSym   string
+	rowMarkDelAboveSym  string
+	rowMarkDelBelowSym  string
 
 	rowStyleProvider   uintptr
 	tokenStyleProvider uintptr
@@ -103,6 +110,13 @@ func (m *Model) currentSnapshotSignature() snapshotSignature {
 		gutterCellProvider:        providerPtr(m.cfg.Gutter.Cell),
 		gutterWidthSet:            m.cfg.Gutter.Width != nil,
 		gutterCellSet:             m.cfg.Gutter.Cell != nil,
+		rowMarkProvider:           providerPtr(m.cfg.RowMarkProvider),
+		rowMarkProviderSet:        m.cfg.RowMarkProvider != nil,
+		rowMarkWidth:              m.cfg.RowMarkWidth,
+		rowMarkInsertedSym:        m.cfg.RowMarkSymbols.Inserted,
+		rowMarkUpdatedSym:         m.cfg.RowMarkSymbols.Updated,
+		rowMarkDelAboveSym:        m.cfg.RowMarkSymbols.DeletedAbove,
+		rowMarkDelBelowSym:        m.cfg.RowMarkSymbols.DeletedBelow,
 		rowStyleProvider:          providerPtr(m.cfg.RowStyleForRow),
 		tokenStyleProvider:        providerPtr(m.cfg.TokenStyleForToken),
 		rowStyleSet:               m.cfg.RowStyleForRow != nil,
@@ -172,6 +186,13 @@ func hashSnapshotSignature(sig snapshotSignature) SnapshotToken {
 	writeU64(uint64(sig.gutterCellProvider))
 	writeB(sig.gutterWidthSet)
 	writeB(sig.gutterCellSet)
+	writeU64(uint64(sig.rowMarkProvider))
+	writeB(sig.rowMarkProviderSet)
+	writeI(sig.rowMarkWidth)
+	writeS(sig.rowMarkInsertedSym)
+	writeS(sig.rowMarkUpdatedSym)
+	writeS(sig.rowMarkDelAboveSym)
+	writeS(sig.rowMarkDelBelowSym)
 	writeU64(uint64(sig.rowStyleProvider))
 	writeU64(uint64(sig.tokenStyleProvider))
 	writeB(sig.rowStyleSet)

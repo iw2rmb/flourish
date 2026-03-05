@@ -35,7 +35,16 @@ type Config struct {
 
 	// Rendering options.
 	Gutter Gutter
-	Style  Style
+	// RowMarkProvider optionally supplies inserted/updated/deleted markers for a row.
+	// Returned marks are rendered in a dedicated marker lane in the gutter area.
+	RowMarkProvider RowMarkProvider
+	// RowMarkWidth controls marker lane width in terminal cells.
+	// When RowMarkProvider is set and width <= 0, it defaults to 1.
+	RowMarkWidth int
+	// RowMarkSymbols controls default glyphs used for row markers.
+	// Empty fields are normalized to defaults.
+	RowMarkSymbols RowMarkSymbols
+	Style          Style
 	// GutterStyleForKey resolves a gutter segment style override by key.
 	// When nil or key is unresolved, Style.Gutter is used.
 	//

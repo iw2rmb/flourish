@@ -68,6 +68,24 @@ func TestHitTest_CustomGutter_ClickMapsToConfiguredCol(t *testing.T) {
 	}
 }
 
+func TestHitTest_RowMarkColumn_MapsToGutterClickCol(t *testing.T) {
+	m := New(Config{
+		Text:   "abcd",
+		Gutter: LineNumberGutter(),
+		RowMarkProvider: func(RowMarkContext) RowMarkState {
+			return RowMarkState{Inserted: true}
+		},
+	})
+
+	// Line number gutter width=2 + row mark width=1 -> mark column is x=2.
+	if got := m.screenToDocPos(2, 0); got != (buffer.Pos{Row: 0, GraphemeCol: 0}) {
+		t.Fatalf("row mark click x=2: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 0})
+	}
+	if got := m.screenToDocPos(3, 0); got != (buffer.Pos{Row: 0, GraphemeCol: 0}) {
+		t.Fatalf("first text cell x=3: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 0})
+	}
+}
+
 func TestHitTest_InsertedTextMapsToAnchorCol(t *testing.T) {
 	m := New(Config{
 		Text: "ab",

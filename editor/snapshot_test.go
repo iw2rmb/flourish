@@ -230,6 +230,54 @@ func TestRenderSnapshot_TokenInvalidationMatrix(t *testing.T) {
 		}
 	})
 
+	t.Run("row mark provider change", func(t *testing.T) {
+		m := New(Config{Text: "ab"})
+		m = m.SetSize(4, 1)
+		t0 := m.RenderSnapshot().Token
+
+		m.cfg.RowMarkProvider = func(RowMarkContext) RowMarkState {
+			return RowMarkState{Inserted: true}
+		}
+		t1 := m.RenderSnapshot().Token
+		if t1 == t0 {
+			t.Fatalf("token must change after row mark provider change")
+		}
+	})
+
+	t.Run("row mark width change", func(t *testing.T) {
+		m := New(Config{
+			Text: "ab",
+			RowMarkProvider: func(RowMarkContext) RowMarkState {
+				return RowMarkState{Inserted: true}
+			},
+		})
+		m = m.SetSize(4, 1)
+		t0 := m.RenderSnapshot().Token
+
+		m.cfg.RowMarkWidth = 2
+		t1 := m.RenderSnapshot().Token
+		if t1 == t0 {
+			t.Fatalf("token must change after row mark width change")
+		}
+	})
+
+	t.Run("row mark symbol change", func(t *testing.T) {
+		m := New(Config{
+			Text: "ab",
+			RowMarkProvider: func(RowMarkContext) RowMarkState {
+				return RowMarkState{Inserted: true}
+			},
+		})
+		m = m.SetSize(4, 1)
+		t0 := m.RenderSnapshot().Token
+
+		m.cfg.RowMarkSymbols.Inserted = "I"
+		t1 := m.RenderSnapshot().Token
+		if t1 == t0 {
+			t.Fatalf("token must change after row mark symbol change")
+		}
+	})
+
 	t.Run("gutter explicit invalidation", func(t *testing.T) {
 		m := New(Config{
 			Text:   "ab",

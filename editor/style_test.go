@@ -12,6 +12,18 @@ func TestStyleIsZero_ScrollbarFieldsAffectZeroCheck(t *testing.T) {
 		style Style
 	}{
 		{
+			name:  "row mark inserted",
+			style: Style{RowMarkInserted: lipgloss.NewStyle().PaddingLeft(1)},
+		},
+		{
+			name:  "row mark updated",
+			style: Style{RowMarkUpdated: lipgloss.NewStyle().PaddingLeft(1)},
+		},
+		{
+			name:  "row mark deleted",
+			style: Style{RowMarkDeleted: lipgloss.NewStyle().PaddingLeft(1)},
+		},
+		{
 			name:  "track",
 			style: Style{ScrollbarTrack: lipgloss.NewStyle().PaddingLeft(1)},
 		},
@@ -37,6 +49,15 @@ func TestStyleIsZero_ScrollbarFieldsAffectZeroCheck(t *testing.T) {
 func TestDefaultStyle_ScrollbarStylesAreConfigured(t *testing.T) {
 	st := DefaultStyle()
 
+	if st.RowMarkInserted.GetForeground() == nil {
+		t.Fatalf("expected default RowMarkInserted foreground to be configured")
+	}
+	if st.RowMarkUpdated.GetForeground() == nil {
+		t.Fatalf("expected default RowMarkUpdated foreground to be configured")
+	}
+	if st.RowMarkDeleted.GetForeground() == nil {
+		t.Fatalf("expected default RowMarkDeleted foreground to be configured")
+	}
 	if st.ScrollbarTrack.GetBackground() == nil {
 		t.Fatalf("expected default ScrollbarTrack background to be configured")
 	}

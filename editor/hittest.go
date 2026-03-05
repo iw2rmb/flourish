@@ -33,9 +33,10 @@ func (m *Model) screenToDocPos(x, y int) buffer.Pos {
 	if x < 0 {
 		x = 0
 	}
-	gw := m.resolvedGutterWidth(len(lines))
+	baseGW := m.resolvedBaseGutterWidth(len(lines))
+	gw := baseGW + m.resolvedRowMarkWidth()
 	if x < gw {
-		cell := m.resolveGutterCell(row, segIdx, line.rawLine, len(lines), gw, row == m.buf.Cursor().Row)
+		cell := m.resolveGutterCell(row, segIdx, line.rawLine, len(lines), baseGW, row == m.buf.Cursor().Row)
 		return buffer.Pos{Row: row, GraphemeCol: clampInt(cell.ClickCol, 0, line.visual.RawGraphemeLen)}
 	}
 	visualX := x - gw
