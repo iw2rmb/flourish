@@ -42,6 +42,18 @@ type Config struct {
 	// Returned styles should avoid layout-affecting options (padding/margin/width)
 	// to keep render mapping deterministic.
 	GutterStyleForKey func(key string) (lipgloss.Style, bool)
+	// RowStyleForRow resolves a style override for each rendered visual row.
+	// When nil or callback returns ok=false, no row-level override is applied.
+	//
+	// Row style is applied only to the content area (gutter excluded). Rendered
+	// output is clamped to one visual line and content width for safety.
+	RowStyleForRow func(RowStyleContext) (lipgloss.Style, bool)
+	// TokenStyleForToken resolves a style override for each rendered visual token.
+	// When nil or callback returns ok=false, no token-level override is applied.
+	//
+	// Returned styles should avoid layout-affecting options (padding/margin/width)
+	// to keep render mapping deterministic.
+	TokenStyleForToken func(TokenStyleContext) (lipgloss.Style, bool)
 	// WrapMode controls soft wrapping vs horizontal scrolling. Default is WrapNone.
 	WrapMode WrapMode
 	// ScrollPolicy controls whether viewport scrolling can diverge from cursor.

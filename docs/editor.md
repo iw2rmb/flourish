@@ -14,6 +14,7 @@ Primary API:
 - `Focus()`, `Blur()`, `Focused()`
 - `InvalidateGutter()`
 - `InvalidateGutterRows(rows ...int)`
+- `InvalidateStyles()`
 - `CompletionState()`
 - `SetCompletionState(state)`
 - `ClearCompletion()`
@@ -87,6 +88,8 @@ Viewport integration:
 - `Gutter.Width` to resolve gutter width in terminal cells for the current frame.
 - `Gutter.Cell` to resolve per-row gutter segments (`[]GutterSegment`) and click mapping.
 - `GutterStyleForKey` to resolve keyed gutter segment styles (fallback: `Style.Gutter`).
+- `RowStyleForRow` for per-visual-row content-area overrides (box styles allowed; output is clamped to one line and content width).
+- `TokenStyleForToken` for per-token style overrides (`IsHighlighted`, `IsActiveRow`, and token metadata).
 - `VirtualTextProvider` for per-line virtual deletions/insertions.
 - `Highlighter` for per-line highlight spans.
 - `LinkProvider` for per-line hyperlink spans (`LinkSpan`) over raw line text.
@@ -251,6 +254,8 @@ Virtual text rules:
 - text mutations attempt dirty-line incremental rebuild first, and fall back to full rebuild when wrap-row shape changes.
 - `VirtualTextProvider` is treated as row-local for cursor/selection movement: non-dirty rows are expected to remain unchanged.
 - per-line visible text/mapping derived from virtual deletions is computed once per layout line and reused by both `Highlighter` and `LinkProvider` in the same frame.
+- row/token style callbacks are composed as base text style -> row style -> role/highlight/link styles -> token style callback.
+- cursor and selection styles still take precedence over token style callbacks.
 
 Hyperlink rules:
 - `LinkProvider` receives both raw line text and visible text (after virtual deletions).
@@ -265,6 +270,7 @@ Gutter rules:
 - gutter click mapping uses `GutterCell.ClickCol` (default `0`, clamped per row).
 - use `InvalidateGutter()` when host-side gutter dependencies changed broadly outside editor updates.
 - use `InvalidateGutterRows(...)` for row-scoped gutter dependency changes; only targeted rows are rerendered.
+- use `InvalidateStyles()` when `RowStyleForRow` / `TokenStyleForToken` depend on host state that changed outside editor updates.
 - `LineNumberGutter()` provides built-in line-number behavior.
 - `LineNumberWidth(lineCount)` and `LineNumberSegment(ctx)` expose reusable line-number pieces for custom gutters.
 - line-number gutter style keys are `line_num` and `line_num_active`.

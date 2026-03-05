@@ -13,5 +13,6 @@ Examples:
 - `examples/completion-popup/main.go` — completion popup host flow with `SetCompletionState`, custom filter/ranking, keyed styles, `AcceptTab=false`, and one-time item hydration to preserve keyboard navigation selection.
 - `examples/virtual-text/main.go` — virtual deletions/insertions overlay behavior.
 - `examples/highlighter/main.go` — line highlighter integration.
+- `examples/conditional-styling/main.go` — row/token conditional style callbacks with active-row background + left border emphasis.
 - `examples/on-change/main.go` — delta-backed `OnChange` event reporting (`buffer.Change` payload).
 - `examples/intent-mode/main.go` — intent emission with host-controlled local-apply decisions.

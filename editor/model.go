@@ -44,6 +44,7 @@ type Model struct {
 	layout wrapLayoutCache
 
 	gutterInvalidationVersion uint64
+	styleInvalidationVersion  uint64
 	renderedRows              []string
 
 	// Reusable per-render highlight bookkeeping, sized to logical line count.
@@ -180,6 +181,15 @@ func (m Model) InvalidateGutterRows(rows ...int) Model {
 	if !m.rebuildGutterRows(rows) {
 		m.rebuildContent()
 	}
+	return m
+}
+
+// InvalidateStyles marks row/token style callback output as stale and rebuilds
+// rendered content. Use this when style callbacks depend on host-managed state
+// that changed outside editor Update flow.
+func (m Model) InvalidateStyles() Model {
+	m.styleInvalidationVersion++
+	m.rebuildContent()
 	return m
 }
 

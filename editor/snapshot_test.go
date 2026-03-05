@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/iw2rmb/flourish/buffer"
 )
@@ -241,6 +242,46 @@ func TestRenderSnapshot_TokenInvalidationMatrix(t *testing.T) {
 		t1 := m.RenderSnapshot().Token
 		if t1 == t0 {
 			t.Fatalf("token must change after gutter explicit invalidation")
+		}
+	})
+
+	t.Run("row style callback change", func(t *testing.T) {
+		m := New(Config{Text: "ab"})
+		m = m.SetSize(3, 1)
+		t0 := m.RenderSnapshot().Token
+
+		m.cfg.RowStyleForRow = func(RowStyleContext) (lipgloss.Style, bool) {
+			return lipgloss.NewStyle().Underline(true), true
+		}
+		t1 := m.RenderSnapshot().Token
+		if t1 == t0 {
+			t.Fatalf("token must change after row style callback change")
+		}
+	})
+
+	t.Run("token style callback change", func(t *testing.T) {
+		m := New(Config{Text: "ab"})
+		m = m.SetSize(3, 1)
+		t0 := m.RenderSnapshot().Token
+
+		m.cfg.TokenStyleForToken = func(TokenStyleContext) (lipgloss.Style, bool) {
+			return lipgloss.NewStyle().Underline(true), true
+		}
+		t1 := m.RenderSnapshot().Token
+		if t1 == t0 {
+			t.Fatalf("token must change after token style callback change")
+		}
+	})
+
+	t.Run("style explicit invalidation", func(t *testing.T) {
+		m := New(Config{Text: "ab"})
+		m = m.SetSize(3, 1)
+		t0 := m.RenderSnapshot().Token
+
+		m = m.InvalidateStyles()
+		t1 := m.RenderSnapshot().Token
+		if t1 == t0 {
+			t.Fatalf("token must change after style explicit invalidation")
 		}
 	})
 

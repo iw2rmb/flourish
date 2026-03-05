@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/iw2rmb/flourish/buffer"
 )
@@ -545,6 +546,105 @@ func TestRender_GhostStyleKey_UsesCallbackAndFallback(t *testing.T) {
 	fallback.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 1})
 	if got := stripANSI(fallback.renderContent()); got != "aXb" {
 		t.Fatalf("ghost fallback render: got %q, want %q", got, "aXb")
+	}
+}
+
+func TestRender_RowStyleForRow_ActiveRow(t *testing.T) {
+	var calls []RowStyleContext
+
+	m := New(Config{
+		Text: "ab\ncd",
+		Style: Style{
+			Text:   lipgloss.NewStyle(),
+			Cursor: lipgloss.NewStyle().Reverse(true),
+		},
+		RowStyleForRow: func(ctx RowStyleContext) (lipgloss.Style, bool) {
+			calls = append(calls, ctx)
+			if ctx.IsActive {
+				return lipgloss.NewStyle().Background(lipgloss.Color("236")), true
+			}
+			return lipgloss.Style{}, false
+		},
+	})
+	m = m.SetSize(4, 2)
+	m = m.Blur()
+	m.buf.SetCursor(buffer.Pos{Row: 1, GraphemeCol: 0})
+	_ = m.renderContent()
+	calls = nil
+
+	if got, want := stripANSI(m.renderContent()), "ab\ncd  "; got != want {
+		t.Fatalf("active row style render: got %q, want %q", got, want)
+	}
+	if len(calls) != 2 {
+		t.Fatalf("row style callback calls: got %d, want %d", len(calls), 2)
+	}
+	if calls[0].Row != 0 || calls[0].IsActive {
+		t.Fatalf("row 0 context mismatch: got row=%d active=%v", calls[0].Row, calls[0].IsActive)
+	}
+	if calls[1].Row != 1 || !calls[1].IsActive {
+		t.Fatalf("row 1 context mismatch: got row=%d active=%v", calls[1].Row, calls[1].IsActive)
+	}
+}
+
+func TestRender_RowStyleForRow_BoxStyleClampedAndGutterUntouched(t *testing.T) {
+	m := New(Config{
+		Text:   "ab",
+		Gutter: LineNumberGutter(),
+		Style: Style{
+			Text:   lipgloss.NewStyle(),
+			Cursor: lipgloss.NewStyle().Reverse(true),
+		},
+		RowStyleForRow: func(ctx RowStyleContext) (lipgloss.Style, bool) {
+			if ctx.IsActive {
+				return lipgloss.NewStyle().BorderLeft(true).PaddingLeft(1).PaddingRight(1), true
+			}
+			return lipgloss.Style{}, false
+		},
+	})
+	m = m.SetSize(6, 1) // gutter=2, content=4
+	m = m.Blur()
+
+	row := m.renderContent()
+	if got, want := stripANSI(ansi.Cut(row, 0, 2)), "1 "; got != want {
+		t.Fatalf("gutter must remain untouched: got %q, want %q", got, want)
+	}
+	content := ansi.Cut(row, 2, 6)
+	if got, want := ansi.StringWidth(content), 4; got != want {
+		t.Fatalf("content width must stay clamped: got %d, want %d", got, want)
+	}
+}
+
+func TestRender_TokenStyleForToken_HighlightAware(t *testing.T) {
+	var highlightedCalls int
+
+	m := New(Config{
+		Text: "abcd",
+		Style: Style{
+			Text:   lipgloss.NewStyle(),
+			Cursor: lipgloss.NewStyle().Reverse(true),
+		},
+		Highlighter: &stubHighlighter{
+			fn: func(LineContext) ([]HighlightSpan, error) {
+				return []HighlightSpan{{StartGraphemeCol: 1, EndGraphemeCol: 3, Style: lipgloss.NewStyle().Underline(true)}}, nil
+			},
+		},
+		TokenStyleForToken: func(ctx TokenStyleContext) (lipgloss.Style, bool) {
+			if ctx.IsHighlighted {
+				highlightedCalls++
+				return lipgloss.NewStyle().PaddingLeft(1).PaddingRight(1), true
+			}
+			return lipgloss.Style{}, false
+		},
+	})
+	m = m.Blur()
+	m = m.SetSize(10, 1)
+	highlightedCalls = 0
+
+	if got, want := stripANSI(m.renderContent()), "a b  c d"; got != want {
+		t.Fatalf("highlight token style render: got %q, want %q", got, want)
+	}
+	if highlightedCalls != 2 {
+		t.Fatalf("highlighted token callback calls: got %d, want %d", highlightedCalls, 2)
 	}
 }
 

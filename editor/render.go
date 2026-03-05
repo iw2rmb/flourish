@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/iw2rmb/flourish/buffer"
 )
 
@@ -239,11 +240,12 @@ func (m *Model) renderLayoutRow(
 		return "", false
 	}
 	line := &layout.lines[row]
+	needVisibleInfo := m.cfg.RowStyleForRow != nil || m.cfg.TokenStyleForToken != nil || m.cfg.LinkProvider != nil
+	if needVisibleInfo && !line.visibleInfoComputed {
+		line.visibleInfo = computeVisibleLineInfo(line.rawLine, line.vt)
+		line.visibleInfoComputed = true
+	}
 	if !line.linksResolved {
-		if !line.visibleInfoComputed {
-			line.visibleInfo = computeVisibleLineInfo(line.rawLine, line.vt)
-			line.visibleInfoComputed = true
-		}
 		line.links = m.linksForLine(row, line.rawLine, line.visibleInfo, cursor)
 		line.linksResolved = true
 	}
@@ -276,11 +278,39 @@ func (m *Model) renderLayoutRow(
 			}
 		}
 	}
+	rowStyle := lipgloss.Style{}
+	rowPaintStyle := lipgloss.Style{}
+	rowStyleSet := false
+	if m.cfg.RowStyleForRow != nil {
+		rowText := line.rawLine
+		if line.visibleInfoComputed {
+			rowText = line.visibleInfo.visible
+		}
+		style, ok := m.cfg.RowStyleForRow(RowStyleContext{
+			Row:          row,
+			SegmentIndex: ref.segmentIndex,
+			RawText:      line.rawLine,
+			Text:         rowText,
+			IsActive:     row == cursor.Row,
+			IsFocused:    m.focused,
+		})
+		if ok {
+			rowStyle = style
+			rowPaintStyle = sanitizeRowPaintStyle(style)
+			rowStyleSet = true
+		}
+	}
+	var contentSB strings.Builder
 	renderVisualLine(
-		&sb,
+		&contentSB,
 		m.cfg.Style,
 		m.cfg.GhostStyleForKey,
 		m.cfg.VirtualOverlayStyleForKey,
+		m.cfg.TokenStyleForToken,
+		rowPaintStyle,
+		ref.segmentIndex,
+		line.rawLine,
+		line.visibleInfo.visible,
 		line.visual,
 		line.links,
 		row,
@@ -292,6 +322,12 @@ func (m *Model) renderLayoutRow(
 		left,
 		right,
 	)
+	content := contentSB.String()
+	if rowStyleSet && contentWidth > 0 {
+		base := fitRenderedRowWidth(content, contentWidth, rowPaintStyle.Inherit(m.cfg.Style.Text))
+		content = fitRenderedRowWidth(renderRowBoxStyle(base, rowStyle, contentWidth), contentWidth, rowPaintStyle.Inherit(m.cfg.Style.Text))
+	}
+	sb.WriteString(content)
 	return sb.String(), true
 }
 
@@ -360,6 +396,11 @@ func renderVisualLine(
 	st Style,
 	ghostStyleForKey func(string) (lipgloss.Style, bool),
 	overlayStyleForKey func(string) (lipgloss.Style, bool),
+	tokenStyleForToken func(TokenStyleContext) (lipgloss.Style, bool),
+	rowPaintStyle lipgloss.Style,
+	segmentIndex int,
+	rawText string,
+	text string,
 	vl VisualLine,
 	links []resolvedLinkSpan,
 	row int,
@@ -371,6 +412,7 @@ func renderVisualLine(
 	left, right int,
 ) {
 	rawLen := vl.RawGraphemeLen
+	rowBaseStyle := rowPaintStyle.Inherit(st.Text)
 
 	cursorCol := cursor.GraphemeCol
 	hasCursor := row == cursor.Row && focused
@@ -448,7 +490,7 @@ func renderVisualLine(
 			return styleFn(spaceString(spanWidth))
 		}
 		// Partial wide grapheme: preserve alignment with blanks.
-		return st.Text.Render(spaceString(spanWidth))
+		return rowBaseStyle.Render(spaceString(spanWidth))
 	}
 
 	isTrailingWhitespaceFrom := func(tokIdx int) bool {
@@ -475,7 +517,7 @@ func renderVisualLine(
 			spanL := max(eolCursorCell, left)
 			spanR := min(eolCursorCell+1, right)
 			if spanL < spanR {
-				sb.WriteString(st.Cursor.Render(" "))
+				sb.WriteString(st.Cursor.Inherit(rowBaseStyle).Render(" "))
 			}
 		}
 
@@ -494,21 +536,37 @@ func renderVisualLine(
 
 		switch tok.Kind {
 		case VisualTokenVirtual:
-			style := st.Text
+			style := rowBaseStyle
 			switch tok.Role {
 			case VirtualRoleGhost:
-				style = st.Ghost.Inherit(st.Text)
+				style = st.Ghost.Inherit(rowBaseStyle)
 				if ghostStyleForKey != nil && tok.StyleKey != "" {
 					if keyed, ok := ghostStyleForKey(tok.StyleKey); ok {
-						style = keyed.Inherit(st.Text)
+						style = keyed.Inherit(rowBaseStyle)
 					}
 				}
 			case VirtualRoleOverlay:
-				style = st.VirtualOverlay.Inherit(st.Text)
+				style = st.VirtualOverlay.Inherit(rowBaseStyle)
 				if overlayStyleForKey != nil && tok.StyleKey != "" {
 					if keyed, ok := overlayStyleForKey(tok.StyleKey); ok {
-						style = keyed.Inherit(st.Text)
+						style = keyed.Inherit(rowBaseStyle)
 					}
+				}
+			}
+			if tokenStyleForToken != nil {
+				if callbackStyle, ok := tokenStyleForToken(TokenStyleContext{
+					Row:           row,
+					SegmentIndex:  segmentIndex,
+					Token:         tok,
+					RawText:       rawText,
+					Text:          text,
+					IsActiveRow:   row == cursor.Row,
+					IsFocused:     focused,
+					IsHighlighted: false,
+					IsLink:        false,
+					LinkTarget:    "",
+				}); ok {
+					style = callbackStyle.Inherit(style)
 				}
 			}
 			write(renderSpan(style.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
@@ -535,24 +593,36 @@ func renderVisualLine(
 			}
 
 			selected := hasSel && tok.DocStartGraphemeCol < selEndCol && tok.DocEndGraphemeCol > selStartCol
+			highlighted := false
+			if len(highlights) > 0 {
+				for _, sp := range highlights {
+					if tok.VisibleStartGraphemeCol < sp.EndGraphemeCol && tok.VisibleEndGraphemeCol > sp.StartGraphemeCol {
+						highlighted = true
+						break
+					}
+				}
+			}
 			if hasCursor && (i == cursorTokenIdx || i == eolBoundaryCursorTokenIdx) {
-				cursorStyle := st.Cursor.Render
+				cursorStyleDef := st.Cursor.Inherit(rowBaseStyle)
 				if tok.AllSpaces && isTrailingWhitespaceFrom(i) {
 					// Trailing ASCII spaces can be visually elided by terminals at line end.
 					// Render cursor whitespace as NBSP in that case so the cursor stays visible.
-					cursorStyle = func(parts ...string) string {
+					cursorStyle := func(parts ...string) string {
 						replaced := make([]string, len(parts))
 						for i, p := range parts {
 							replaced[i] = strings.ReplaceAll(p, " ", "\u00a0")
 						}
-						return st.Cursor.Render(replaced...)
+						return cursorStyleDef.Render(replaced...)
 					}
+					writeDoc(renderSpan(cursorStyle, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
+					continue
 				}
-				writeDoc(renderSpan(cursorStyle, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
+				writeDoc(renderSpan(cursorStyleDef.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 			} else if selected {
-				writeDoc(renderSpan(st.Selection.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
+				selectionStyle := st.Selection.Inherit(rowBaseStyle)
+				writeDoc(renderSpan(selectionStyle.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 			} else {
-				style := st.Text
+				style := rowBaseStyle
 				for _, sp := range highlights {
 					if tok.VisibleStartGraphemeCol < sp.EndGraphemeCol && tok.VisibleEndGraphemeCol > sp.StartGraphemeCol {
 						style = sp.Style.Inherit(style)
@@ -561,17 +631,104 @@ func renderVisualLine(
 				if linkTarget != "" {
 					style = linkStyle.Inherit(style)
 				}
+				if tokenStyleForToken != nil {
+					if callbackStyle, ok := tokenStyleForToken(TokenStyleContext{
+						Row:           row,
+						SegmentIndex:  segmentIndex,
+						Token:         tok,
+						RawText:       rawText,
+						Text:          text,
+						IsActiveRow:   row == cursor.Row,
+						IsFocused:     focused,
+						IsHighlighted: highlighted,
+						IsLink:        linkTarget != "",
+						LinkTarget:    linkTarget,
+					}); ok {
+						style = callbackStyle.Inherit(style)
+					}
+				}
 				writeDoc(renderSpan(style.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 			}
 		default:
-			write(renderSpan(st.Text.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
+			style := rowBaseStyle
+			if tokenStyleForToken != nil {
+				if callbackStyle, ok := tokenStyleForToken(TokenStyleContext{
+					Row:           row,
+					SegmentIndex:  segmentIndex,
+					Token:         tok,
+					RawText:       rawText,
+					Text:          text,
+					IsActiveRow:   row == cursor.Row,
+					IsFocused:     focused,
+					IsHighlighted: false,
+					IsLink:        false,
+					LinkTarget:    "",
+				}); ok {
+					style = callbackStyle.Inherit(style)
+				}
+			}
+			write(renderSpan(style.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 		}
 	}
 	if renderEOLCursor && eolCursorCell == vl.VisualLen() {
 		spanL := max(eolCursorCell, left)
 		spanR := min(eolCursorCell+1, right)
 		if spanL < spanR {
-			sb.WriteString(st.Cursor.Render(" "))
+			sb.WriteString(st.Cursor.Inherit(rowBaseStyle).Render(" "))
 		}
 	}
+}
+
+func sanitizeRowPaintStyle(s lipgloss.Style) lipgloss.Style {
+	return s.
+		UnsetMargins().
+		UnsetPadding().
+		UnsetWidth().
+		UnsetHeight().
+		UnsetMaxWidth().
+		UnsetMaxHeight().
+		UnsetAlign().
+		UnsetAlignHorizontal().
+		UnsetAlignVertical().
+		UnsetInline().
+		UnsetTransform().
+		UnsetBorderStyle().
+		UnsetBorderTop().
+		UnsetBorderRight().
+		UnsetBorderBottom().
+		UnsetBorderLeft()
+}
+
+func firstLineOnly(s string) string {
+	if s == "" {
+		return ""
+	}
+	if idx := strings.IndexByte(s, '\n'); idx >= 0 {
+		return s[:idx]
+	}
+	return s
+}
+
+func fitRenderedRowWidth(s string, width int, fillStyle lipgloss.Style) string {
+	if width <= 0 {
+		return s
+	}
+	s = firstLineOnly(s)
+	s = ansi.Truncate(s, width, "")
+	if w := ansi.StringWidth(s); w < width {
+		s += fillStyle.Render(spaceString(width - w))
+	}
+	return s
+}
+
+func renderRowBoxStyle(base string, boxStyle lipgloss.Style, width int) string {
+	if width <= 0 {
+		return firstLineOnly(boxStyle.Render(base))
+	}
+	boxed := firstLineOnly(boxStyle.Render(base))
+	boxed = ansi.Truncate(boxed, width, "")
+	if w := ansi.StringWidth(boxed); w < width {
+		boxed += ansi.Cut(base, w, width)
+	}
+	return boxed
 }

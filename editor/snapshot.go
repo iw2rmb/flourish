@@ -47,11 +47,17 @@ type snapshotSignature struct {
 	focused                   bool
 	docID                     string
 	gutterInvalidationVersion uint64
+	styleInvalidationVersion  uint64
 
 	gutterWidthProvider uintptr
 	gutterCellProvider  uintptr
 	gutterWidthSet      bool
 	gutterCellSet       bool
+
+	rowStyleProvider   uintptr
+	tokenStyleProvider uintptr
+	rowStyleSet        bool
+	tokenStyleSet      bool
 
 	virtualProvider uintptr
 	ghostProvider   uintptr
@@ -92,10 +98,15 @@ func (m *Model) currentSnapshotSignature() snapshotSignature {
 		focused:                   m.focused,
 		docID:                     m.cfg.DocID,
 		gutterInvalidationVersion: m.gutterInvalidationVersion,
+		styleInvalidationVersion:  m.styleInvalidationVersion,
 		gutterWidthProvider:       providerPtr(m.cfg.Gutter.Width),
 		gutterCellProvider:        providerPtr(m.cfg.Gutter.Cell),
 		gutterWidthSet:            m.cfg.Gutter.Width != nil,
 		gutterCellSet:             m.cfg.Gutter.Cell != nil,
+		rowStyleProvider:          providerPtr(m.cfg.RowStyleForRow),
+		tokenStyleProvider:        providerPtr(m.cfg.TokenStyleForToken),
+		rowStyleSet:               m.cfg.RowStyleForRow != nil,
+		tokenStyleSet:             m.cfg.TokenStyleForToken != nil,
 		virtualProvider:           providerPtr(m.cfg.VirtualTextProvider),
 		ghostProvider:             providerPtr(m.cfg.GhostProvider),
 		highlighter:               providerPtr(m.cfg.Highlighter),
@@ -156,10 +167,15 @@ func hashSnapshotSignature(sig snapshotSignature) SnapshotToken {
 	writeB(sig.focused)
 	writeS(sig.docID)
 	writeU64(sig.gutterInvalidationVersion)
+	writeU64(sig.styleInvalidationVersion)
 	writeU64(uint64(sig.gutterWidthProvider))
 	writeU64(uint64(sig.gutterCellProvider))
 	writeB(sig.gutterWidthSet)
 	writeB(sig.gutterCellSet)
+	writeU64(uint64(sig.rowStyleProvider))
+	writeU64(uint64(sig.tokenStyleProvider))
+	writeB(sig.rowStyleSet)
+	writeB(sig.tokenStyleSet)
 	writeU64(uint64(sig.virtualProvider))
 	writeU64(uint64(sig.ghostProvider))
 	writeU64(uint64(sig.highlighter))

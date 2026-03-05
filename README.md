@@ -17,6 +17,7 @@ It provides a pure document buffer package and an editor component package.
 - mouse hit-testing and drag selection in terminal cell coordinates.
 - host-controlled paste handling via Bubble Tea v2 `tea.PasteMsg`.
 - optional virtual text, highlighting, ghost suggestions, and change events.
+- conditional row/token style callbacks for active-row and token-state rendering.
 - semver-enabled runtime version API via `flourish.Version()`.
 - semver release flow with `vMAJOR.MINOR.PATCH` git tags.
 
@@ -62,6 +63,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 - `go run ./examples/inline-suggestions`
 - `go run ./examples/virtual-text`
 - `go run ./examples/highlighter`
+- `go run ./examples/conditional-styling`
 - `go run ./examples/on-change`
 
 ## Versioning
