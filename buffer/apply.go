@@ -35,7 +35,7 @@ func (b *Buffer) Apply(edits ...TextEdit) {
 		return
 	}
 
-	b.cursor = b.clampPos(lastCursor)
+	b.setCursor(b.clampPos(lastCursor))
 	b.sel = selectionState{}
 	b.version++
 	b.recordUndo(prev)
@@ -148,7 +148,7 @@ func (b *Buffer) ApplyRemote(edits []RemoteEdit, opts ApplyRemoteOptions) (Apply
 		}
 	}
 
-	b.cursor = remap.Cursor.After
+	b.setCursor(remap.Cursor.After)
 	b.sel = nextSelection
 	b.version++
 	b.recordUndo(prev)

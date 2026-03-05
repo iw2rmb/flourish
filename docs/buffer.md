@@ -164,6 +164,7 @@ Example:
 - `Move(Move)` supports grapheme, word, line, and document movement.
 - `Extend=true` keeps a stable anchor and updates selection end.
 - word movement is single-line and treats newline as a hard boundary.
+- line up/down movement keeps a preferred grapheme column across shorter and empty lines; non-vertical moves reset that preferred column to the resulting cursor column.
 
 ## Versioning
 

@@ -36,7 +36,13 @@ func (b *Buffer) Move(m Move) {
 	prevCursor := b.cursor
 	prevSel := b.sel
 
-	nextCursor := b.moveCursor(prevCursor, m)
+	usePreferred := usesPreferredColumn(m)
+	preferredCol := prevCursor.GraphemeCol
+	if usePreferred {
+		preferredCol = b.preferredColumn(prevCursor.GraphemeCol)
+	}
+
+	nextCursor := b.moveCursor(prevCursor, m, preferredCol, usePreferred)
 	nextCursor = b.clampPos(nextCursor)
 
 	nextSel := selectionState{}
@@ -48,6 +54,12 @@ func (b *Buffer) Move(m Move) {
 		if anchor != nextCursor {
 			nextSel = selectionState{active: true, anchor: anchor, end: nextCursor}
 		}
+	}
+
+	if usePreferred {
+		b.setPreferredColumn(preferredCol)
+	} else {
+		b.setPreferredColumn(nextCursor.GraphemeCol)
 	}
 
 	if prevCursor == nextCursor && selectionStateEqual(prevSel, nextSel) {
@@ -67,7 +79,14 @@ func selectionStateEqual(a, b selectionState) bool {
 	return a.active == b.active && a.anchor == b.anchor && a.end == b.end
 }
 
-func (b *Buffer) moveCursor(p Pos, m Move) Pos {
+func usesPreferredColumn(m Move) bool {
+	if m.Dir != DirUp && m.Dir != DirDown {
+		return false
+	}
+	return m.Unit == MoveLine || m.Unit == MoveGrapheme
+}
+
+func (b *Buffer) moveCursor(p Pos, m Move, preferredCol int, usePreferred bool) Pos {
 	count := m.Count
 	if count <= 0 {
 		count = 1
@@ -78,11 +97,11 @@ func (b *Buffer) moveCursor(p Pos, m Move) Pos {
 		prev := next
 		switch m.Unit {
 		case MoveGrapheme:
-			next = b.moveGrapheme(next, m.Dir)
+			next = b.moveGrapheme(next, m.Dir, preferredCol, usePreferred)
 		case MoveWord:
 			next = b.moveWord(next, m.Dir)
 		case MoveLine:
-			next = b.moveLine(next, m.Dir)
+			next = b.moveLine(next, m.Dir, preferredCol, usePreferred)
 		case MoveDoc:
 			next = b.moveDoc(next, m.Dir)
 		default:
@@ -95,7 +114,7 @@ func (b *Buffer) moveCursor(p Pos, m Move) Pos {
 	return next
 }
 
-func (b *Buffer) moveGrapheme(p Pos, dir MoveDir) Pos {
+func (b *Buffer) moveGrapheme(p Pos, dir MoveDir, preferredCol int, usePreferred bool) Pos {
 	row, col := p.Row, p.GraphemeCol
 	lastRow := len(b.lines) - 1
 
@@ -118,7 +137,7 @@ func (b *Buffer) moveGrapheme(p Pos, dir MoveDir) Pos {
 		}
 		return Pos{Row: row + 1, GraphemeCol: 0}
 	case DirUp, DirDown, DirHome, DirEnd:
-		return b.moveLine(p, dir)
+		return b.moveLine(p, dir, preferredCol, usePreferred)
 	default:
 		return p
 	}
@@ -142,7 +161,7 @@ func (b *Buffer) moveWord(p Pos, dir MoveDir) Pos {
 	}
 }
 
-func (b *Buffer) moveLine(p Pos, dir MoveDir) Pos {
+func (b *Buffer) moveLine(p Pos, dir MoveDir, preferredCol int, usePreferred bool) Pos {
 	row, col := p.Row, p.GraphemeCol
 	lastRow := len(b.lines) - 1
 
@@ -156,13 +175,21 @@ func (b *Buffer) moveLine(p Pos, dir MoveDir) Pos {
 			return p
 		}
 		nr := row - 1
-		return Pos{Row: nr, GraphemeCol: min(col, len(b.lines[nr]))}
+		targetCol := col
+		if usePreferred {
+			targetCol = preferredCol
+		}
+		return Pos{Row: nr, GraphemeCol: min(targetCol, len(b.lines[nr]))}
 	case DirDown:
 		if row == lastRow {
 			return p
 		}
 		nr := row + 1
-		return Pos{Row: nr, GraphemeCol: min(col, len(b.lines[nr]))}
+		targetCol := col
+		if usePreferred {
+			targetCol = preferredCol
+		}
+		return Pos{Row: nr, GraphemeCol: min(targetCol, len(b.lines[nr]))}
 	default:
 		return p
 	}

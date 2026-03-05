@@ -37,7 +37,7 @@ func (b *Buffer) restore(s bufferSnapshot) {
 	b.lines = lines
 	b.offsetIdx.byteRuneValid = false
 	b.offsetIdx.utf16Valid = false
-	b.cursor = ClampPos(s.cursor, len(b.lines), b.lineLen)
+	b.setCursor(ClampPos(s.cursor, len(b.lines), b.lineLen))
 
 	if !s.sel.active {
 		b.sel = selectionState{}

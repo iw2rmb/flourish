@@ -53,6 +53,61 @@ func TestBuffer_MoveLine_HomeEndAndVerticalClamp(t *testing.T) {
 	}
 }
 
+func TestBuffer_MoveLine_PreferredColumnAcrossShortAndEmptyLines(t *testing.T) {
+	b := New("012345\nx\n\nabcd\n0123456789", Options{})
+	b.SetCursor(Pos{Row: 0, GraphemeCol: 5})
+
+	for _, want := range []Pos{
+		{Row: 1, GraphemeCol: 1},
+		{Row: 2, GraphemeCol: 0},
+		{Row: 3, GraphemeCol: 4},
+		{Row: 4, GraphemeCol: 5},
+		{Row: 3, GraphemeCol: 4},
+		{Row: 2, GraphemeCol: 0},
+		{Row: 1, GraphemeCol: 1},
+		{Row: 0, GraphemeCol: 5},
+	} {
+		dir := DirDown
+		if want.Row < b.Cursor().Row {
+			dir = DirUp
+		}
+		b.Move(Move{Unit: MoveLine, Dir: dir})
+		if got := b.Cursor(); got != want {
+			t.Fatalf("cursor=%v, want %v", got, want)
+		}
+	}
+}
+
+func TestBuffer_MoveLine_PreferredColumnResetsAfterHorizontalMove(t *testing.T) {
+	b := New("012345\nx\n012345", Options{})
+	b.SetCursor(Pos{Row: 0, GraphemeCol: 5})
+
+	b.Move(Move{Unit: MoveLine, Dir: DirDown})
+	if got := b.Cursor(); got != (Pos{Row: 1, GraphemeCol: 1}) {
+		t.Fatalf("cursor=%v, want (1,1)", got)
+	}
+
+	b.Move(Move{Unit: MoveGrapheme, Dir: DirLeft})
+	if got := b.Cursor(); got != (Pos{Row: 1, GraphemeCol: 0}) {
+		t.Fatalf("cursor=%v, want (1,0)", got)
+	}
+
+	b.Move(Move{Unit: MoveLine, Dir: DirDown})
+	if got := b.Cursor(); got != (Pos{Row: 2, GraphemeCol: 0}) {
+		t.Fatalf("cursor=%v, want (2,0)", got)
+	}
+}
+
+func TestBuffer_MoveLine_CountMaintainsPreferredColumn(t *testing.T) {
+	b := New("012345\nx\n012345", Options{})
+	b.SetCursor(Pos{Row: 0, GraphemeCol: 5})
+
+	b.Move(Move{Unit: MoveLine, Dir: DirDown, Count: 2})
+	if got := b.Cursor(); got != (Pos{Row: 2, GraphemeCol: 5}) {
+		t.Fatalf("cursor=%v, want (2,5)", got)
+	}
+}
+
 func TestBuffer_Move_CountRepeatsAndClamps(t *testing.T) {
 	b := New("a\nb\nc\nd", Options{})
 

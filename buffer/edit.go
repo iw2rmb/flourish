@@ -19,7 +19,7 @@ func (b *Buffer) doLocalEdit(r Range, text string) bool {
 		return false
 	}
 
-	b.cursor = nextCursor
+	b.setCursor(nextCursor)
 	b.sel = selectionState{}
 	b.version++
 	b.recordUndo(prev)

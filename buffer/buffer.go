@@ -24,6 +24,9 @@ type Buffer struct {
 	textVersion uint64
 
 	cursor Pos
+	// preferredCol tracks vertical-move target column across shorter/empty lines.
+	preferredCol int
+	hasPreferred bool
 	sel    selectionState
 
 	lastChange    Change
@@ -59,6 +62,9 @@ func New(text string, opt Options) *Buffer {
 		lines:   splitLines(text),
 		version: 0,
 		cursor:  Pos{Row: 0, GraphemeCol: 0},
+		// Cursor starts at (0,0), so the preferred column is initialized to 0.
+		preferredCol: 0,
+		hasPreferred: true,
 		sel:     selectionState{},
 		opt:     opt,
 	}
@@ -102,10 +108,11 @@ func (b *Buffer) Cursor() Pos { return b.cursor }
 func (b *Buffer) SetCursor(p Pos) {
 	next := b.clampPos(p)
 	if next == b.cursor {
+		b.setPreferredColumn(next.GraphemeCol)
 		return
 	}
 	change := b.beginChange(ChangeSourceLocal)
-	b.cursor = next
+	b.setCursor(next)
 	b.version++
 	b.commitChange(change)
 }
@@ -188,6 +195,26 @@ func (b *Buffer) lineLen(row int) int {
 
 func (b *Buffer) clampPos(p Pos) Pos {
 	return ClampPos(p, len(b.lines), b.lineLen)
+}
+
+func (b *Buffer) setCursor(p Pos) {
+	b.cursor = p
+	b.setPreferredColumn(p.GraphemeCol)
+}
+
+func (b *Buffer) setPreferredColumn(col int) {
+	if col < 0 {
+		col = 0
+	}
+	b.preferredCol = col
+	b.hasPreferred = true
+}
+
+func (b *Buffer) preferredColumn(fallback int) int {
+	if b.hasPreferred {
+		return b.preferredCol
+	}
+	return fallback
 }
 
 // TextInRange returns the text contained in the given range, reading directly
