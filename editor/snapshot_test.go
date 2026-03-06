@@ -254,7 +254,7 @@ func TestRenderSnapshot_TokenInvalidationMatrix(t *testing.T) {
 		m = m.SetSize(4, 1)
 		t0 := m.RenderSnapshot().Token
 
-		m.cfg.RowMarkWidth = 2
+		m.cfg.RowMarkWidth = 3
 		t1 := m.RenderSnapshot().Token
 		if t1 == t0 {
 			t.Fatalf("token must change after row mark width change")

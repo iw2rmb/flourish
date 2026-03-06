@@ -77,7 +77,7 @@ func New(cfg Config) Model {
 	cfg.CompletionMaxWidth = normalizeCompletionMaxWidth(cfg.CompletionMaxWidth)
 	cfg.RowMarkSymbols = normalizeRowMarkSymbols(cfg.RowMarkSymbols)
 	if cfg.RowMarkProvider != nil && cfg.RowMarkWidth <= 0 {
-		cfg.RowMarkWidth = 1
+		cfg.RowMarkWidth = 2
 	}
 	if cfg.Scrollbar.MinThumb <= 0 {
 		cfg.Scrollbar.MinThumb = 1

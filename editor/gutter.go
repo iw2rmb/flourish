@@ -200,7 +200,7 @@ func (m Model) resolvedRowMarkWidth() int {
 		return 0
 	}
 	if m.cfg.RowMarkWidth <= 0 {
-		return 1
+		return 2
 	}
 	return m.cfg.RowMarkWidth
 }

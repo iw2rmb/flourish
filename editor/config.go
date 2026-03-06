@@ -39,7 +39,7 @@ type Config struct {
 	// Returned marks are rendered in a dedicated marker lane in the gutter area.
 	RowMarkProvider RowMarkProvider
 	// RowMarkWidth controls marker lane width in terminal cells.
-	// When RowMarkProvider is set and width <= 0, it defaults to 1.
+	// When RowMarkProvider is set and width <= 0, it defaults to 2.
 	RowMarkWidth int
 	// RowMarkSymbols controls default glyphs used for row markers.
 	// Empty fields are normalized to defaults.

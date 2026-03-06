@@ -71,13 +71,13 @@ func TestConfig_ScrollbarMinThumbClamp(t *testing.T) {
 	}
 }
 
-func TestConfig_RowMarkWidthDefaultsToOneWhenProviderSet(t *testing.T) {
+func TestConfig_RowMarkWidthDefaultsToTwoWhenProviderSet(t *testing.T) {
 	m := New(Config{
 		RowMarkProvider: func(RowMarkContext) RowMarkState {
 			return RowMarkState{}
 		},
 	})
-	if got, want := m.cfg.RowMarkWidth, 1; got != want {
+	if got, want := m.cfg.RowMarkWidth, 2; got != want {
 		t.Fatalf("row mark width default: got %d, want %d", got, want)
 	}
 }

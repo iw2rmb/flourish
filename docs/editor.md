@@ -136,7 +136,7 @@ Viewport integration:
 - `Gutter.Width` to resolve gutter width in terminal cells for the current frame.
 - `Gutter.Cell` to resolve per-row gutter segments (`[]GutterSegment`) and click mapping.
 - `RowMarkProvider` to resolve per-row inserted/updated/deleted markers in a dedicated marker lane.
-- `RowMarkWidth` to control marker lane width (defaults to `1` when provider is set).
+- `RowMarkWidth` to control marker lane width (defaults to `2` when provider is set).
 - `RowMarkSymbols` to override marker glyphs for inserted/updated bars and deleted-row arrows.
 - `GutterStyleForKey` to resolve keyed gutter segment styles (fallback: `Style.Gutter`).
 - `RowStyleForRow` for per-visual-row content-area overrides (box styles allowed; output is clamped to one line and content width).
@@ -200,7 +200,7 @@ Gutter rules:
 - gutter content is provided as `GutterCell.Segments`; each segment can provide `StyleKey` or direct `Style`.
 - `Gutter.Cell` receives `LineText` (raw unwrapped document line text).
 - gutter click mapping uses `GutterCell.ClickCol` (default `0`, clamped per row).
-- row-marker lane is appended to the right side of the configured gutter width.
+- row-marker lane is rendered before (to the left of) the configured gutter width.
 - `RowMarkProvider` receives `RowMarkContext` with row, segment index, focus/cursor state, and doc metadata.
 - marker precedence per visual row is: `DeletedAbove` (segment `0` only), `DeletedBelow` (segment `0` only), `Inserted`, then `Updated`.
 - deleted markers are rendered only on the first wrapped segment (`SegmentIndex==0`); inserted/updated markers render on all wrapped segments.

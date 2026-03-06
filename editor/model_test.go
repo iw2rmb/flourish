@@ -201,7 +201,7 @@ func TestView_RowMarks_RenderWithoutGutterAndWithCustomSymbols(t *testing.T) {
 	for i := range got {
 		got[i] = strings.TrimRight(stripANSI(got[i]), " ")
 	}
-	want := []string{"Ifoo", "Ubar"}
+	want := []string{"I foo", "U bar"}
 	if fmt.Sprintf("%q", got) != fmt.Sprintf("%q", want) {
 		t.Fatalf("unexpected row mark render:\n got: %q\nwant: %q", got, want)
 	}
@@ -229,7 +229,7 @@ func TestView_RowMarks_ComposeWithLineNumberGutter(t *testing.T) {
 	for i := range got {
 		got[i] = strings.TrimRight(stripANSI(got[i]), " ")
 	}
-	want := []string{"1 ^foo", "2 vbar"}
+	want := []string{"^ 1 foo", "v 2 bar"}
 	if fmt.Sprintf("%q", got) != fmt.Sprintf("%q", want) {
 		t.Fatalf("unexpected row mark + line number render:\n got: %q\nwant: %q", got, want)
 	}

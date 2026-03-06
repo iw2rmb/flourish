@@ -50,7 +50,6 @@ func newModel() model {
 		RowMarkProvider: func(ctx editor.RowMarkContext) editor.RowMarkState {
 			return store.marks[ctx.Row]
 		},
-		RowMarkWidth: 1,
 		RowMarkSymbols: editor.RowMarkSymbols{
 			Inserted:     "I",
 			Updated:      "U",

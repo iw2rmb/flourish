@@ -257,13 +257,13 @@ func (m *Model) renderLayoutRow(
 	seg := line.segments[ref.segmentIndex]
 
 	var sb strings.Builder
-	if baseGutterWidth > 0 {
-		cell := m.resolveGutterCell(row, ref.segmentIndex, line.rawLine, lineCount, baseGutterWidth, row == cursor.Row)
-		sb.WriteString(renderGutterCell(m.cfg.Style.Gutter, m.cfg.GutterStyleForKey, cell))
-	}
 	if rowMarkWidth > 0 {
 		cell := m.resolveRowMarkCell(row, ref.segmentIndex, line.rawLine, rowMarkWidth, row == cursor.Row)
 		sb.WriteString(renderGutterCell(m.cfg.Style.Gutter, nil, cell))
+	}
+	if baseGutterWidth > 0 {
+		cell := m.resolveGutterCell(row, ref.segmentIndex, line.rawLine, lineCount, baseGutterWidth, row == cursor.Row)
+		sb.WriteString(renderGutterCell(m.cfg.Style.Gutter, m.cfg.GutterStyleForKey, cell))
 	}
 
 	left := leftNoWrap

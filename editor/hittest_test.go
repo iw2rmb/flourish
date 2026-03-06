@@ -77,12 +77,12 @@ func TestHitTest_RowMarkColumn_MapsToGutterClickCol(t *testing.T) {
 		},
 	})
 
-	// Line number gutter width=2 + row mark width=1 -> mark column is x=2.
-	if got := m.screenToDocPos(2, 0); got != (buffer.Pos{Row: 0, GraphemeCol: 0}) {
-		t.Fatalf("row mark click x=2: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 0})
+	// Row mark width=2 + line number gutter width=2. Row mark columns are x=0..1.
+	if got := m.screenToDocPos(0, 0); got != (buffer.Pos{Row: 0, GraphemeCol: 0}) {
+		t.Fatalf("row mark click x=0: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 0})
 	}
-	if got := m.screenToDocPos(3, 0); got != (buffer.Pos{Row: 0, GraphemeCol: 0}) {
-		t.Fatalf("first text cell x=3: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 0})
+	if got := m.screenToDocPos(4, 0); got != (buffer.Pos{Row: 0, GraphemeCol: 0}) {
+		t.Fatalf("first text cell x=4: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 0})
 	}
 }
 
