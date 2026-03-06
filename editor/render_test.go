@@ -189,6 +189,145 @@ func TestRender_Selection_DeletedRangesDoNotRenderHighlight(t *testing.T) {
 	}
 }
 
+func TestRender_Selection_PreservesHighlightForegroundWhenSelectionForegroundUnset(t *testing.T) {
+	textStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
+	selectionStyle := lipgloss.NewStyle().Background(lipgloss.Color("237"))
+	highlightStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+
+	st := Style{
+		Text:      textStyle,
+		Selection: selectionStyle,
+		Cursor:    lipgloss.NewStyle().Reverse(true),
+	}
+
+	m := New(Config{
+		Text:  "ab",
+		Style: st,
+		Highlighter: &stubHighlighter{
+			fn: func(LineContext) ([]HighlightSpan, error) {
+				return []HighlightSpan{
+					{StartGraphemeCol: 1, EndGraphemeCol: 2, Style: highlightStyle},
+				}, nil
+			},
+		},
+	})
+	m = m.Blur()
+	m = m.SetSize(2, 1)
+	m.buf.SetSelection(buffer.Range{
+		Start: buffer.Pos{Row: 0, GraphemeCol: 1},
+		End:   buffer.Pos{Row: 0, GraphemeCol: 2},
+	})
+
+	got := m.renderContent()
+	want := textStyle.Render("a") + selectionStyle.Inherit(highlightStyle.Inherit(textStyle)).Render("b")
+	if got != want {
+		t.Fatalf("unexpected selected highlight foreground preservation:\n got: %q\nwant: %q", got, want)
+	}
+}
+
+func TestRender_Selection_SelectionForegroundOverridesHighlightForeground(t *testing.T) {
+	textStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
+	selectionStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("15")).
+		Background(lipgloss.Color("237"))
+	highlightStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+
+	st := Style{
+		Text:      textStyle,
+		Selection: selectionStyle,
+		Cursor:    lipgloss.NewStyle().Reverse(true),
+	}
+
+	m := New(Config{
+		Text:  "ab",
+		Style: st,
+		Highlighter: &stubHighlighter{
+			fn: func(LineContext) ([]HighlightSpan, error) {
+				return []HighlightSpan{
+					{StartGraphemeCol: 1, EndGraphemeCol: 2, Style: highlightStyle},
+				}, nil
+			},
+		},
+	})
+	m = m.Blur()
+	m = m.SetSize(2, 1)
+	m.buf.SetSelection(buffer.Range{
+		Start: buffer.Pos{Row: 0, GraphemeCol: 1},
+		End:   buffer.Pos{Row: 0, GraphemeCol: 2},
+	})
+
+	got := m.renderContent()
+	want := textStyle.Render("a") + selectionStyle.Inherit(highlightStyle.Inherit(textStyle)).Render("b")
+	if got != want {
+		t.Fatalf("unexpected selected highlight foreground override:\n got: %q\nwant: %q", got, want)
+	}
+}
+
+func TestRender_TokenStyleForToken_SelectedDocTokenAppliesAndSetsContext(t *testing.T) {
+	textStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
+	selectionStyle := lipgloss.NewStyle().Background(lipgloss.Color("237"))
+	selectedTokenStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("46"))
+
+	var selectedCalls int
+	var unselectedCalls int
+	var selectedTexts []string
+	var unselectedTexts []string
+
+	m := New(Config{
+		Text: "ab",
+		Style: Style{
+			Text:      textStyle,
+			Selection: selectionStyle,
+			Cursor:    lipgloss.NewStyle().Reverse(true),
+		},
+		TokenStyleForToken: func(ctx TokenStyleContext) (lipgloss.Style, bool) {
+			if ctx.Token.Kind != VisualTokenDoc {
+				return lipgloss.Style{}, false
+			}
+			if ctx.IsSelected {
+				selectedCalls++
+				selectedTexts = append(selectedTexts, ctx.Token.Text)
+				return selectedTokenStyle, true
+			}
+			unselectedCalls++
+			unselectedTexts = append(unselectedTexts, ctx.Token.Text)
+			return lipgloss.Style{}, false
+		},
+	})
+	m = m.Blur()
+	m = m.SetSize(2, 1)
+	m.buf.SetSelection(buffer.Range{
+		Start: buffer.Pos{Row: 0, GraphemeCol: 1},
+		End:   buffer.Pos{Row: 0, GraphemeCol: 2},
+	})
+	selectedCalls = 0
+	unselectedCalls = 0
+	selectedTexts = nil
+	unselectedTexts = nil
+
+	got := m.renderContent()
+	want := textStyle.Render("a") + selectionStyle.Inherit(selectedTokenStyle.Inherit(textStyle)).Render("b")
+	if got != want {
+		t.Fatalf("unexpected selected token-style rendering:\n got: %q\nwant: %q", got, want)
+	}
+	if selectedCalls == 0 {
+		t.Fatalf("selected token callback calls: got %d, want >0", selectedCalls)
+	}
+	if unselectedCalls == 0 {
+		t.Fatalf("unselected token callback calls: got %d, want >0", unselectedCalls)
+	}
+	for _, s := range selectedTexts {
+		if s != "b" {
+			t.Fatalf("selected token text: got %q, want only %q", s, "b")
+		}
+	}
+	for _, s := range unselectedTexts {
+		if s != "a" {
+			t.Fatalf("unselected token text: got %q, want only %q", s, "a")
+		}
+	}
+}
+
 func TestRender_HorizontalScroll_ClipsByXOffset_TabAndWideGrapheme(t *testing.T) {
 	st := Style{
 		Text:   lipgloss.NewStyle(),

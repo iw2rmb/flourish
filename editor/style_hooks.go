@@ -40,6 +40,8 @@ type TokenStyleContext struct {
 
 	// IsHighlighted reports overlap with highlighter spans.
 	IsHighlighted bool
+	// IsSelected reports overlap with the active document selection range.
+	IsSelected bool
 
 	// IsLink reports whether link style/target are active for this token.
 	IsLink bool

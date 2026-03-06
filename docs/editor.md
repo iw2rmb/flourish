@@ -142,7 +142,7 @@ Viewport integration:
 - `RowMarkSymbols` to override marker glyphs for inserted/updated bars and deleted-row arrows.
 - `GutterStyleForKey` to resolve keyed gutter segment styles (fallback: `Style.Gutter`).
 - `RowStyleForRow` for per-visual-row content-area overrides (box styles allowed; output is clamped to one line and content width).
-- `TokenStyleForToken` for per-token style overrides (`IsHighlighted`, `IsActiveRow`, and token metadata).
+- `TokenStyleForToken` for per-token style overrides (`IsHighlighted`, `IsSelected`, `IsActiveRow`, link metadata, and token metadata).
 - `VirtualTextProvider` for per-line virtual deletions/insertions.
 - `Highlighter` for per-line highlight spans.
 - `LinkProvider` for per-line hyperlink spans (`LinkSpan`) over raw line text.
@@ -189,7 +189,8 @@ Virtual text rules:
 - `VirtualTextProvider` is treated as row-local for cursor/selection movement: non-dirty rows are expected to remain unchanged.
 - per-line visible text/mapping derived from virtual deletions is computed once per layout line and reused by both `Highlighter` and `LinkProvider` in the same frame.
 - row/token style callbacks are composed as base text style -> row style -> role/highlight/link styles -> token style callback.
-- cursor and selection styles still take precedence over token style callbacks.
+- for document tokens, selection is an overlay layer applied after highlight/link/token composition, so `Style.Selection` can add a background while preserving composed foreground unless `Style.Selection` sets foreground.
+- cursor style remains highest precedence over token/highlight/link/selection composition.
 
 Hyperlink rules:
 - `LinkProvider` receives both raw line text and visible text (after virtual deletions).

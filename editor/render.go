@@ -516,6 +516,35 @@ func renderVisualLine(
 		return true
 	}
 
+	applyTokenStyle := func(
+		style lipgloss.Style,
+		tok VisualToken,
+		isHighlighted bool,
+		isSelected bool,
+		isLink bool,
+		linkTarget string,
+	) lipgloss.Style {
+		if tokenStyleForToken == nil {
+			return style
+		}
+		if callbackStyle, ok := tokenStyleForToken(TokenStyleContext{
+			Row:           row,
+			SegmentIndex:  segmentIndex,
+			Token:         tok,
+			RawText:       rawText,
+			Text:          text,
+			IsActiveRow:   row == cursor.Row,
+			IsFocused:     focused,
+			IsHighlighted: isHighlighted,
+			IsSelected:    isSelected,
+			IsLink:        isLink,
+			LinkTarget:    linkTarget,
+		}); ok {
+			return callbackStyle.Inherit(style)
+		}
+		return style
+	}
+
 	linkIdx := 0 // advancing pointer into sorted links slice
 	for i, tok := range vl.Tokens {
 		if renderEOLCursor && eolCursorCell == tok.StartCell {
@@ -559,22 +588,7 @@ func renderVisualLine(
 					}
 				}
 			}
-			if tokenStyleForToken != nil {
-				if callbackStyle, ok := tokenStyleForToken(TokenStyleContext{
-					Row:           row,
-					SegmentIndex:  segmentIndex,
-					Token:         tok,
-					RawText:       rawText,
-					Text:          text,
-					IsActiveRow:   row == cursor.Row,
-					IsFocused:     focused,
-					IsHighlighted: false,
-					IsLink:        false,
-					LinkTarget:    "",
-				}); ok {
-					style = callbackStyle.Inherit(style)
-				}
-			}
+			style = applyTokenStyle(style, tok, false, false, false, "")
 			write(renderSpan(style.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 		case VisualTokenDoc:
 			// Advance past links that end before this token starts.
@@ -624,9 +638,6 @@ func renderVisualLine(
 					continue
 				}
 				writeDoc(renderSpan(cursorStyleDef.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
-			} else if selected {
-				selectionStyle := st.Selection.Inherit(rowBaseStyle)
-				writeDoc(renderSpan(selectionStyle.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 			} else {
 				style := rowBaseStyle
 				for _, sp := range highlights {
@@ -637,42 +648,15 @@ func renderVisualLine(
 				if linkTarget != "" {
 					style = linkStyle.Inherit(style)
 				}
-				if tokenStyleForToken != nil {
-					if callbackStyle, ok := tokenStyleForToken(TokenStyleContext{
-						Row:           row,
-						SegmentIndex:  segmentIndex,
-						Token:         tok,
-						RawText:       rawText,
-						Text:          text,
-						IsActiveRow:   row == cursor.Row,
-						IsFocused:     focused,
-						IsHighlighted: highlighted,
-						IsLink:        linkTarget != "",
-						LinkTarget:    linkTarget,
-					}); ok {
-						style = callbackStyle.Inherit(style)
-					}
+				style = applyTokenStyle(style, tok, highlighted, selected, linkTarget != "", linkTarget)
+				if selected {
+					style = st.Selection.Inherit(style)
 				}
 				writeDoc(renderSpan(style.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 			}
 		default:
 			style := rowBaseStyle
-			if tokenStyleForToken != nil {
-				if callbackStyle, ok := tokenStyleForToken(TokenStyleContext{
-					Row:           row,
-					SegmentIndex:  segmentIndex,
-					Token:         tok,
-					RawText:       rawText,
-					Text:          text,
-					IsActiveRow:   row == cursor.Row,
-					IsFocused:     focused,
-					IsHighlighted: false,
-					IsLink:        false,
-					LinkTarget:    "",
-				}); ok {
-					style = callbackStyle.Inherit(style)
-				}
-			}
+			style = applyTokenStyle(style, tok, false, false, false, "")
 			write(renderSpan(style.Render, tok.Text, tok.CellWidth, spanStart, spanWidth, splittable))
 		}
 	}
