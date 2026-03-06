@@ -120,6 +120,10 @@ func (m *Model) buildIntentsFromKey(msg tea.KeyPressMsg, before EditorState) (In
 		appendMove(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirLeft})
 	case key.Matches(msg, km.Right):
 		appendMove(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirRight})
+	case key.Matches(msg, km.ParagraphUp):
+		appendMove(buffer.Move{Unit: buffer.MoveParagraph, Dir: buffer.DirUp})
+	case key.Matches(msg, km.ParagraphDown):
+		appendMove(buffer.Move{Unit: buffer.MoveParagraph, Dir: buffer.DirDown})
 	case key.Matches(msg, km.Up):
 		appendMove(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirUp})
 	case key.Matches(msg, km.Down):
@@ -133,6 +137,10 @@ func (m *Model) buildIntentsFromKey(msg tea.KeyPressMsg, before EditorState) (In
 		appendMove(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirLeft, Extend: true})
 	case key.Matches(msg, km.ShiftRight):
 		appendMove(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirRight, Extend: true})
+	case key.Matches(msg, km.ParagraphShiftUp):
+		appendMove(buffer.Move{Unit: buffer.MoveParagraph, Dir: buffer.DirUp, Extend: true})
+	case key.Matches(msg, km.ParagraphShiftDown):
+		appendMove(buffer.Move{Unit: buffer.MoveParagraph, Dir: buffer.DirDown, Extend: true})
 	case key.Matches(msg, km.ShiftUp):
 		appendMove(buffer.Move{Unit: buffer.MoveGrapheme, Dir: buffer.DirUp, Extend: true})
 	case key.Matches(msg, km.ShiftDown):

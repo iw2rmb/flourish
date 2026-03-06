@@ -144,6 +144,97 @@ func TestUpdate_OptShiftLeftRight_ExtendsAndDeselection(t *testing.T) {
 	}
 }
 
+func TestUpdate_CtrlUpDown_MovesToEmptyRows(t *testing.T) {
+	m := New(Config{Text: "a\nb\n\nc\n\nend"})
+	m.buf.SetCursor(buffer.Pos{Row: 1, GraphemeCol: 1})
+
+	m, _ = m.Update(testKeyCode(tea.KeyDown, tea.ModCtrl))
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 2, GraphemeCol: 0}) {
+		t.Fatalf("cursor after ctrl+down: got %v, want %v", got, buffer.Pos{Row: 2, GraphemeCol: 0})
+	}
+
+	m, _ = m.Update(testKeyCode(tea.KeyDown, tea.ModCtrl))
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 4, GraphemeCol: 0}) {
+		t.Fatalf("cursor after second ctrl+down: got %v, want %v", got, buffer.Pos{Row: 4, GraphemeCol: 0})
+	}
+
+	m, _ = m.Update(testKeyCode(tea.KeyUp, tea.ModCtrl))
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 2, GraphemeCol: 0}) {
+		t.Fatalf("cursor after ctrl+up: got %v, want %v", got, buffer.Pos{Row: 2, GraphemeCol: 0})
+	}
+
+	m, _ = m.Update(testKeyCode(tea.KeyUp, tea.ModCtrl))
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, GraphemeCol: 0}) {
+		t.Fatalf("cursor after second ctrl+up: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 0})
+	}
+}
+
+func TestUpdate_AltUpDown_MovesToEmptyRows(t *testing.T) {
+	m := New(Config{Text: "a\nb\n\nc\n\nend"})
+	m.buf.SetCursor(buffer.Pos{Row: 1, GraphemeCol: 1})
+
+	m, _ = m.Update(testKeyCode(tea.KeyDown, tea.ModAlt))
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 2, GraphemeCol: 0}) {
+		t.Fatalf("cursor after alt+down: got %v, want %v", got, buffer.Pos{Row: 2, GraphemeCol: 0})
+	}
+
+	m, _ = m.Update(testKeyCode(tea.KeyDown, tea.ModAlt))
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 4, GraphemeCol: 0}) {
+		t.Fatalf("cursor after second alt+down: got %v, want %v", got, buffer.Pos{Row: 4, GraphemeCol: 0})
+	}
+
+	m, _ = m.Update(testKeyCode(tea.KeyUp, tea.ModAlt))
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 2, GraphemeCol: 0}) {
+		t.Fatalf("cursor after alt+up: got %v, want %v", got, buffer.Pos{Row: 2, GraphemeCol: 0})
+	}
+}
+
+func TestUpdate_ShiftUpDown_UsesSameCursorMovementAsUpDown(t *testing.T) {
+	a := New(Config{Text: "012345\nx\n012345"})
+	b := New(Config{Text: "012345\nx\n012345"})
+	a.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 5})
+	b.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 5})
+
+	a, _ = a.Update(testKeyCode(tea.KeyDown))
+	a, _ = a.Update(testKeyCode(tea.KeyDown))
+
+	b, _ = b.Update(testKeyCode(tea.KeyDown, tea.ModShift))
+	b, _ = b.Update(testKeyCode(tea.KeyDown, tea.ModShift))
+
+	if got, want := b.buf.Cursor(), a.buf.Cursor(); got != want {
+		t.Fatalf("shift movement cursor parity: got %v, want %v", got, want)
+	}
+	if got, ok := b.buf.Selection(); !ok || got != (buffer.Range{Start: buffer.Pos{Row: 0, GraphemeCol: 5}, End: buffer.Pos{Row: 2, GraphemeCol: 5}}) {
+		t.Fatalf("selection after shift-down chain: got (%v,%v), want (%v,%v)", got, ok, buffer.Range{Start: buffer.Pos{Row: 0, GraphemeCol: 5}, End: buffer.Pos{Row: 2, GraphemeCol: 5}}, true)
+	}
+}
+
+func TestUpdate_AltShiftUpDown_ExtendsToEmptyRows(t *testing.T) {
+	m := New(Config{Text: "012345\nab\n\nxyz\n\nqwerty"})
+	m.buf.SetCursor(buffer.Pos{Row: 1, GraphemeCol: 1})
+
+	m, _ = m.Update(testKeyCode(tea.KeyDown, tea.ModShift, tea.ModAlt))
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 2, GraphemeCol: 0}) {
+		t.Fatalf("cursor after alt+shift+down: got %v, want %v", got, buffer.Pos{Row: 2, GraphemeCol: 0})
+	}
+	if got, ok := m.buf.Selection(); !ok || got != (buffer.Range{Start: buffer.Pos{Row: 1, GraphemeCol: 1}, End: buffer.Pos{Row: 2, GraphemeCol: 0}}) {
+		t.Fatalf("selection after alt+shift+down: got (%v,%v), want (%v,%v)", got, ok, buffer.Range{Start: buffer.Pos{Row: 1, GraphemeCol: 1}, End: buffer.Pos{Row: 2, GraphemeCol: 0}}, true)
+	}
+}
+
+func TestUpdate_CtrlShiftUpDown_NoDefaultSelectionBinding(t *testing.T) {
+	m := New(Config{Text: "012345\nab\n\nxyz\n\nqwerty"})
+	m.buf.SetCursor(buffer.Pos{Row: 1, GraphemeCol: 1})
+
+	m, _ = m.Update(testKeyCode(tea.KeyDown, tea.ModShift, tea.ModCtrl))
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 1, GraphemeCol: 1}) {
+		t.Fatalf("cursor after ctrl+shift+down: got %v, want %v", got, buffer.Pos{Row: 1, GraphemeCol: 1})
+	}
+	if _, ok := m.buf.Selection(); ok {
+		t.Fatalf("selection after ctrl+shift+down: got active, want inactive")
+	}
+}
+
 func TestUpdate_PasteMsgIgnoredByEditor(t *testing.T) {
 	m := New(Config{Text: "hello"})
 	m, _ = m.Update(tea.PasteMsg{Content: "X"})

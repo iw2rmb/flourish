@@ -15,9 +15,6 @@ Primary API:
 - `InvalidateGutter()`
 - `InvalidateGutterRows(rows ...int)`
 - `InvalidateStyles()`
-- `CompletionState()`
-- `SetCompletionState(state)`
-- `ClearCompletion()`
 - `Update(msg tea.Msg)`
 - `View() tea.View`
 - `Buffer()`
@@ -55,10 +52,61 @@ Primary API:
 
 Keyboard:
 - Bubble Tea v2 key input is handled via `tea.KeyPressMsg`.
-- movement, selection extension, editing, and undo/redo shortcuts.
-- default `pgup`/`pgdown` move by the current visible row count.
 - `ReadOnly=true` blocks text mutation, keeps movement/selection enabled.
-- text mutation shortcuts include typing, enter, delete/backspace, undo/redo.
+
+## Keyboard
+
+Default keyboard shortcuts (can be overridden via `Config.KeyMap` and `Config.GhostAccept`):
+
+| Context | Shortcut | Action |
+| --- | --- | --- |
+| Document | `left` | Move cursor left by one grapheme. |
+| Document | `right` | Move cursor right by one grapheme. |
+| Document | `up` | Move cursor up one row (preferred-column aware). |
+| Document | `down` | Move cursor down one row (preferred-column aware). |
+| Document | `alt+up` or `ctrl+up` | Move cursor to previous empty row (or document start when none). |
+| Document | `alt+down` or `ctrl+down` | Move cursor to next empty row (or document end when none). |
+| Document | `shift+left` | Extend selection left by one grapheme. |
+| Document | `shift+right` | Extend selection right by one grapheme. |
+| Document | `shift+up` | Extend selection to cursor position moved one row up (same cursor movement semantics as `up`, preferred-column aware). |
+| Document | `shift+down` | Extend selection to cursor position moved one row down (same cursor movement semantics as `down`, preferred-column aware). |
+| Document | `alt+left` or `ctrl+left` | Move cursor to previous word boundary (same row). |
+| Document | `alt+right` or `ctrl+right` | Move cursor to next word boundary (same row). |
+| Document | `alt+shift+left` | Extend selection to previous word boundary. |
+| Document | `alt+shift+right` | Extend selection to next word boundary. |
+| Document | `alt+shift+up` | Extend selection to previous empty row (or document start when none), using the same cursor movement semantics as paragraph-up movement. |
+| Document | `alt+shift+down` | Extend selection to next empty row (or document end when none), using the same cursor movement semantics as paragraph-down movement. |
+| Document | `pgup` | Move cursor up by current visible row count. |
+| Document | `pgdown` | Move cursor down by current visible row count. |
+| Document | `home` or `ctrl+a` | Move cursor to line start. |
+| Document | `end` or `ctrl+e` | Move cursor to line end. |
+| Document | `backspace` or `ctrl+h` | Delete backward (or delete active selection). |
+| Document | `delete` | Delete forward (or delete active selection). |
+| Document | `enter` | Insert newline. |
+| Document | `tab` | Insert tab (`\t`). |
+| Document | `space` | Insert a space. |
+| Document | printable key text | Insert typed text (`alt`-modified text is ignored). |
+| Document | `ctrl+z` | Undo. |
+| Document | `ctrl+y` or `ctrl+shift+z` | Redo. |
+| Ghost suggestion (visible) | `tab` | Accept ghost suggestion when `GhostAccept.AcceptTab=true`. |
+| Ghost suggestion (visible) | `right` | Accept ghost suggestion when `GhostAccept.AcceptRight=true`. |
+
+Terminal note:
+- some terminals (including macOS Terminal defaults) reserve combinations like `shift+up/down` and other modified arrows for terminal-level selection/scrollback and may not forward them to Bubble Tea apps.
+- run hosts in alt-screen (for demos/examples) or remap terminal shortcuts and/or editor `KeyMap` bindings when these keys are not delivered.
+- WezTerm defaults bind `ctrl+shift+arrow` for pane navigation, which prevents delivery to TUI apps unless you disable/rebind those defaults (`wezterm show-keys --lua` helps inspect active mappings).
+- WezTerm key protocol delivery depends on `enable_kitty_keyboard` (default is `false` in WezTerm docs).
+- Zed terminal defaults bind `shift+up/down` to terminal scroll history; forward with `terminal::SendKeystroke` if you need those keys inside TUI apps.
+
+WezTerm Lua example (`~/.wezterm.lua`):
+
+```lua
+local wezterm = require 'wezterm'
+
+return {
+  enable_kitty_keyboard = true,
+}
+```
 
 Mouse:
 - Bubble Tea v2 typed mouse messages are handled via `tea.MouseClickMsg`, `tea.MouseMotionMsg`, `tea.MouseReleaseMsg`, and `tea.MouseWheelMsg`.
@@ -101,15 +149,12 @@ Viewport integration:
 - `GhostStyleForKey` to resolve keyed ghost insertion styles (fallback: `Style.Ghost`).
 - `OnChange` for post-mutation change events.
 - `OnIntent` for key-derived semantic intent batches (when intent mode is enabled).
-- `CompletionFilter` for host-defined completion item filtering and ordering.
-- `CompletionStyleForKey` for keyed completion row/segment style overrides.
-- `OnCompletionIntent` for completion semantic intent batches.
 
 Scrollbar config:
 - `Scrollbar.Vertical` and `Scrollbar.Horizontal` use `ScrollbarMode` (`ScrollbarAuto`, `ScrollbarAlways`, `ScrollbarNever`).
 - `Scrollbar.MinThumb` defaults to `1` when `<=0`.
 - per-frame scrollbar metrics resolve axis visibility and reserve content area dimensions (`contentWidth`/`contentHeight`) used by layout, cursor-follow, and viewport state.
-- scrollbar chrome is painted in `Model.View()` on top of `viewport.View()` output and before completion popup composition.
+- scrollbar chrome is painted in `Model.View()` on top of `viewport.View()` output.
 - vertical scrollbar paints track/thumb in the rightmost inner viewport column for content rows only.
 - horizontal scrollbar paints track/thumb in the reserved bottom inner row (content area only), clears the reserved row first, and paints `ScrollbarCorner` when both axes are visible.
 - scrollbar cells render as styled spaces (`" "`) using `Style.ScrollbarTrack`, `Style.ScrollbarThumb`, and `Style.ScrollbarCorner`.
@@ -125,127 +170,6 @@ Row marker style fields:
 - `Style.RowMarkInserted`
 - `Style.RowMarkUpdated`
 - `Style.RowMarkDeleted`
-
-Completion foundation config:
-- `CompletionKeyMap` controls completion-specific key bindings.
-- `CompletionInputMode` default is `CompletionInputQueryOnly`.
-- `CompletionMaxVisibleRows` default is `8` when `<=0`.
-- `CompletionMaxWidth` default is `60` when `<=0`.
-
-Completion state model:
-- `SetCompletionState` stores a cloned completion state and recomputes filtered visibility/selection.
-- `CompletionState` returns a cloned state snapshot (no shared mutable slices).
-- `ClearCompletion` resets completion to zero value state.
-
-Minimal host flow (`SetCompletionState` + `CompletionFilter`):
-
-```go
-cfg := editor.Config{
-    CompletionFilter: func(ctx editor.CompletionFilterContext) editor.CompletionFilterResult {
-        indices := make([]int, len(ctx.Items))
-        for i := range ctx.Items {
-            indices[i] = i
-        }
-        return editor.CompletionFilterResult{VisibleIndices: indices, SelectedIndex: 0}
-    },
-}
-
-// Host opens popup and provides item list.
-m = m.SetCompletionState(editor.CompletionState{
-    Visible: true,
-    Anchor:  m.Buffer().Cursor(),
-    Items: []editor.CompletionItem{
-        {ID: "println", InsertText: "println()"},
-        {ID: "print", InsertText: "print()"},
-    },
-})
-```
-
-Completion input and acceptance (Phase 2):
-- completion key handling runs before regular editor key handling when popup is visible.
-- `CompletionKeyMap.Trigger` opens completion at the current cursor anchor and resets query to `""`.
-- default `CompletionKeyMap.Trigger` binds both `ctrl+space` and `ctrl+@` (NUL alias used by some terminals/runtime key decoders).
-- when popup is visible, `Next`/`Prev`/`PageNext`/`PagePrev` move completion selection and do not move the cursor.
-- `Dismiss` closes popup without document mutation.
-- `Accept` applies selected completion deterministically:
-  use `CompletionItem.Edits` when non-empty, otherwise insert `CompletionItem.InsertText` at `CompletionState.Anchor`.
-- after successful local accept apply, popup is cleared.
-- `CompletionKeyMap.AcceptTab=false` keeps `Tab` out of completion accept path and falls through to normal tab handling.
-- `CompletionInputQueryOnly`: typing/backspace updates `CompletionState.Query` only and does not mutate document text.
-- `CompletionInputMutateDocument`: typing/backspace follows normal document mutation and keeps popup visible.
-- mutate-document query recompute uses buffer text in range `[Anchor, Cursor)` only when cursor stays on `Anchor.Row` and `Cursor.GraphemeCol >= Anchor.GraphemeCol`; otherwise query resets to `""`.
-- mutate-document query updates use `buffer.TextInRange` and avoid temporary full-buffer clones.
-- cursor movement keeps popup open only while cursor stays within the token span anchored at `CompletionState.Anchor`; leaving that span (or row) clears popup state.
-- `ReadOnly=true` suppresses local document mutation; mutate-document input behaves as query-only.
-- while completion is visible, ghost suggestions are suppressed for both rendering and ghost-accept key paths.
-
-Completion filtering and item styling (Phase 3):
-- `CompletionFilter` executes synchronously when completion query/items/context change.
-- filter context includes `Query`, `Items`, `Cursor`, `DocID`, and current buffer version.
-- `CompletionFilterContext.Items` is passed directly from current completion state (no defensive deep copy); treat it as read-only.
-- callback results sanitize invalid/duplicate indices and clamp `SelectedIndex` into visible range.
-- default filter (nil callback): case-insensitive `contains` over flattened `Prefix+Label+Detail` text with stable source ordering.
-- completion filter is also recomputed while popup is visible when cursor/doc version context changes.
-- completion row style precedence is implemented as `segment StyleKey -> item StyleKey -> Style.CompletionItem`, with selected rows based on `Style.CompletionSelected`.
-- completion segment truncation helpers preserve segment order and allow partial tail segment rendering with terminal-cell-safe clipping.
-
-Completion popup rendering and placement (Phase 4):
-- `Model.View()` renders completion popup rows as an editor-owned overlay on top of the viewport output.
-- overlay composition uses the editor-owned helper (`compositeTopLeft`) backed by Lip Gloss v2 layers/compositor.
-- popup anchor uses `CompletionState.Anchor` projected through `DocToScreen`.
-- vertical placement prefers below the anchor row, then flips above when below-space is insufficient.
-- when anchor is offscreen (`DocToScreen` not visible), popup render is suppressed while completion state remains intact.
-- popup width is measured from rendered completion rows, then clamped by `CompletionMaxWidth` and content-area width (excludes gutter and reserved vertical scrollbar column).
-- popup X placement is clamped to content-area bounds, so overlay never paints into reserved scrollbar chrome.
-- completion popup segment cell widths are precomputed per item and reused for width measurement.
-- popup row count is clamped by `CompletionMaxVisibleRows`, available vertical space, and visible completion count.
-- runnable host integration example: `examples/completion-popup/main.go`.
-
-Completion intents and host control (Phase 5):
-- `OnCompletionIntent` emits completion semantic batches for trigger/navigate/accept/dismiss/query actions.
-- completion intent payloads are typed:
-- `CompletionTriggerIntentPayload{Anchor}`
-- `CompletionNavigateIntentPayload{Delta, Selected, ItemIndex}`
-- `CompletionAcceptIntentPayload{ItemID, ItemIndex, VisibleIndex, InsertText, Edits}`
-- `CompletionDismissIntentPayload{}`
-- `CompletionQueryIntentPayload{Query}`
-- callback order for mutate-document completion keys is deterministic: `OnCompletionIntent` first, then `OnIntent`.
-- `MutationMode` gates only local document mutation, not completion callback emission.
-- in `EmitIntentsOnly`, completion UI state still updates for non-document actions (trigger/navigate/dismiss/query-only input).
-- in `CompletionInputMutateDocument`, typing/backspace emits both completion query intent and document insert/delete intent.
-- in `EmitIntentsOnly`, completion-driven document edits are emitted via `OnIntent` and skipped locally.
-- in `EmitIntentsAndMutate`, completion-driven document edits are emitted and then locally applied only when `IntentDecision.ApplyLocally=true`.
-- when local completion accept apply runs, popup is cleared; if local apply is skipped, popup remains host-controlled via `SetCompletionState`.
-
-Emit-only host flow example:
-
-```go
-cfg := editor.Config{
-    MutationMode: editor.EmitIntentsOnly,
-    OnCompletionIntent: func(batch editor.CompletionIntentBatch) {
-        sendCompletionToRemote(batch)
-    },
-    OnIntent: func(batch editor.IntentBatch) editor.IntentDecision {
-        sendDocumentToRemote(batch)
-        return editor.IntentDecision{ApplyLocally: false}
-    },
-}
-```
-
-Emit-and-mutate host flow example:
-
-```go
-cfg := editor.Config{
-    MutationMode: editor.EmitIntentsAndMutate,
-    OnCompletionIntent: func(batch editor.CompletionIntentBatch) {
-        auditCompletion(batch)
-    },
-    OnIntent: func(batch editor.IntentBatch) editor.IntentDecision {
-        ack := replicate(batch)
-        return editor.IntentDecision{ApplyLocally: ack}
-    },
-}
-```
 
 Scrollbar design and implementation roadmap:
 - `design/scrollbar.md`
@@ -391,7 +315,7 @@ Examples:
 
 Cross references:
 - `docs/buffer.md`
-- `design/completion.md`
+- `docs/completions.md`
 - `design/scrollbar.md`
 - `design/collab-editing-best-practices.md`
 - `roadmap/scrollbar.md`

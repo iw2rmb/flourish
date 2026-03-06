@@ -108,6 +108,48 @@ func TestBuffer_MoveLine_CountMaintainsPreferredColumn(t *testing.T) {
 	}
 }
 
+func TestBuffer_MoveLine_ExtendVerticalKeepsPreferredColumn(t *testing.T) {
+	b := New("012345\nx\n012345", Options{})
+	b.SetCursor(Pos{Row: 0, GraphemeCol: 5})
+
+	b.Move(Move{Unit: MoveGrapheme, Dir: DirDown, Extend: true})
+	if got := b.Cursor(); got != (Pos{Row: 1, GraphemeCol: 1}) {
+		t.Fatalf("cursor after first extend-down=%v, want (1,1)", got)
+	}
+
+	b.Move(Move{Unit: MoveGrapheme, Dir: DirDown, Extend: true})
+	if got := b.Cursor(); got != (Pos{Row: 2, GraphemeCol: 5}) {
+		t.Fatalf("cursor after second extend-down=%v, want (2,5)", got)
+	}
+	if got, ok := b.Selection(); !ok || got != (Range{Start: Pos{Row: 0, GraphemeCol: 5}, End: Pos{Row: 2, GraphemeCol: 5}}) {
+		t.Fatalf("selection after extend-down chain: got (%v,%v), want (%v,%v)", got, ok, Range{Start: Pos{Row: 0, GraphemeCol: 5}, End: Pos{Row: 2, GraphemeCol: 5}}, true)
+	}
+}
+
+func TestBuffer_MoveParagraph_EmptyRowsAndBounds(t *testing.T) {
+	b := New("012345\nab\n\nxyz\n\nqwerty", Options{})
+	b.SetCursor(Pos{Row: 0, GraphemeCol: 4})
+
+	tests := []struct {
+		dir  MoveDir
+		want Pos
+	}{
+		{dir: DirDown, want: Pos{Row: 2, GraphemeCol: 0}},
+		{dir: DirDown, want: Pos{Row: 4, GraphemeCol: 0}},
+		{dir: DirDown, want: Pos{Row: 5, GraphemeCol: 0}},
+		{dir: DirUp, want: Pos{Row: 4, GraphemeCol: 0}},
+		{dir: DirUp, want: Pos{Row: 2, GraphemeCol: 0}},
+		{dir: DirUp, want: Pos{Row: 0, GraphemeCol: 0}},
+	}
+
+	for _, tc := range tests {
+		b.Move(Move{Unit: MoveParagraph, Dir: tc.dir})
+		if got := b.Cursor(); got != tc.want {
+			t.Fatalf("cursor=%v, want %v", got, tc.want)
+		}
+	}
+}
+
 func TestBuffer_Move_CountRepeatsAndClamps(t *testing.T) {
 	b := New("a\nb\nc\nd", Options{})
 

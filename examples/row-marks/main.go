@@ -96,7 +96,12 @@ func (m model) View() tea.View {
 		cursorRow+1,
 		current,
 	)
-	return tea.NewView(m.editor.View().Content + "\n" + status)
+	v := m.editor.View()
+	v.Content = v.Content + "\n" + status
+	// Run this demo in alt-screen to avoid terminal scrollback/selection
+	// shortcuts swallowing shifted arrow keys.
+	v.AltScreen = true
+	return v
 }
 
 func (m *model) processLatestChange() {

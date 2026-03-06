@@ -161,10 +161,12 @@ Example:
 
 ## Movement and Selection
 
-- `Move(Move)` supports grapheme, word, line, and document movement.
+- `Move(Move)` supports grapheme, word, paragraph, line, and document movement.
 - `Extend=true` keeps a stable anchor and updates selection end.
 - word movement is single-line and treats newline as a hard boundary.
-- line up/down movement keeps a preferred grapheme column across shorter and empty lines; non-vertical moves reset that preferred column to the resulting cursor column.
+- paragraph movement (`MoveParagraph` with `DirUp`/`DirDown`) jumps to the previous/next empty row; when none exists in that direction, it clamps to document start/end.
+- paragraph movement follows current cursor column semantics, clamped by target row length.
+- line/grapheme up/down movement keeps a preferred grapheme column across shorter and empty lines (for both move and extend); non-vertical moves reset that preferred column to the resulting cursor column.
 
 ## Versioning
 

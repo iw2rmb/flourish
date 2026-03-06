@@ -7,6 +7,7 @@ type MoveUnit int
 const (
 	MoveGrapheme MoveUnit = iota
 	MoveWord
+	MoveParagraph
 	MoveLine
 	MoveDoc
 )
@@ -100,6 +101,8 @@ func (b *Buffer) moveCursor(p Pos, m Move, preferredCol int, usePreferred bool) 
 			next = b.moveGrapheme(next, m.Dir, preferredCol, usePreferred)
 		case MoveWord:
 			next = b.moveWord(next, m.Dir)
+		case MoveParagraph:
+			next = b.moveParagraph(next, m.Dir)
 		case MoveLine:
 			next = b.moveLine(next, m.Dir, preferredCol, usePreferred)
 		case MoveDoc:
@@ -159,6 +162,39 @@ func (b *Buffer) moveWord(p Pos, dir MoveDir) Pos {
 	default:
 		return p
 	}
+}
+
+func (b *Buffer) moveParagraph(p Pos, dir MoveDir) Pos {
+	row, col := p.Row, p.GraphemeCol
+	lastRow := len(b.lines) - 1
+
+	targetRow := row
+	switch dir {
+	case DirUp:
+		for nr := row - 1; nr >= 0; nr-- {
+			if len(b.lines[nr]) == 0 {
+				targetRow = nr
+				break
+			}
+		}
+		if targetRow == row {
+			targetRow = 0
+		}
+	case DirDown:
+		for nr := row + 1; nr <= lastRow; nr++ {
+			if len(b.lines[nr]) == 0 {
+				targetRow = nr
+				break
+			}
+		}
+		if targetRow == row {
+			targetRow = lastRow
+		}
+	default:
+		return p
+	}
+
+	return Pos{Row: targetRow, GraphemeCol: min(col, len(b.lines[targetRow]))}
 }
 
 func (b *Buffer) moveLine(p Pos, dir MoveDir, preferredCol int, usePreferred bool) Pos {

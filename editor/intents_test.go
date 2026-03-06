@@ -209,10 +209,58 @@ func TestIntentEmission_KeyKindsAndSelectionAwareDelete(t *testing.T) {
 			},
 		},
 		{
+			name: "move paragraph down",
+			cfg:  Config{Text: "a\n\nb", MutationMode: EmitIntentsOnly},
+			msg:  testKeyCode(tea.KeyDown, tea.ModCtrl),
+			want: IntentMove,
+			checkFn: func(t *testing.T, in Intent) {
+				t.Helper()
+				p, ok := in.Payload.(MoveIntentPayload)
+				if !ok {
+					t.Fatalf("move payload type: got %T", in.Payload)
+				}
+				if got, want := p.Move, (buffer.Move{Unit: buffer.MoveParagraph, Dir: buffer.DirDown}); got != want {
+					t.Fatalf("move payload: got %+v, want %+v", got, want)
+				}
+			},
+		},
+		{
+			name: "move paragraph down alt",
+			cfg:  Config{Text: "a\n\nb", MutationMode: EmitIntentsOnly},
+			msg:  testKeyCode(tea.KeyDown, tea.ModAlt),
+			want: IntentMove,
+			checkFn: func(t *testing.T, in Intent) {
+				t.Helper()
+				p, ok := in.Payload.(MoveIntentPayload)
+				if !ok {
+					t.Fatalf("move payload type: got %T", in.Payload)
+				}
+				if got, want := p.Move, (buffer.Move{Unit: buffer.MoveParagraph, Dir: buffer.DirDown}); got != want {
+					t.Fatalf("move payload: got %+v, want %+v", got, want)
+				}
+			},
+		},
+		{
 			name: "select",
 			cfg:  Config{Text: "ab", MutationMode: EmitIntentsOnly},
 			msg:  testKeyCode(tea.KeyRight, tea.ModShift),
 			want: IntentSelect,
+		},
+		{
+			name: "select paragraph down alt",
+			cfg:  Config{Text: "a\n\nb", MutationMode: EmitIntentsOnly},
+			msg:  testKeyCode(tea.KeyDown, tea.ModShift, tea.ModAlt),
+			want: IntentSelect,
+			checkFn: func(t *testing.T, in Intent) {
+				t.Helper()
+				p, ok := in.Payload.(SelectIntentPayload)
+				if !ok {
+					t.Fatalf("select payload type: got %T", in.Payload)
+				}
+				if got, want := p.Move, (buffer.Move{Unit: buffer.MoveParagraph, Dir: buffer.DirDown, Extend: true}); got != want {
+					t.Fatalf("select payload: got %+v, want %+v", got, want)
+				}
+			},
 		},
 		{
 			name: "undo",
