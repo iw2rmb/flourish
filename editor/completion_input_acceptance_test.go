@@ -220,6 +220,43 @@ func TestCompletionInput_MutateDocumentModeMutatesTextAndRecomputesQuery(t *test
 	}
 }
 
+func TestCompletionInput_MutateDocumentModeDeleteWordAndLineRightRecomputeQuery(t *testing.T) {
+	m := New(Config{
+		Text:                "alpha beta gamma",
+		CompletionInputMode: CompletionInputMutateDocument,
+	})
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 10})
+	m = m.SetCompletionState(CompletionState{
+		Visible:        true,
+		Anchor:         buffer.Pos{Row: 0, GraphemeCol: 6},
+		Query:          "beta",
+		Items:          []CompletionItem{{ID: "0"}},
+		VisibleIndices: []int{0},
+	})
+
+	m, _ = m.Update(testKeyCode(tea.KeyBackspace, tea.ModAlt))
+	if got, want := m.buf.Text(), "alpha  gamma"; got != want {
+		t.Fatalf("mutate-document opt+backspace should mutate text: got %q, want %q", got, want)
+	}
+	if got, want := m.CompletionState().Query, ""; got != want {
+		t.Fatalf("mutate-document opt+backspace should recompute query: got %q, want %q", got, want)
+	}
+	if !m.CompletionState().Visible {
+		t.Fatalf("mutate-document opt+backspace should keep popup visible")
+	}
+
+	m, _ = m.Update(testKeyCode('k', tea.ModCtrl))
+	if got, want := m.buf.Text(), "alpha "; got != want {
+		t.Fatalf("mutate-document ctrl+k should mutate text: got %q, want %q", got, want)
+	}
+	if got, want := m.CompletionState().Query, ""; got != want {
+		t.Fatalf("mutate-document ctrl+k should keep query left of cursor: got %q, want %q", got, want)
+	}
+	if !m.CompletionState().Visible {
+		t.Fatalf("mutate-document ctrl+k should keep popup visible")
+	}
+}
+
 func TestCompletionInput_MutateDocumentModeAnchorInvalidationResetsQuery(t *testing.T) {
 	m := New(Config{
 		Text:                "ab",

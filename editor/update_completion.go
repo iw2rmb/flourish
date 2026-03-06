@@ -116,19 +116,30 @@ func (m *Model) buildCompletionIntentsFromKey(msg tea.KeyPressMsg, before Editor
 		return result, false
 	}
 
-	if key.Matches(msg, km.Backspace) {
+	if key.Matches(msg, km.Backspace) ||
+		key.Matches(msg, km.DeleteWordBackward) ||
+		key.Matches(msg, km.KillLineRight) {
 		query, ok := m.nextCompletionQueryForMutateDocumentKey(msg)
 		if !ok {
 			query = m.completionState.Query
 		}
 		appendCompletionIntent(IntentCompletionQuery, CompletionQueryIntentPayload{Query: query})
 		dir := DeleteBackward
+		deleteOp := func(mm *Model) { mm.buf.DeleteBackward() }
+		switch {
+		case key.Matches(msg, km.DeleteWordBackward):
+			dir = DeleteWordBackward
+			deleteOp = func(mm *Model) { mm.buf.DeleteWordBackward() }
+		case key.Matches(msg, km.KillLineRight):
+			dir = DeleteLineRight
+			deleteOp = func(mm *Model) { mm.buf.DeleteLineRight() }
+		}
 		if _, ok := m.buf.Selection(); ok {
 			dir = DeleteSelection
 		}
 		appendDocumentIntent(IntentDelete, DeleteIntentPayload{Direction: dir})
 		result.documentMutations = append(result.documentMutations, func(mm *Model) {
-			mm.buf.DeleteBackward()
+			deleteOp(mm)
 			mm.recomputeCompletionQueryFromAnchor()
 		})
 		return result, true
@@ -240,12 +251,25 @@ func (m *Model) acceptCompletionPayload() (CompletionAcceptIntentPayload, bool) 
 }
 
 func (m *Model) nextCompletionQueryFromKey(msg tea.KeyPressMsg) (string, bool) {
-	if key.Matches(msg, m.cfg.KeyMap.Backspace) {
+	km := m.cfg.KeyMap
+	if key.Matches(msg, km.DeleteWordBackward) {
+		parts := grapheme.Split(m.completionState.Query)
+		if len(parts) == 0 {
+			return "", true
+		}
+		return grapheme.Join(parts[:prevCompletionWordBoundary(parts, len(parts))]), true
+	}
+	if key.Matches(msg, km.Backspace) {
 		parts := grapheme.Split(m.completionState.Query)
 		if len(parts) == 0 {
 			return "", true
 		}
 		return grapheme.Join(parts[:len(parts)-1]), true
+	}
+	if key.Matches(msg, km.KillLineRight) {
+		// Query-only input tracks a suffix-at-anchor model with implicit cursor at end.
+		// Deleting to line-right from end is a no-op.
+		return m.completionState.Query, true
 	}
 	if isSpaceKey(msg) && !hasAltMod(msg) {
 		return m.completionState.Query + " ", true
@@ -281,6 +305,44 @@ func (m *Model) nextCompletionQueryForMutateDocumentKey(msg tea.KeyPressMsg) (st
 	}
 
 	switch {
+	case key.Matches(msg, m.cfg.KeyMap.DeleteWordBackward):
+		if hasSel {
+			insertAt := sel.Start
+			if insertAt.Row != anchor.Row || insertAt.GraphemeCol < anchor.GraphemeCol {
+				return "", true
+			}
+			return m.buf.TextInRange(buffer.Range{Start: anchor, End: insertAt}), true
+		}
+		if cursor.Row != anchor.Row {
+			return "", true
+		}
+		linePrefix := m.buf.TextInRange(buffer.Range{
+			Start: buffer.Pos{Row: cursor.Row, GraphemeCol: 0},
+			End:   cursor,
+		})
+		startCol := prevCompletionWordBoundary(grapheme.Split(linePrefix), cursor.GraphemeCol)
+		if startCol < anchor.GraphemeCol {
+			return "", true
+		}
+		return m.buf.TextInRange(buffer.Range{
+			Start: anchor,
+			End:   buffer.Pos{Row: cursor.Row, GraphemeCol: startCol},
+		}), true
+
+	case key.Matches(msg, m.cfg.KeyMap.KillLineRight):
+		if hasSel {
+			insertAt := sel.Start
+			if insertAt.Row != anchor.Row || insertAt.GraphemeCol < anchor.GraphemeCol {
+				return "", true
+			}
+			return m.buf.TextInRange(buffer.Range{Start: anchor, End: insertAt}), true
+		}
+		if cursor.Row != anchor.Row || cursor.GraphemeCol < anchor.GraphemeCol {
+			return "", true
+		}
+		// Delete-right does not change text left of cursor.
+		return m.buf.TextInRange(buffer.Range{Start: anchor, End: cursor}), true
+
 	case key.Matches(msg, m.cfg.KeyMap.Backspace):
 		if hasSel {
 			// Selection delete: cursor lands at selection start.
@@ -316,6 +378,23 @@ func (m *Model) nextCompletionQueryForMutateDocumentKey(msg tea.KeyPressMsg) (st
 	default:
 		return "", false
 	}
+}
+
+func prevCompletionWordBoundary(line []string, col int) int {
+	if col < 0 {
+		col = 0
+	}
+	if col > len(line) {
+		col = len(line)
+	}
+	i := col
+	for i > 0 && grapheme.IsSpace(line[i-1]) {
+		i--
+	}
+	for i > 0 && !grapheme.IsSpace(line[i-1]) {
+		i--
+	}
+	return i
 }
 
 func (m *Model) recomputeCompletionQueryFromAnchor() {

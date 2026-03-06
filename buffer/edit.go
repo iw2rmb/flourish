@@ -115,6 +115,48 @@ func (b *Buffer) DeleteForward() {
 	}, "")
 }
 
+// DeleteLineRight deletes from cursor to end of active logical line.
+func (b *Buffer) DeleteLineRight() {
+	if _, ok := b.Selection(); ok {
+		b.DeleteSelection()
+		return
+	}
+
+	row, col := b.cursor.Row, b.cursor.GraphemeCol
+	lineLen := len(b.lines[row])
+	if col >= lineLen {
+		return
+	}
+
+	b.doLocalEdit(Range{
+		Start: Pos{Row: row, GraphemeCol: col},
+		End:   Pos{Row: row, GraphemeCol: lineLen},
+	}, "")
+}
+
+// DeleteWordBackward deletes from cursor to previous word boundary.
+//
+// Word boundaries follow MoveWord semantics and are scoped to the active row.
+func (b *Buffer) DeleteWordBackward() {
+	if _, ok := b.Selection(); ok {
+		b.DeleteSelection()
+		return
+	}
+
+	row, col := b.cursor.Row, b.cursor.GraphemeCol
+	if col <= 0 {
+		return
+	}
+	startCol := prevWordBoundary(b.lines[row], col)
+	if startCol >= col {
+		return
+	}
+	b.doLocalEdit(Range{
+		Start: Pos{Row: row, GraphemeCol: startCol},
+		End:   Pos{Row: row, GraphemeCol: col},
+	}, "")
+}
+
 // DeleteSelection deletes the active selection, if any.
 func (b *Buffer) DeleteSelection() {
 	r, ok := b.Selection()

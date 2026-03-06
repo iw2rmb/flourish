@@ -86,6 +86,8 @@ Deletion:
 - without selection:
 - `DeleteBackward` removes one grapheme cluster before cursor, joining lines at SOL.
 - `DeleteForward` removes one grapheme cluster at cursor, joining lines at EOL.
+- `DeleteWordBackward` removes text from cursor to previous word boundary on the active row.
+- `DeleteLineRight` removes text from cursor to end of the active row.
 
 Apply:
 - `Apply(edits ...TextEdit)` applies edits in order.

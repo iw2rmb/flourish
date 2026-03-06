@@ -155,3 +155,37 @@ func TestBuffer_DeleteBackward_RemovesWholeGraphemeCluster(t *testing.T) {
 		t.Fatalf("cursor=%v, want %v", got, want)
 	}
 }
+
+func TestBuffer_DeleteLineRight_DeletesToEndOfLineOnly(t *testing.T) {
+	b := New("alpha beta\ngamma", Options{})
+	b.SetCursor(Pos{Row: 0, GraphemeCol: 6})
+	v := b.Version()
+
+	b.DeleteLineRight()
+	if got, want := b.Text(), "alpha \ngamma"; got != want {
+		t.Fatalf("text=%q, want %q", got, want)
+	}
+	if got, want := b.Cursor(), (Pos{Row: 0, GraphemeCol: 6}); got != want {
+		t.Fatalf("cursor=%v, want %v", got, want)
+	}
+	if got := b.Version(); got != v+1 {
+		t.Fatalf("version=%d, want %d", got, v+1)
+	}
+}
+
+func TestBuffer_DeleteWordBackward_DeletesToPreviousWordBoundary(t *testing.T) {
+	b := New("alpha beta gamma", Options{})
+	b.SetCursor(Pos{Row: 0, GraphemeCol: 10}) // after "alpha beta"
+	v := b.Version()
+
+	b.DeleteWordBackward()
+	if got, want := b.Text(), "alpha  gamma"; got != want {
+		t.Fatalf("text=%q, want %q", got, want)
+	}
+	if got, want := b.Cursor(), (Pos{Row: 0, GraphemeCol: 6}); got != want {
+		t.Fatalf("cursor=%v, want %v", got, want)
+	}
+	if got := b.Version(); got != v+1 {
+		t.Fatalf("version=%d, want %d", got, v+1)
+	}
+}

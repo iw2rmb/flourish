@@ -184,6 +184,44 @@ func TestIntentEmission_KeyKindsAndSelectionAwareDelete(t *testing.T) {
 			},
 		},
 		{
+			name: "delete word backward",
+			cfg:  Config{Text: "alpha beta", MutationMode: EmitIntentsOnly},
+			setup: func(m *Model) {
+				m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 10})
+			},
+			msg:  testKeyCode(tea.KeyBackspace, tea.ModAlt),
+			want: IntentDelete,
+			checkFn: func(t *testing.T, in Intent) {
+				t.Helper()
+				p, ok := in.Payload.(DeleteIntentPayload)
+				if !ok {
+					t.Fatalf("delete payload type: got %T", in.Payload)
+				}
+				if got, want := p.Direction, DeleteWordBackward; got != want {
+					t.Fatalf("delete direction: got %v, want %v", got, want)
+				}
+			},
+		},
+		{
+			name: "delete line right",
+			cfg:  Config{Text: "alpha beta", MutationMode: EmitIntentsOnly},
+			setup: func(m *Model) {
+				m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 6})
+			},
+			msg:  testKeyCode('k', tea.ModCtrl),
+			want: IntentDelete,
+			checkFn: func(t *testing.T, in Intent) {
+				t.Helper()
+				p, ok := in.Payload.(DeleteIntentPayload)
+				if !ok {
+					t.Fatalf("delete payload type: got %T", in.Payload)
+				}
+				if got, want := p.Direction, DeleteLineRight; got != want {
+					t.Fatalf("delete direction: got %v, want %v", got, want)
+				}
+			},
+		},
+		{
 			name: "move",
 			cfg:  Config{Text: "ab", MutationMode: EmitIntentsOnly},
 			msg:  testKeyCode(tea.KeyRight),

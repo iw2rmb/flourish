@@ -160,6 +160,24 @@ func (m *Model) buildIntentsFromKey(msg tea.KeyPressMsg, before EditorState) (In
 	case key.Matches(msg, km.End):
 		appendMove(buffer.Move{Unit: buffer.MoveLine, Dir: buffer.DirEnd})
 
+	case key.Matches(msg, km.DeleteWordBackward):
+		if !m.cfg.ReadOnly {
+			dir := DeleteWordBackward
+			if _, ok := m.buf.Selection(); ok {
+				dir = DeleteSelection
+			}
+			appendIntent(IntentDelete, DeleteIntentPayload{Direction: dir})
+			mutations = append(mutations, func(mm *Model) { mm.buf.DeleteWordBackward() })
+		}
+	case key.Matches(msg, km.KillLineRight):
+		if !m.cfg.ReadOnly {
+			dir := DeleteLineRight
+			if _, ok := m.buf.Selection(); ok {
+				dir = DeleteSelection
+			}
+			appendIntent(IntentDelete, DeleteIntentPayload{Direction: dir})
+			mutations = append(mutations, func(mm *Model) { mm.buf.DeleteLineRight() })
+		}
 	case key.Matches(msg, km.Backspace):
 		if !m.cfg.ReadOnly {
 			dir := DeleteBackward

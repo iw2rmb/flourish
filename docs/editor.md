@@ -81,7 +81,9 @@ Default keyboard shortcuts (can be overridden via `Config.KeyMap` and `Config.Gh
 | Document | `home` or `ctrl+a` | Move cursor to line start. |
 | Document | `end` or `ctrl+e` | Move cursor to line end. |
 | Document | `backspace` or `ctrl+h` | Delete backward (or delete active selection). |
+| Document | `opt+backspace` or `ctrl+w` | Delete backward to previous word boundary (or delete active selection). |
 | Document | `delete` | Delete forward (or delete active selection). |
+| Document | `ctrl+k` | Delete from cursor to line end (or delete active selection). |
 | Document | `enter` | Insert newline. |
 | Document | `tab` | Insert tab (`\t`). |
 | Document | `space` | Insert a space. |

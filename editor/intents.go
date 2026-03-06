@@ -64,6 +64,8 @@ const (
 	DeleteBackward DeleteDirection = iota
 	DeleteForward
 	DeleteSelection
+	DeleteWordBackward
+	DeleteLineRight
 )
 
 // InsertIntentPayload describes an insert action.

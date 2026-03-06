@@ -15,8 +15,9 @@ type KeyMap struct {
 	WordShiftLeft, WordShiftRight             key.Binding
 	Home, End                                 key.Binding
 
-	Backspace, Delete key.Binding
-	Enter             key.Binding
+	Backspace, Delete                 key.Binding
+	DeleteWordBackward, KillLineRight key.Binding
+	Enter                             key.Binding
 
 	Undo, Redo key.Binding
 }
@@ -31,7 +32,7 @@ func (km KeyMap) bindings() []key.Binding {
 		km.ParagraphShiftUp, km.ParagraphShiftDown,
 		km.WordLeft, km.WordRight, km.WordShiftLeft, km.WordShiftRight,
 		km.Home, km.End,
-		km.Backspace, km.Delete, km.Enter,
+		km.Backspace, km.Delete, km.DeleteWordBackward, km.KillLineRight, km.Enter,
 		km.Undo, km.Redo,
 	}
 }
@@ -89,9 +90,11 @@ func DefaultKeyMap() KeyMap {
 		Home: key.NewBinding(key.WithKeys("home", "ctrl+a"), key.WithHelp("home", "line start")),
 		End:  key.NewBinding(key.WithKeys("end", "ctrl+e"), key.WithHelp("end", "line end")),
 
-		Backspace: key.NewBinding(key.WithKeys("backspace", "ctrl+h"), key.WithHelp("backspace", "delete left")),
-		Delete:    key.NewBinding(key.WithKeys("delete"), key.WithHelp("del", "delete right")),
-		Enter:     key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "newline")),
+		Backspace:          key.NewBinding(key.WithKeys("backspace", "ctrl+h"), key.WithHelp("backspace", "delete left")),
+		Delete:             key.NewBinding(key.WithKeys("delete"), key.WithHelp("del", "delete right")),
+		DeleteWordBackward: key.NewBinding(key.WithKeys("alt+backspace", "ctrl+w"), key.WithHelp("opt+⌫/ctrl+w", "delete word left")),
+		KillLineRight:      key.NewBinding(key.WithKeys("ctrl+k"), key.WithHelp("ctrl+k", "delete line right")),
+		Enter:              key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "newline")),
 
 		Undo: key.NewBinding(key.WithKeys("ctrl+z"), key.WithHelp("ctrl+z", "undo")),
 		Redo: key.NewBinding(key.WithKeys("ctrl+y", "ctrl+shift+z"), key.WithHelp("ctrl+y", "redo")),

@@ -32,6 +32,32 @@ func TestUpdate_TypingMovementAndDelete(t *testing.T) {
 	}
 }
 
+func TestUpdate_CtrlK_DeletesToLineEnd(t *testing.T) {
+	m := New(Config{Text: "alpha beta\ngamma"})
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 6})
+
+	m, _ = m.Update(testKeyCode('k', tea.ModCtrl))
+	if got, want := m.buf.Text(), "alpha \ngamma"; got != want {
+		t.Fatalf("text after ctrl+k: got %q, want %q", got, want)
+	}
+	if got, want := m.buf.Cursor(), (buffer.Pos{Row: 0, GraphemeCol: 6}); got != want {
+		t.Fatalf("cursor after ctrl+k: got %v, want %v", got, want)
+	}
+}
+
+func TestUpdate_OptBackspace_DeletesWordLeft(t *testing.T) {
+	m := New(Config{Text: "alpha beta gamma"})
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 10})
+
+	m, _ = m.Update(testKeyCode(tea.KeyBackspace, tea.ModAlt))
+	if got, want := m.buf.Text(), "alpha  gamma"; got != want {
+		t.Fatalf("text after opt+backspace: got %q, want %q", got, want)
+	}
+	if got, want := m.buf.Cursor(), (buffer.Pos{Row: 0, GraphemeCol: 6}); got != want {
+		t.Fatalf("cursor after opt+backspace: got %v, want %v", got, want)
+	}
+}
+
 func TestUpdate_SpaceKey_InsertsSpace(t *testing.T) {
 	m := New(Config{Text: "ab"})
 	m, _ = m.Update(testKeyCode(tea.KeyRight))
