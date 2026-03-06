@@ -148,16 +148,37 @@ func (b *Buffer) moveGrapheme(p Pos, dir MoveDir, preferredCol int, usePreferred
 
 func (b *Buffer) moveWord(p Pos, dir MoveDir) Pos {
 	row, col := p.Row, p.GraphemeCol
-	line := b.lines[row]
+	lastRow := len(b.lines) - 1
 
 	switch dir {
 	case DirLeft:
-		return Pos{Row: row, GraphemeCol: prevWordBoundary(line, col)}
+		line := b.lines[row]
+		nextCol := prevWordBoundary(line, col)
+		if nextCol != col {
+			return Pos{Row: row, GraphemeCol: nextCol}
+		}
+		if row == 0 {
+			return p
+		}
+		prevRow := row - 1
+		prevLine := b.lines[prevRow]
+		return Pos{Row: prevRow, GraphemeCol: prevWordBoundary(prevLine, len(prevLine))}
 	case DirRight:
-		return Pos{Row: row, GraphemeCol: nextWordBoundary(line, col)}
+		line := b.lines[row]
+		nextCol := nextWordBoundary(line, col)
+		if nextCol != col {
+			return Pos{Row: row, GraphemeCol: nextCol}
+		}
+		if row == lastRow {
+			return p
+		}
+		nextRow := row + 1
+		nextLine := b.lines[nextRow]
+		return Pos{Row: nextRow, GraphemeCol: nextWordBoundary(nextLine, 0)}
 	case DirHome:
 		return Pos{Row: row, GraphemeCol: 0}
 	case DirEnd:
+		line := b.lines[row]
 		return Pos{Row: row, GraphemeCol: len(line)}
 	default:
 		return p
@@ -247,7 +268,6 @@ func (b *Buffer) moveDoc(p Pos, dir MoveDir) Pos {
 
 // Word boundary rules (v0):
 // - skip whitespace, then skip non-whitespace
-// - newline is a hard boundary (so this operates on a single logical line)
 func prevWordBoundary(line []string, col int) int {
 	if col < 0 {
 		col = 0

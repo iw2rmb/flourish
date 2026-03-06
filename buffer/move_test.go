@@ -269,7 +269,7 @@ func TestBuffer_MoveWord_PortableSemantics(t *testing.T) {
 	}
 }
 
-func TestBuffer_MoveWord_UnicodeAndNewlineBoundary(t *testing.T) {
+func TestBuffer_MoveWord_UnicodeAndCrossLineBoundary(t *testing.T) {
 	greek := "προβλήμα"
 	rest := "テスト"
 	line := greek + "  " + rest
@@ -283,14 +283,14 @@ func TestBuffer_MoveWord_UnicodeAndNewlineBoundary(t *testing.T) {
 
 	b.SetCursor(Pos{Row: 0, GraphemeCol: graphemeutil.Count(line)})
 	b.Move(Move{Unit: MoveWord, Dir: DirRight})
-	if got := b.Cursor(); got != (Pos{Row: 0, GraphemeCol: graphemeutil.Count(line)}) {
-		t.Fatalf("cursor=%v, want unchanged at EOL", got)
+	if got := b.Cursor(); got != (Pos{Row: 1, GraphemeCol: 3}) {
+		t.Fatalf("cursor=%v, want (1,3) after crossing EOL", got)
 	}
 
 	b.SetCursor(Pos{Row: 1, GraphemeCol: 0})
 	b.Move(Move{Unit: MoveWord, Dir: DirLeft})
-	if got := b.Cursor(); got != (Pos{Row: 1, GraphemeCol: 0}) {
-		t.Fatalf("cursor=%v, want unchanged at SOL", got)
+	if got := b.Cursor(); got != (Pos{Row: 0, GraphemeCol: graphemeutil.Count(greek) + 2}) {
+		t.Fatalf("cursor=%v, want start of previous line last word", got)
 	}
 }
 

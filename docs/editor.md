@@ -70,8 +70,8 @@ Default keyboard shortcuts (can be overridden via `Config.KeyMap` and `Config.Gh
 | Document | `shift+right` | Extend selection right by one grapheme. |
 | Document | `shift+up` | Extend selection to cursor position moved one row up (same cursor movement semantics as `up`, preferred-column aware). |
 | Document | `shift+down` | Extend selection to cursor position moved one row down (same cursor movement semantics as `down`, preferred-column aware). |
-| Document | `alt+left` or `ctrl+left` | Move cursor to previous word boundary (same row). |
-| Document | `alt+right` or `ctrl+right` | Move cursor to next word boundary (same row). |
+| Document | `alt+left` or `ctrl+left` | Move cursor to previous word boundary (crosses to previous row when at start of line). |
+| Document | `alt+right` or `ctrl+right` | Move cursor to next word boundary (crosses to next row when at end of line). |
 | Document | `alt+shift+left` | Extend selection to previous word boundary. |
 | Document | `alt+shift+right` | Extend selection to next word boundary. |
 | Document | `alt+shift+up` | Extend selection to previous empty row (or document start when none), using the same cursor movement semantics as paragraph-up movement. |

@@ -134,6 +134,22 @@ func TestUpdate_OptLeftRight_JumpsByWord(t *testing.T) {
 	}
 }
 
+func TestUpdate_OptLeftRight_CrossesLineBoundaries(t *testing.T) {
+	m := New(Config{Text: "alpha\nbeta gamma"})
+
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 5})
+	m, _ = m.Update(testKeyCode(tea.KeyRight, tea.ModAlt))
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 1, GraphemeCol: 4}) {
+		t.Fatalf("cursor after opt+right at EOL: got %v, want %v", got, buffer.Pos{Row: 1, GraphemeCol: 4})
+	}
+
+	m.buf.SetCursor(buffer.Pos{Row: 1, GraphemeCol: 0})
+	m, _ = m.Update(testKeyCode(tea.KeyLeft, tea.ModAlt))
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 0, GraphemeCol: 0}) {
+		t.Fatalf("cursor after opt+left at SOL: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 0})
+	}
+}
+
 func TestUpdate_OptShiftLeftRight_ExtendsAndDeselection(t *testing.T) {
 	m := New(Config{Text: "alpha beta gamma"})
 
@@ -167,6 +183,35 @@ func TestUpdate_OptShiftLeftRight_ExtendsAndDeselection(t *testing.T) {
 	}
 	if _, ok := m.buf.Selection(); ok {
 		t.Fatalf("expected selection cleared after returning to anchor with opt+shift+left")
+	}
+}
+
+func TestUpdate_OptShiftLeftRight_CrossesLineBoundaries(t *testing.T) {
+	m := New(Config{Text: "alpha\nbeta"})
+
+	m.buf.SetCursor(buffer.Pos{Row: 0, GraphemeCol: 5})
+	m, _ = m.Update(testKeyCode(tea.KeyRight, tea.ModShift, tea.ModAlt))
+	if got := m.buf.Cursor(); got != (buffer.Pos{Row: 1, GraphemeCol: 4}) {
+		t.Fatalf("cursor after opt+shift+right at EOL: got %v, want %v", got, buffer.Pos{Row: 1, GraphemeCol: 4})
+	}
+	if got, ok := m.buf.Selection(); !ok || got != (buffer.Range{
+		Start: buffer.Pos{Row: 0, GraphemeCol: 5},
+		End:   buffer.Pos{Row: 1, GraphemeCol: 4},
+	}) {
+		t.Fatalf("selection after opt+shift+right at EOL: got (%v,%v)", got, ok)
+	}
+
+	m2 := New(Config{Text: "alpha\nbeta"})
+	m2.buf.SetCursor(buffer.Pos{Row: 1, GraphemeCol: 0})
+	m2, _ = m2.Update(testKeyCode(tea.KeyLeft, tea.ModShift, tea.ModAlt))
+	if got := m2.buf.Cursor(); got != (buffer.Pos{Row: 0, GraphemeCol: 0}) {
+		t.Fatalf("cursor after opt+shift+left at SOL: got %v, want %v", got, buffer.Pos{Row: 0, GraphemeCol: 0})
+	}
+	if got, ok := m2.buf.Selection(); !ok || got != (buffer.Range{
+		Start: buffer.Pos{Row: 0, GraphemeCol: 0},
+		End:   buffer.Pos{Row: 1, GraphemeCol: 0},
+	}) {
+		t.Fatalf("selection after opt+shift+left at SOL: got (%v,%v)", got, ok)
 	}
 }
 
