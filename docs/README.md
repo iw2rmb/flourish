@@ -1,12 +1,15 @@
-# Flourish Documentation
+# Documentation
 
-Packages:
+
+## Packages
+
 - `docs/buffer.md` — `buffer` package behavior and contracts.
 - `docs/editor.md` — `editor` package behavior and integration contracts.
 - `docs/completions.md` — completion subsystem behavior, rendering, and host integration contracts.
-- `docs/versioning.md` — semver policy, runtime version API, and release flow.
 
-Examples:
+
+## Examples
+
 - `examples/simple/main.go` — baseline editor setup.
 - `examples/wrap-modes/main.go` — toggles `WrapNone`, `WrapWord`, `WrapGrapheme` via `ctrl+n`, `ctrl+w`, `ctrl+g`.
 - `examples/scrollbar/main.go` — editor-owned vertical/horizontal scrollbar rendering and mouse interaction.
@@ -18,3 +21,8 @@ Examples:
 - `examples/conditional-styling/main.go` — row/token conditional style callbacks with active-row background + left border emphasis.
 - `examples/on-change/main.go` — delta-backed `OnChange` event reporting (`buffer.Change` payload).
 - `examples/intent-mode/main.go` — intent emission with host-controlled local-apply decisions.
+
+
+## Versioning
+
+- `docs/versioning.md` — semver policy, runtime version API, and release flow.
